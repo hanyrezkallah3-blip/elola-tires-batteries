@@ -55,43 +55,6 @@ export const useWebsiteStore = create(
           )
         })),
 
-      // CART
-
-      cart: [],
-
-      addToCart: (product) =>
-        set((state) => ({
-          cart: [...state.cart, product]
-        })),
-
-      removeFromCart: (index) =>
-        set((state) => ({
-          cart: state.cart.filter(
-            (_, i) => i !== index
-          )
-        })),
-
-      clearCart: () =>
-        set({
-          cart: []
-        }),
-
-      // ORDERS
-
-      orders: [],
-
-      addOrder: (order) =>
-        set((state) => ({
-          orders: [...state.orders, order]
-        })),
-
-      deleteOrder: (index) =>
-        set((state) => ({
-          orders: state.orders.filter(
-            (_, i) => i !== index
-          )
-        })),
-
       // OFFERS
 
       offers: [],
@@ -136,6 +99,43 @@ export const useWebsiteStore = create(
       deleteVideo: (index) =>
         set((state) => ({
           videos: state.videos.filter(
+            (_, i) => i !== index
+          )
+        })),
+
+      // CART
+
+      cart: [],
+
+      addToCart: (product) =>
+        set((state) => ({
+          cart: [...state.cart, product]
+        })),
+
+      removeFromCart: (index) =>
+        set((state) => ({
+          cart: state.cart.filter(
+            (_, i) => i !== index
+          )
+        })),
+
+      clearCart: () =>
+        set({
+          cart: []
+        }),
+
+      // ORDERS
+
+      orders: [],
+
+      addOrder: (order) =>
+        set((state) => ({
+          orders: [...state.orders, order]
+        })),
+
+      deleteOrder: (index) =>
+        set((state) => ({
+          orders: state.orders.filter(
             (_, i) => i !== index
           )
         }))

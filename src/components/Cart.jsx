@@ -14,16 +14,33 @@ export default function Cart({ open, setOpen }) {
 
   const [phone, setPhone] = useState('')
 
+  const [address, setAddress] = useState('')
+
   if (!open) return null
+
+  const total = cart.reduce((acc, item) => {
+
+    const price = Number(
+      String(item.price).replace(/[^\d]/g, '')
+    )
+
+    return acc + price
+
+  }, 0)
 
   const handleOrder = () => {
 
     if (
       !customerName ||
       !phone ||
+      !address ||
       cart.length === 0
     ) {
+
+      alert('يرجى إدخال جميع البيانات')
+
       return
+
     }
 
     addOrder({
@@ -32,7 +49,11 @@ export default function Cart({ open, setOpen }) {
 
       phone,
 
+      address,
+
       items: cart,
+
+      total,
 
       date: new Date().toLocaleString()
 
@@ -44,7 +65,11 @@ export default function Cart({ open, setOpen }) {
 
     setPhone('')
 
+    setAddress('')
+
     alert('تم إرسال الطلب بنجاح')
+
+    setOpen(false)
 
   }
 
@@ -63,6 +88,8 @@ export default function Cart({ open, setOpen }) {
         overflow-y-auto
         shadow-2xl
         p-6
+        border-l-4
+        border-yellow-400
       "
     >
 
@@ -86,10 +113,12 @@ export default function Cart({ open, setOpen }) {
           }
           className="
             bg-red-600
+            hover:bg-red-700
             px-4
             py-2
             rounded-xl
             text-white
+            font-bold
           "
         >
           ✕
@@ -115,6 +144,7 @@ export default function Cart({ open, setOpen }) {
             bg-white
             text-black
             text-xl
+            outline-none
           "
         />
 
@@ -132,6 +162,25 @@ export default function Cart({ open, setOpen }) {
             bg-white
             text-black
             text-xl
+            outline-none
+          "
+        />
+
+        <textarea
+          placeholder="العنوان بالتفصيل"
+          value={address}
+          onChange={(e) =>
+            setAddress(e.target.value)
+          }
+          className="
+            w-full
+            p-4
+            rounded-2xl
+            bg-white
+            text-black
+            text-xl
+            h-32
+            outline-none
           "
         />
 
@@ -141,10 +190,15 @@ export default function Cart({ open, setOpen }) {
 
       {cart.length === 0 && (
 
-        <div className="text-center text-3xl text-white">
-
+        <div
+          className="
+            text-center
+            text-3xl
+            text-white
+            mt-20
+          "
+        >
           السلة فارغة
-
         </div>
 
       )}
@@ -205,10 +259,12 @@ export default function Cart({ open, setOpen }) {
                 }
                 className="
                   bg-red-600
+                  hover:bg-red-700
                   px-5
                   py-3
                   rounded-2xl
                   text-white
+                  font-bold
                 "
               >
                 حذف
@@ -221,6 +277,27 @@ export default function Cart({ open, setOpen }) {
         ))}
 
       </div>
+
+      {/* TOTAL */}
+
+      {cart.length > 0 && (
+
+        <div
+          className="
+            mt-8
+            bg-yellow-400
+            text-black
+            rounded-3xl
+            p-5
+            text-center
+            text-3xl
+            font-extrabold
+          "
+        >
+          الإجمالي: {total} جنيه
+        </div>
+
+      )}
 
       {/* ACTIONS */}
 
@@ -239,6 +316,7 @@ export default function Cart({ open, setOpen }) {
               text-2xl
               font-extrabold
               text-white
+              transition-all
             "
           >
             تأكيد الطلب
@@ -255,6 +333,7 @@ export default function Cart({ open, setOpen }) {
               text-2xl
               font-extrabold
               text-white
+              transition-all
             "
           >
             تفريغ السلة
