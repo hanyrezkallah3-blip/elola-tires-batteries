@@ -11,9 +11,7 @@ export default function Cart({ open, setOpen }) {
   } = useWebsiteStore()
 
   const [customerName, setCustomerName] = useState('')
-
   const [phone, setPhone] = useState('')
-
   const [address, setAddress] = useState('')
 
   if (!open) return null
@@ -30,31 +28,19 @@ export default function Cart({ open, setOpen }) {
 
   const handleOrder = () => {
 
-    if (
-      !customerName ||
-      !phone ||
-      !address ||
-      cart.length === 0
-    ) {
-
+    if (!customerName || !phone || !address || cart.length === 0) {
       alert('يرجى إدخال جميع البيانات')
-
       return
-
     }
 
     addOrder({
 
+      id: Date.now(),
       customerName,
-
       phone,
-
       address,
-
       items: cart,
-
       total,
-
       date: new Date().toLocaleString()
 
     })
@@ -62,64 +48,33 @@ export default function Cart({ open, setOpen }) {
     clearCart()
 
     setCustomerName('')
-
     setPhone('')
-
     setAddress('')
 
     alert('تم إرسال الطلب بنجاح')
 
     setOpen(false)
-
   }
 
   return (
 
-    <div
-      className="
-        fixed
-        top-0
-        right-0
-        w-full
-        md:w-[450px]
-        h-screen
-        bg-slate-950
-        z-50
-        overflow-y-auto
-        shadow-2xl
-        p-6
-        border-l-4
-        border-yellow-400
-      "
-    >
+    <div className="
+      fixed top-0 right-0 w-full md:w-[450px]
+      h-screen bg-slate-950 z-50 overflow-y-auto
+      shadow-2xl p-6 border-l-4 border-yellow-400
+    ">
 
       {/* HEADER */}
 
       <div className="flex justify-between items-center mb-8">
 
-        <h2
-          className="
-            text-4xl
-            font-extrabold
-            text-yellow-400
-          "
-        >
+        <h2 className="text-4xl font-extrabold text-yellow-400">
           سلة المشتريات
         </h2>
 
         <button
-          onClick={() =>
-            setOpen(false)
-          }
-          className="
-            bg-red-600
-            hover:bg-red-700
-            px-4
-            py-2
-            rounded-xl
-            text-white
-            font-bold
-          "
+          onClick={() => setOpen(false)}
+          className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-xl text-white font-bold"
         >
           ✕
         </button>
@@ -134,54 +89,23 @@ export default function Cart({ open, setOpen }) {
           type="text"
           placeholder="اسم العميل"
           value={customerName}
-          onChange={(e) =>
-            setCustomerName(e.target.value)
-          }
-          className="
-            w-full
-            p-4
-            rounded-2xl
-            bg-white
-            text-black
-            text-xl
-            outline-none
-          "
+          onChange={(e) => setCustomerName(e.target.value)}
+          className="w-full p-4 rounded-2xl bg-white text-black text-xl outline-none"
         />
 
         <input
           type="text"
           placeholder="رقم الهاتف"
           value={phone}
-          onChange={(e) =>
-            setPhone(e.target.value)
-          }
-          className="
-            w-full
-            p-4
-            rounded-2xl
-            bg-white
-            text-black
-            text-xl
-            outline-none
-          "
+          onChange={(e) => setPhone(e.target.value)}
+          className="w-full p-4 rounded-2xl bg-white text-black text-xl outline-none"
         />
 
         <textarea
           placeholder="العنوان بالتفصيل"
           value={address}
-          onChange={(e) =>
-            setAddress(e.target.value)
-          }
-          className="
-            w-full
-            p-4
-            rounded-2xl
-            bg-white
-            text-black
-            text-xl
-            h-32
-            outline-none
-          "
+          onChange={(e) => setAddress(e.target.value)}
+          className="w-full p-4 rounded-2xl bg-white text-black text-xl h-32 outline-none"
         />
 
       </div>
@@ -189,83 +113,41 @@ export default function Cart({ open, setOpen }) {
       {/* EMPTY */}
 
       {cart.length === 0 && (
-
-        <div
-          className="
-            text-center
-            text-3xl
-            text-white
-            mt-20
-          "
-        >
+        <div className="text-center text-3xl text-white mt-20">
           السلة فارغة
         </div>
-
       )}
 
       {/* ITEMS */}
 
       <div className="space-y-6">
 
-        {cart.map((item, index) => (
+        {cart.map((item) => (
 
           <div
-            key={index}
-            className="
-              bg-slate-900
-              rounded-3xl
-              overflow-hidden
-              border
-              border-yellow-400
-            "
+            key={item.id}
+            className="bg-slate-900 rounded-3xl overflow-hidden border border-yellow-400"
           >
 
             <img
               src={item.image}
               alt=""
-              className="
-                w-full
-                h-52
-                object-cover
-              "
+              className="w-full h-52 object-cover"
             />
 
             <div className="p-5">
 
-              <h3
-                className="
-                  text-2xl
-                  font-bold
-                  mb-4
-                "
-              >
+              <h3 className="text-2xl font-bold mb-4">
                 {item.name}
               </h3>
 
-              <p
-                className="
-                  text-yellow-400
-                  text-3xl
-                  font-extrabold
-                  mb-5
-                "
-              >
+              <p className="text-yellow-400 text-3xl font-extrabold mb-5">
                 {item.price}
               </p>
 
               <button
-                onClick={() =>
-                  removeFromCart(index)
-                }
-                className="
-                  bg-red-600
-                  hover:bg-red-700
-                  px-5
-                  py-3
-                  rounded-2xl
-                  text-white
-                  font-bold
-                "
+                onClick={() => removeFromCart(item.id)}
+                className="bg-red-600 hover:bg-red-700 px-5 py-3 rounded-2xl text-white font-bold"
               >
                 حذف
               </button>
@@ -282,18 +164,7 @@ export default function Cart({ open, setOpen }) {
 
       {cart.length > 0 && (
 
-        <div
-          className="
-            mt-8
-            bg-yellow-400
-            text-black
-            rounded-3xl
-            p-5
-            text-center
-            text-3xl
-            font-extrabold
-          "
-        >
+        <div className="mt-8 bg-yellow-400 text-black rounded-3xl p-5 text-center text-3xl font-extrabold">
           الإجمالي: {total} جنيه
         </div>
 
@@ -307,34 +178,14 @@ export default function Cart({ open, setOpen }) {
 
           <button
             onClick={handleOrder}
-            className="
-              w-full
-              bg-green-600
-              hover:bg-green-700
-              py-5
-              rounded-3xl
-              text-2xl
-              font-extrabold
-              text-white
-              transition-all
-            "
+            className="w-full bg-green-600 hover:bg-green-700 py-5 rounded-3xl text-2xl font-extrabold text-white"
           >
             تأكيد الطلب
           </button>
 
           <button
             onClick={clearCart}
-            className="
-              w-full
-              bg-red-700
-              hover:bg-red-800
-              py-5
-              rounded-3xl
-              text-2xl
-              font-extrabold
-              text-white
-              transition-all
-            "
+            className="w-full bg-red-700 hover:bg-red-800 py-5 rounded-3xl text-2xl font-extrabold text-white"
           >
             تفريغ السلة
           </button>
@@ -344,7 +195,5 @@ export default function Cart({ open, setOpen }) {
       )}
 
     </div>
-
   )
-
 }

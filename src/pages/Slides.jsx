@@ -11,10 +11,11 @@ export default function Slides() {
 
   const [preview, setPreview] = useState('')
 
+  // ================= UPLOAD IMAGE =================
+
   const handleImageUpload = (e) => {
 
     const file = e.target.files[0]
-
     if (!file) return
 
     const reader = new FileReader()
@@ -22,12 +23,11 @@ export default function Slides() {
     reader.readAsDataURL(file)
 
     reader.onload = () => {
-
       setPreview(reader.result)
-
     }
-
   }
+
+  // ================= ADD SLIDE =================
 
   const handleAddSlide = () => {
 
@@ -38,7 +38,12 @@ export default function Slides() {
     })
 
     setPreview('')
+  }
 
+  // ================= DELETE SLIDE =================
+
+  const handleDelete = (id) => {
+    deleteSlide(id)
   }
 
   return (
@@ -49,6 +54,7 @@ export default function Slides() {
         إدارة السلايدر
       </h1>
 
+      {/* UPLOAD AREA */}
       <div className="bg-slate-900 p-6 rounded-3xl mb-10">
 
         <input
@@ -59,13 +65,11 @@ export default function Slides() {
         />
 
         {preview && (
-
           <img
             src={preview}
             alt=""
             className="w-full h-72 object-cover rounded-2xl mb-6"
           />
-
         )}
 
         <button
@@ -77,12 +81,13 @@ export default function Slides() {
 
       </div>
 
+      {/* SLIDES LIST */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-        {slides.map((slide, index) => (
+        {slides.map((slide) => (
 
           <div
-            key={index}
+            key={slide.id}
             className="bg-slate-900 rounded-3xl overflow-hidden"
           >
 
@@ -95,7 +100,7 @@ export default function Slides() {
             <div className="p-5">
 
               <button
-                onClick={() => deleteSlide(index)}
+                onClick={() => handleDelete(slide.id)}
                 className="bg-red-600 hover:bg-red-700 px-5 py-2 rounded-xl"
               >
                 حذف
@@ -112,5 +117,4 @@ export default function Slides() {
     </div>
 
   )
-
 }

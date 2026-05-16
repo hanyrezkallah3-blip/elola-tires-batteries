@@ -34,10 +34,10 @@ export default function Orders() {
 
         <div className="space-y-10">
 
-          {orders.map((order, index) => (
+          {orders.map((order) => (
 
             <div
-              key={index}
+              key={order.id}
               className="
                 bg-slate-900
                 rounded-3xl
@@ -61,16 +61,24 @@ export default function Orders() {
                 </h2>
 
                 <p className="text-2xl">
-
                   📞 {order.phone}
-
                 </p>
 
                 <p className="text-gray-400 mt-2">
-
                   {order.date}
-
                 </p>
+
+                {order.address && (
+                  <p className="text-gray-300 mt-2">
+                    📍 {order.address}
+                  </p>
+                )}
+
+                {order.total && (
+                  <p className="text-yellow-400 text-2xl mt-2 font-bold">
+                    الإجمالي: {order.total} جنيه
+                  </p>
+                )}
 
               </div>
 
@@ -130,7 +138,7 @@ export default function Orders() {
               <button
 
                 onClick={() =>
-                  deleteOrder(index)
+                  deleteOrder(order.id)
                 }
 
                 className="

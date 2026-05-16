@@ -1,143 +1,139 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+const generateId = () => Date.now() + Math.random()
+
 export const useWebsiteStore = create(
-
   persist(
-
     (set) => ({
 
-      // COMPANY
+      // ================= COMPANY =================
 
       companyName: 'شركة العلا للإطارات والبطاريات',
-
       logo: '',
 
-      setCompanyName: (name) =>
-        set({
-          companyName: name
-        }),
+      setCompanyName: (name) => set({ companyName: name }),
+      setLogo: (logo) => set({ logo }),
 
-      setLogo: (logo) =>
-        set({
-          logo
-        }),
-
-      // SLIDES
+      // ================= SLIDES =================
 
       slides: [],
 
       addSlide: (slide) =>
         set((state) => ({
-          slides: [...state.slides, slide]
+          slides: [
+            ...state.slides,
+            { id: generateId(), ...slide }
+          ]
         })),
 
-      deleteSlide: (index) =>
+      deleteSlide: (id) =>
         set((state) => ({
-          slides: state.slides.filter(
-            (_, i) => i !== index
-          )
+          slides: state.slides.filter(s => s.id !== id)
         })),
 
-      // PRODUCTS
+      // ================= PRODUCTS =================
 
       products: [],
 
       addProduct: (product) =>
         set((state) => ({
-          products: [...state.products, product]
+          products: [
+            ...state.products,
+            { id: generateId(), ...product }
+          ]
         })),
 
-      deleteProduct: (index) =>
+      deleteProduct: (id) =>
         set((state) => ({
-          products: state.products.filter(
-            (_, i) => i !== index
-          )
+          products: state.products.filter(p => p.id !== id)
         })),
 
-      // OFFERS
+      // ================= OFFERS =================
 
       offers: [],
 
       addOffer: (offer) =>
         set((state) => ({
-          offers: [...state.offers, offer]
+          offers: [
+            ...state.offers,
+            { id: generateId(), ...offer }
+          ]
         })),
 
-      deleteOffer: (index) =>
+      deleteOffer: (id) =>
         set((state) => ({
-          offers: state.offers.filter(
-            (_, i) => i !== index
-          )
+          offers: state.offers.filter(o => o.id !== id)
         })),
 
-      // SERVICES
+      // ================= SERVICES =================
 
       services: [],
 
       addService: (service) =>
         set((state) => ({
-          services: [...state.services, service]
+          services: [
+            ...state.services,
+            { id: generateId(), ...service }
+          ]
         })),
 
-      deleteService: (index) =>
+      deleteService: (id) =>
         set((state) => ({
-          services: state.services.filter(
-            (_, i) => i !== index
-          )
+          services: state.services.filter(s => s.id !== id)
         })),
 
-      // VIDEOS
+      // ================= VIDEOS =================
 
       videos: [],
 
       addVideo: (video) =>
         set((state) => ({
-          videos: [...state.videos, video]
+          videos: [
+            ...state.videos,
+            { id: generateId(), ...video }
+          ]
         })),
 
-      deleteVideo: (index) =>
+      deleteVideo: (id) =>
         set((state) => ({
-          videos: state.videos.filter(
-            (_, i) => i !== index
-          )
+          videos: state.videos.filter(v => v.id !== id)
         })),
 
-      // CART
+      // ================= CART =================
 
       cart: [],
 
       addToCart: (product) =>
         set((state) => ({
-          cart: [...state.cart, product]
+          cart: [
+            ...state.cart,
+            { id: generateId(), ...product }
+          ]
         })),
 
-      removeFromCart: (index) =>
+      removeFromCart: (id) =>
         set((state) => ({
-          cart: state.cart.filter(
-            (_, i) => i !== index
-          )
+          cart: state.cart.filter(item => item.id !== id)
         })),
 
-      clearCart: () =>
-        set({
-          cart: []
-        }),
+      clearCart: () => set({ cart: [] }),
 
-      // ORDERS
+      // ================= ORDERS =================
 
       orders: [],
 
       addOrder: (order) =>
         set((state) => ({
-          orders: [...state.orders, order]
+          orders: [
+            ...state.orders,
+            { id: generateId(), ...order }
+          ]
         })),
 
-      deleteOrder: (index) =>
+      deleteOrder: (id) =>
         set((state) => ({
-          orders: state.orders.filter(
-            (_, i) => i !== index
-          )
+          orders: state.orders.filter(o => o.id !== id)
         }))
 
     }),
@@ -145,7 +141,5 @@ export const useWebsiteStore = create(
     {
       name: 'elola-storage'
     }
-
   )
-
 )

@@ -11,12 +11,27 @@ import Services from './pages/Services'
 import Videos from './pages/Videos'
 import Orders from './pages/Orders'
 import Company from './pages/Company'
+import Login from './pages/Login'
+
+// 🔓 تعطيل الحماية مؤقتاً
+function ProtectedRoute({ children }) {
+
+  return children
+
+}
 
 export default function App() {
 
   return (
 
     <Routes>
+
+      {/* LOGIN */}
+
+      <Route
+        path="/login"
+        element={<Login />}
+      />
 
       {/* WEBSITE */}
 
@@ -30,72 +45,88 @@ export default function App() {
       <Route
         path="/"
         element={
-          <DashboardLayout>
-            <Dashboard />
-          </DashboardLayout>
+          <ProtectedRoute>
+            <DashboardLayout>
+              <Dashboard />
+            </DashboardLayout>
+          </ProtectedRoute>
         }
       />
 
       <Route
         path="/products"
         element={
-          <DashboardLayout>
-            <Products />
-          </DashboardLayout>
+          <ProtectedRoute>
+            <DashboardLayout>
+              <Products />
+            </DashboardLayout>
+          </ProtectedRoute>
         }
       />
 
       <Route
         path="/slides"
         element={
-          <DashboardLayout>
-            <Slides />
-          </DashboardLayout>
+          <ProtectedRoute>
+            <DashboardLayout>
+              <Slides />
+            </DashboardLayout>
+          </ProtectedRoute>
         }
       />
 
       <Route
         path="/offers"
         element={
-          <DashboardLayout>
-            <Offers />
-          </DashboardLayout>
+          <ProtectedRoute>
+            <DashboardLayout>
+              <Offers />
+            </DashboardLayout>
+          </ProtectedRoute>
         }
       />
 
       <Route
         path="/services"
         element={
-          <DashboardLayout>
-            <Services />
-          </DashboardLayout>
+          <ProtectedRoute>
+            <DashboardLayout>
+              <Services />
+            </DashboardLayout>
+          </ProtectedRoute>
         }
       />
 
       <Route
         path="/videos"
         element={
-          <DashboardLayout>
-            <Videos />
-          </DashboardLayout>
+          <ProtectedRoute>
+            <DashboardLayout>
+              <Videos />
+            </DashboardLayout>
+          </ProtectedRoute>
         }
       />
 
       <Route
         path="/orders"
         element={
-          <DashboardLayout>
-            <Orders />
-          </DashboardLayout>
+          <ProtectedRoute>
+            <DashboardLayout>
+              <Orders />
+            </DashboardLayout>
+          </ProtectedRoute>
         }
       />
 
       <Route
         path="/company"
         element={
-          <DashboardLayout>
-            <Company />
-          </DashboardLayout>
+          <ProtectedRoute>
+            <DashboardLayout>
+              <Company />
+            </DashboardLayout>
+          </ProtectedRoute>
         }
       />
 

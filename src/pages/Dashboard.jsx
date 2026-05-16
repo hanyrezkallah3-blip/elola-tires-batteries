@@ -14,36 +14,42 @@ export default function Dashboard() {
   const cards = [
 
     {
+      id: 'products',
       title: 'عدد المنتجات',
       value: products.length,
       color: 'bg-blue-700'
     },
 
     {
+      id: 'offers',
       title: 'عدد العروض',
       value: offers.length,
       color: 'bg-red-600'
     },
 
     {
+      id: 'videos',
       title: 'عدد الفيديوهات',
       value: videos.length,
       color: 'bg-purple-700'
     },
 
     {
+      id: 'services',
       title: 'عدد الخدمات',
       value: services.length,
       color: 'bg-green-700'
     },
 
     {
+      id: 'slides',
       title: 'عدد صور السلايدر',
       value: slides.length,
       color: 'bg-yellow-500 text-black'
     },
 
     {
+      id: 'orders',
       title: 'عدد الطلبات',
       value: orders.length,
       color: 'bg-orange-500 text-black'
@@ -55,30 +61,16 @@ export default function Dashboard() {
 
     <div className="p-10 bg-black min-h-screen text-white">
 
-      <h1
-        className="
-          text-5xl
-          font-extrabold
-          mb-12
-          text-yellow-400
-        "
-      >
+      <h1 className="text-5xl font-extrabold mb-12 text-yellow-400">
         لوحة التحكم الرئيسية
       </h1>
 
-      <div
-        className="
-          grid
-          grid-cols-1
-          md:grid-cols-3
-          gap-8
-        "
-      >
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
 
-        {cards.map((card, index) => (
+        {cards.map((card) => (
 
           <div
-            key={index}
+            key={card.id}
             className={`
               ${card.color}
               rounded-3xl
@@ -88,22 +80,11 @@ export default function Dashboard() {
             `}
           >
 
-            <h2
-              className="
-                text-3xl
-                font-bold
-                mb-6
-              "
-            >
+            <h2 className="text-3xl font-bold mb-6">
               {card.title}
             </h2>
 
-            <p
-              className="
-                text-6xl
-                font-extrabold
-              "
-            >
+            <p className="text-6xl font-extrabold">
               {card.value}
             </p>
 
