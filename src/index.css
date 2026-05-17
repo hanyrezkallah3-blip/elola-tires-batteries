@@ -1,14 +1,224 @@
 @import "tailwindcss";
-
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  }
+
+html,
+body,
+#root {
+width: 100%;
+min-height: 100%;
+overflow-x: hidden;
 }
 
 body {
+background: #000;
+color: white;
+direction: rtl;
+font-family: Arial, Helvetica, sans-serif;
+}
 
-  font-family: Arial, Helvetica, sans-serif;
-  background: #f3f4f6;
+/* ================= GLOBAL RESET ================= */
+
+* {
+
+  margin: 0;
+
+  padding: 0;
+
+  box-sizing: border-box;
+
+}
+
+/* ================= ROOT ================= */
+
+html {
+
+scroll-behavior: smooth;
+
+}
+
+html,
+body,
+#root {
+
+width: 100%;
+
+min-height: 100%;
+
+overflow-x: hidden;
+
+}
+
+/* ================= BODY ================= */
+
+body {
+
+font-family:
+Arial,
+Helvetica,
+sans-serif;
+
+background: #000;
+
+color: white;
+
+direction: rtl;
+
+text-rendering: optimizeLegibility;
+
+-webkit-font-smoothing: antialiased;
+
+-moz-osx-font-smoothing: grayscale;
+
+}
+
+/* ================= IMAGES ================= */
+
+img,
+video {
+
+max-width: 100%;
+
+display: block;
+
+}
+
+/* ================= BUTTONS ================= */
+
+button {
+
+cursor: pointer;
+
+transition:
+all 0.3s ease;
+
+}
+
+button:disabled {
+
+cursor: not-allowed;
+
+}
+
+/* ================= INPUTS ================= */
+
+input,
+textarea,
+select {
+
+outline: none;
+
+border: none;
+
+}
+
+/* ================= SCROLLBAR ================= */
+
+::-webkit-scrollbar {
+
+width: 12px;
+
+}
+
+::-webkit-scrollbar-track {
+
+background: #020617;
+
+}
+
+::-webkit-scrollbar-thumb {
+
+background: #eab308;
+
+border-radius: 999px;
+
+}
+
+::-webkit-scrollbar-thumb:hover {
+
+background: #facc15;
+
+}
+
+/* ================= LINKS ================= */
+
+a {
+
+text-decoration: none;
+
+}
+
+/* ================= ANIMATIONS ================= */
+
+.fade-in {
+
+animation:
+fadeIn 0.5s ease-in-out;
+
+}
+
+@keyframes fadeIn {
+
+from {
+
+
+opacity: 0;
+
+transform: translateY(15px);
+
+
+}
+
+to {
+
+
+opacity: 1;
+
+transform: translateY(0);
+
+
+}
+
+}
+
+/* ================= CUSTOM UTILITIES ================= */
+
+.glass-effect {
+
+background:
+rgba(255,255,255,0.05);
+
+backdrop-filter:
+blur(12px);
+
+}
+
+.shadow-gold {
+
+box-shadow:
+0 0 25px rgba(234,179,8,0.5);
+
+}
+
+.shadow-blue {
+
+box-shadow:
+0 0 25px rgba(59,130,246,0.4);
+
+}
+
+/* ================= MOBILE ================= */
+
+@media (max-width: 768px) {
+
+body {
+
+
+overflow-x: hidden;
+
+}
 
 }

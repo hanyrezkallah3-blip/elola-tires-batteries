@@ -1,4 +1,8 @@
-import { Routes, Route } from 'react-router-dom'
+import {
+  Routes,
+  Route,
+  Navigate
+} from 'react-router-dom'
 
 import DashboardLayout from './layout/DashboardLayout'
 
@@ -12,11 +16,41 @@ import Videos from './pages/Videos'
 import Orders from './pages/Orders'
 import Company from './pages/Company'
 import Login from './pages/Login'
+import Admin from './pages/Admin'
 
-// 🔓 تعطيل الحماية مؤقتاً
+// ================= PROTECTED ROUTE =================
+
 function ProtectedRoute({ children }) {
 
-  return children
+  // 🔓 الحماية معطلة مؤقتاً
+
+  const isLoggedIn = true
+
+  return isLoggedIn
+
+    ? children
+
+    : <Navigate to="/login" replace />
+
+}
+
+// ================= DASHBOARD WRAPPER =================
+
+function DashboardPage({ children }) {
+
+  return (
+
+    <ProtectedRoute>
+
+      <DashboardLayout>
+
+        {children}
+
+      </DashboardLayout>
+
+    </ProtectedRoute>
+
+  )
 
 }
 
@@ -24,113 +58,187 @@ export default function App() {
 
   return (
 
-    <Routes>
+    <div className="bg-black min-h-screen">
 
-      {/* LOGIN */}
+      <Routes>
 
-      <Route
-        path="/login"
-        element={<Login />}
-      />
+        {/* ================= LOGIN ================= */}
 
-      {/* WEBSITE */}
+        <Route
+          path="/login"
+          element={<Login />}
+        />
 
-      <Route
-        path="/home"
-        element={<Home />}
-      />
+        {/* ================= WEBSITE ================= */}
 
-      {/* DASHBOARD */}
+        <Route
+          path="/home"
+          element={<Home />}
+        />
 
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout>
+        {/* ================= ADMIN ================= */}
+
+        <Route
+          path="/"
+          element={
+            <DashboardPage>
+              <Admin />
+            </DashboardPage>
+          }
+        />
+
+        <Route
+          path="/admin"
+          element={
+            <DashboardPage>
+              <Admin />
+            </DashboardPage>
+          }
+        />
+
+        {/* ================= DASHBOARD ================= */}
+
+        <Route
+          path="/dashboard"
+          element={
+            <DashboardPage>
               <Dashboard />
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
+            </DashboardPage>
+          }
+        />
 
-      <Route
-        path="/products"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout>
+        {/* ================= PRODUCTS ================= */}
+
+        <Route
+          path="/products"
+          element={
+            <DashboardPage>
               <Products />
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
+            </DashboardPage>
+          }
+        />
 
-      <Route
-        path="/slides"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout>
+        {/* ================= SLIDES ================= */}
+
+        <Route
+          path="/slides"
+          element={
+            <DashboardPage>
               <Slides />
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
+            </DashboardPage>
+          }
+        />
 
-      <Route
-        path="/offers"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout>
+        {/* ================= OFFERS ================= */}
+
+        <Route
+          path="/offers"
+          element={
+            <DashboardPage>
               <Offers />
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
+            </DashboardPage>
+          }
+        />
 
-      <Route
-        path="/services"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout>
+        {/* ================= SERVICES ================= */}
+
+        <Route
+          path="/services"
+          element={
+            <DashboardPage>
               <Services />
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
+            </DashboardPage>
+          }
+        />
 
-      <Route
-        path="/videos"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout>
+        {/* ================= VIDEOS ================= */}
+
+        <Route
+          path="/videos"
+          element={
+            <DashboardPage>
               <Videos />
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
+            </DashboardPage>
+          }
+        />
 
-      <Route
-        path="/orders"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout>
+        {/* ================= ORDERS ================= */}
+
+        <Route
+          path="/orders"
+          element={
+            <DashboardPage>
               <Orders />
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
+            </DashboardPage>
+          }
+        />
 
-      <Route
-        path="/company"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout>
+        {/* ================= COMPANY ================= */}
+
+        <Route
+          path="/company"
+          element={
+            <DashboardPage>
               <Company />
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
+            </DashboardPage>
+          }
+        />
 
-    </Routes>
+        {/* ================= 404 ================= */}
+
+        <Route
+          path="*"
+          element={
+
+            <div
+              className="
+                min-h-screen
+                flex
+                flex-col
+                items-center
+                justify-center
+                text-white
+                bg-black
+                p-10
+                text-center
+              "
+            >
+
+              <div className="text-9xl mb-6">
+                ⚠
+              </div>
+
+              <h1
+                className="
+                  text-6xl
+                  font-black
+                  text-yellow-400
+                  mb-6
+                "
+              >
+                الصفحة غير موجودة
+              </h1>
+
+              <p
+                className="
+                  text-2xl
+                  text-gray-400
+                  mb-10
+                "
+              >
+                الرابط الذي تحاول الوصول إليه غير متوفر
+              </p>
+
+              <Navigate to="/" replace />
+
+            </div>
+
+          }
+        />
+
+      </Routes>
+
+    </div>
 
   )
 
