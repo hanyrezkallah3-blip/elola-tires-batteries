@@ -9,21 +9,13 @@ export default function Footer() {
   const {
 
     companyName,
-
     companyPhone,
-
     companyWhatsapp,
-
     companyAddress,
-
     companyEmail,
-
     companyFacebook,
-
     companyInstagram,
-
     companyYoutube,
-
     logo
 
   } = useWebsiteStore()
@@ -50,7 +42,8 @@ export default function Footer() {
         className="
           grid
           grid-cols-1
-          md:grid-cols-4
+          md:grid-cols-2
+          lg:grid-cols-4
           gap-14
           mb-16
         "
@@ -62,7 +55,7 @@ export default function Footer() {
 
           <div className="flex items-center gap-5 mb-6">
 
-            {logo && (
+            {logo ? (
 
               <img
                 src={logo}
@@ -78,16 +71,36 @@ export default function Footer() {
                 "
               />
 
+            ) : (
+
+              <div
+                className="
+                  w-20
+                  h-20
+                  rounded-full
+                  bg-yellow-400
+                  flex
+                  items-center
+                  justify-center
+                  text-black
+                  text-3xl
+                  font-black
+                "
+              >
+                🚗
+              </div>
+
             )}
 
             <h2
               className="
-                text-4xl
+                text-3xl
+                lg:text-4xl
                 font-extrabold
                 text-yellow-400
               "
             >
-              {companyName}
+              {companyName || 'شركة العلا'}
             </h2>
 
           </div>
@@ -95,7 +108,7 @@ export default function Footer() {
           <p
             className="
               text-gray-300
-              text-xl
+              text-lg
               leading-loose
             "
           >
@@ -131,7 +144,7 @@ export default function Footer() {
                 transition-all
               "
             >
-              الرئيسية
+              🏠 الرئيسية
             </Link>
 
             <a
@@ -142,7 +155,7 @@ export default function Footer() {
                 transition-all
               "
             >
-              المنتجات
+              📦 المنتجات
             </a>
 
             <a
@@ -153,7 +166,7 @@ export default function Footer() {
                 transition-all
               "
             >
-              العروض
+              🔥 العروض
             </a>
 
             <a
@@ -164,7 +177,7 @@ export default function Footer() {
                 transition-all
               "
             >
-              الخدمات
+              🛠 الخدمات
             </a>
 
             <a
@@ -175,7 +188,7 @@ export default function Footer() {
                 transition-all
               "
             >
-              الفيديوهات
+              🎥 الفيديوهات
             </a>
 
           </div>
@@ -197,24 +210,59 @@ export default function Footer() {
             معلومات التواصل
           </h2>
 
-          <div className="space-y-5 text-xl">
+          <div className="space-y-5 text-lg">
 
-            <div
+            {/* PHONE */}
+
+            <a
+              href={`tel:${companyPhone}`}
               className="
                 bg-slate-900
                 p-4
                 rounded-2xl
                 border
                 border-slate-700
+                flex
+                items-center
+                gap-3
+                hover:border-yellow-400
+                transition-all
               "
             >
               📞
 
-              {' '}
+              <span>
+                {companyPhone || '01000000000'}
+              </span>
+            </a>
 
-              {companyPhone ||
-                '01000000000'}
-            </div>
+            {/* WHATSAPP */}
+
+            <a
+              href={`https://wa.me/${companyWhatsapp || '201000000000'}`}
+              target="_blank"
+              rel="noreferrer"
+              className="
+                bg-slate-900
+                p-4
+                rounded-2xl
+                border
+                border-slate-700
+                flex
+                items-center
+                gap-3
+                hover:border-green-400
+                transition-all
+              "
+            >
+              💬
+
+              <span>
+                {companyWhatsapp || '01000000000'}
+              </span>
+            </a>
+
+            {/* ADDRESS */}
 
             <div
               className="
@@ -223,33 +271,44 @@ export default function Footer() {
                 rounded-2xl
                 border
                 border-slate-700
+                flex
+                items-start
+                gap-3
               "
             >
               📍
 
-              {' '}
+              <span>
+                {companyAddress || 'الجيزة - مصر'}
+              </span>
 
-              {companyAddress ||
-                'الجيزة - مصر'}
             </div>
 
-            <div
+            {/* EMAIL */}
+
+            <a
+              href={`mailto:${companyEmail}`}
               className="
                 bg-slate-900
                 p-4
                 rounded-2xl
                 border
                 border-slate-700
+                flex
+                items-center
+                gap-3
                 break-all
+                hover:border-blue-400
+                transition-all
               "
             >
               ✉️
 
-              {' '}
+              <span>
+                {companyEmail || 'info@elola.com'}
+              </span>
 
-              {companyEmail ||
-                'info@elola.com'}
-            </div>
+            </a>
 
           </div>
 
@@ -272,29 +331,30 @@ export default function Footer() {
 
           <div className="space-y-5">
 
-            {companyWhatsapp && (
+            {/* WHATSAPP */}
 
-              <a
-                href={`https://wa.me/${companyWhatsapp}`}
-                target="_blank"
-                rel="noreferrer"
-                className="
-                  flex
-                  items-center
-                  justify-center
-                  bg-green-600
-                  hover:bg-green-700
-                  py-4
-                  rounded-2xl
-                  text-xl
-                  font-bold
-                  transition-all
-                "
-              >
-                واتساب
-              </a>
+            <a
+              href={`https://wa.me/${companyWhatsapp || '201000000000'}`}
+              target="_blank"
+              rel="noreferrer"
+              className="
+                flex
+                items-center
+                justify-center
+                bg-green-600
+                hover:bg-green-700
+                py-4
+                rounded-2xl
+                text-xl
+                font-bold
+                transition-all
+                hover:scale-105
+              "
+            >
+              💬 واتساب
+            </a>
 
-            )}
+            {/* FACEBOOK */}
 
             {companyFacebook && (
 
@@ -313,12 +373,15 @@ export default function Footer() {
                   text-xl
                   font-bold
                   transition-all
+                  hover:scale-105
                 "
               >
-                فيسبوك
+                🔵 فيسبوك
               </a>
 
             )}
+
+            {/* INSTAGRAM */}
 
             {companyInstagram && (
 
@@ -337,12 +400,15 @@ export default function Footer() {
                   text-xl
                   font-bold
                   transition-all
+                  hover:scale-105
                 "
               >
-                انستجرام
+                📸 انستجرام
               </a>
 
             )}
+
+            {/* YOUTUBE */}
 
             {companyYoutube && (
 
@@ -361,9 +427,10 @@ export default function Footer() {
                   text-xl
                   font-bold
                   transition-all
+                  hover:scale-105
                 "
               >
-                يوتيوب
+                ▶ يوتيوب
               </a>
 
             )}
@@ -395,7 +462,7 @@ export default function Footer() {
 
           {' '}
 
-          {companyName}
+          {companyName || 'شركة العلا'}
 
           {' '}
 

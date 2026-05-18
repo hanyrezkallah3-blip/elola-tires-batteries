@@ -1,7 +1,5 @@
 import { create } from 'zustand'
-
-import { persist }
-  from 'zustand/middleware'
+import { persist } from 'zustand/middleware'
 
 const generateId = () =>
   Date.now() + Math.random()
@@ -11,6 +9,15 @@ export const useWebsiteStore = create(
   persist(
 
     (set, get) => ({
+
+      // ================= HYDRATION =================
+
+      hydrated: false,
+
+      setHydrated: (value) =>
+        set({
+          hydrated: value
+        }),
 
       // ================= COMPANY =================
 
@@ -25,79 +32,359 @@ export const useWebsiteStore = create(
 
       companyAddress: '',
 
+      companyEmail: '',
+
       companyFacebook: '',
 
       companyInstagram: '',
 
       companyYoutube: '',
 
-      companyEmail: '',
+      // ================= COMPANY SETTERS =================
 
       setCompanyName: (name) =>
         set({
-          companyName: name
+          companyName: name || ''
         }),
 
       setLogo: (logo) =>
         set({
-          logo
+          logo: logo || ''
         }),
 
       setCompanyPhone: (phone) =>
         set({
-          companyPhone: phone
+          companyPhone: phone || ''
         }),
 
-      setCompanyWhatsapp: (
-        whatsapp
-      ) =>
+      setCompanyWhatsapp: (whatsapp) =>
         set({
-          companyWhatsapp:
-            whatsapp
+          companyWhatsapp: whatsapp || ''
         }),
 
-      setCompanyAddress: (
-        address
-      ) =>
+      setCompanyAddress: (address) =>
         set({
-          companyAddress:
-            address
+          companyAddress: address || ''
         }),
 
-      setCompanyFacebook: (
-        facebook
-      ) =>
+      setCompanyEmail: (email) =>
         set({
-          companyFacebook:
-            facebook
+          companyEmail: email || ''
         }),
 
-      setCompanyInstagram: (
-        instagram
-      ) =>
+      setCompanyFacebook: (facebook) =>
         set({
-          companyInstagram:
-            instagram
+          companyFacebook: facebook || ''
         }),
 
-      setCompanyYoutube: (
-        youtube
-      ) =>
+      setCompanyInstagram: (instagram) =>
         set({
-          companyYoutube:
-            youtube
+          companyInstagram: instagram || ''
         }),
 
-      setCompanyEmail: (
-        email
-      ) =>
+      setCompanyYoutube: (youtube) =>
         set({
-          companyEmail: email
+          companyYoutube: youtube || ''
         }),
 
-      // ================= SLIDES =================
+      // ================= USERS =================
+
+      users: [
+
+        {
+          id: 'owner',
+
+          username: 'owner',
+
+          password: 'owner123',
+
+          role: 'owner',
+
+          warehouseId: 'all',
+
+          permissions: ['all']
+        }
+
+      ],
+
+      currentUser: null,
+
+      login: (username, password) => {
+
+        const user = get().users.find(
+
+          (u) =>
+
+            u.username === username &&
+
+            u.password === password
+
+        )
+
+        if (!user) return false
+
+        set({
+          currentUser: user
+        })
+
+        return true
+      },
+
+      logout: () =>
+        set({
+          currentUser: null
+        }),
+
+      getCurrentWarehouseId: () => {
+
+        const user =
+          get().currentUser
+
+        if (!user) return null
+
+        if (user.role === 'owner') {
+
+          return 'all'
+
+        }
+
+        return user.warehouseId
+      },
+
+      // ================= STOCK HISTORY =================
+
+      stockHistory: [],
+
+      addStockHistory: (history) =>
+
+        set((state) => ({
+
+          stockHistory: [
+
+            ...state.stockHistory,
+
+            {
+
+              id: generateId(),
+
+              createdAt:
+                new Date().toISOString(),
+
+              warehouseId:
+                get().getCurrentWarehouseId(),
+
+              ...history
+
+            }
+
+          ]
+
+        })),
+
+      // ================= PRODUCTS =================
+
+      products: [],
+
+      addProduct: (product) => {
+
+        const newProduct = {
+
+          id: generateId(),
+
+          name: product.name || '',
+
+          price: product.price || '',
+
+          image: product.image || '',
+
+          stock:
+            Number(product.stock) || 0,
+
+          hidden:
+            product.hidden || false,
+
+          sold:
+            Number(product.sold) || 0,
+
+          warehouseId:
+            get().getCurrentWarehouseId(),
+
+          createdAt:
+            new Date().toISOString()
+
+        }
+
+        get().addStockHistory({
+
+          type: 'ADD_PRODUCT',
+
+          action: 'إضافة منتج',
+
+          productName:
+            newProduct.name,
+
+          quantity:
+            newProduct.stock,
+
+          fromWarehouse: '-',
+
+          toWarehouse:
+            newProduct.warehouseId
+
+        })
+
+        set((state) => ({
+
+          products: [
+
+            ...state.products,
+
+            newProduct
+
+          ]
+
+        }))
+      },
+
+      updateProductStock: (
+        productId,
+        change
+      ) => {
+
+        const state = get()
+
+        const product =
+          state.products.find(
+            (p) => p.id === productId
+          )
+
+        if (!product) return
+
+        get().addStockHistory({
+
+          type: 'UPDATE_STOCK',
+
+          action: 'تعديل مخزون',
+
+          productName:
+            product.name,
+
+          quantity: change,
+
+          fromWarehouse:
+            product.warehouseId,
+
+          toWarehouse:
+            product.warehouseId
+
+        })
+
+        set((state) => ({
+
+          products:
+            state.products.map((p) =>
+
+              p.id === productId
+
+                ? {
+
+                    ...p,
+
+                    stock: Math.max(
+
+                      0,
+
+                      (p.stock || 0) + change
+
+                    )
+
+                  }
+
+                : p
+
+            )
+
+        }))
+      },
+
+      // ================= CART =================
+
+      cart: [],
+
+      addToCart: (product) =>
+
+        set((state) => ({
+
+          cart: [
+
+            ...state.cart,
+
+            {
+              ...product,
+              cartId: generateId()
+            }
+
+          ]
+
+        })),
+
+      removeFromCart: (cartId) =>
+
+        set((state) => ({
+
+          cart:
+            state.cart.filter(
+
+              (item) =>
+                item.cartId !== cartId
+
+            )
+
+        })),
+
+      clearCart: () =>
+        set({
+          cart: []
+        }),
+
+      // ================= ORDERS =================
+
+      orders: [],
+
+      addOrder: (order) =>
+
+        set((state) => ({
+
+          orders: [
+
+            ...state.orders,
+
+            {
+              id: generateId(),
+
+              createdAt:
+                new Date().toISOString(),
+
+              status: 'جديد',
+
+              ...order
+            }
+
+          ]
+
+        })),
+
+      // ================= WEBSITE CONTENT =================
 
       slides: [],
+
+      offers: [],
+
+      services: [],
+
+      videos: [],
+
+      // ================= SLIDES =================
 
       addSlide: (slide) =>
 
@@ -108,12 +395,14 @@ export const useWebsiteStore = create(
             ...state.slides,
 
             {
+
               id: generateId(),
 
-              createdAt:
-                new Date().toISOString(),
+              image: slide.image || '',
 
-              ...slide
+              createdAt:
+                new Date().toISOString()
+
             }
 
           ]
@@ -126,232 +415,17 @@ export const useWebsiteStore = create(
 
           slides:
             state.slides.filter(
-
-              (slide) =>
-                slide.id !== id
-
+              (slide) => slide.id !== id
             )
 
         })),
 
-      // ================= PRODUCTS =================
-
-      products: [],
-
-      addProduct: (product) =>
-
-        set((state) => ({
-
-          products: [
-
-            ...state.products,
-
-            {
-
-              id: generateId(),
-
-              createdAt:
-                new Date().toISOString(),
-
-              updatedAt:
-                new Date().toISOString(),
-
-              stock:
-                Number(
-                  product.stock
-                ) || 0,
-
-              sold: 0,
-
-              hidden: false,
-
-              featured: false,
-
-              category:
-                product.category ||
-                'عام',
-
-              ...product
-
-            }
-
-          ]
-
-        })),
-
-      // ================= DELETE PRODUCT =================
-
-      deleteProduct: (id) =>
-
-        set((state) => ({
-
-          products:
-            state.products.filter(
-
-              (product) =>
-                product.id !== id
-
-            )
-
-        })),
-
-      // ================= UPDATE PRODUCT STOCK =================
-
-      updateProductStock: (
-        id,
-        quantity
-      ) =>
-
-        set((state) => ({
-
-          products:
-            state.products.map(
-
-              (product) =>
-
-                product.id === id
-
-                  ? {
-
-                      ...product,
-
-                      stock:
-                        Math.max(
-                          0,
-                          Number(
-                            quantity
-                          )
-                        ),
-
-                      updatedAt:
-                        new Date().toISOString()
-
-                    }
-
-                  : product
-
-            )
-
-        })),
-
-      // ================= TOGGLE PRODUCT =================
-
-      toggleProductVisibility: (
-        id
-      ) =>
-
-        set((state) => ({
-
-          products:
-            state.products.map(
-
-              (product) =>
-
-                product.id === id
-
-                  ? {
-
-                      ...product,
-
-                      hidden:
-                        !product.hidden
-
-                    }
-
-                  : product
-
-            )
-
-        })),
-
-      // ================= FEATURE PRODUCT =================
-
-      toggleFeaturedProduct: (
-        id
-      ) =>
-
-        set((state) => ({
-
-          products:
-            state.products.map(
-
-              (product) =>
-
-                product.id === id
-
-                  ? {
-
-                      ...product,
-
-                      featured:
-                        !product.featured
-
-                    }
-
-                  : product
-
-            )
-
-        })),
-
-      // ================= INCREASE SOLD =================
-
-      increaseSold: (
-        id,
-        quantity = 1
-      ) =>
-
-        set((state) => ({
-
-          products:
-            state.products.map(
-
-              (product) => {
-
-                if (
-                  product.id === id
-                ) {
-
-                  const currentStock =
-                    Number(
-                      product.stock || 0
-                    )
-
-                  const currentSold =
-                    Number(
-                      product.sold || 0
-                    )
-
-                  return {
-
-                    ...product,
-
-                    sold:
-                      currentSold +
-                      quantity,
-
-                    stock:
-                      Math.max(
-                        0,
-                        currentStock -
-                          quantity
-                      )
-
-                  }
-
-                }
-
-                return product
-
-              }
-
-            )
-
-        })),
+      setSlides: (slides) =>
+        set({
+          slides: slides || []
+        }),
 
       // ================= OFFERS =================
-
-      offers: [],
 
       addOffer: (offer) =>
 
@@ -362,12 +436,14 @@ export const useWebsiteStore = create(
             ...state.offers,
 
             {
+
               id: generateId(),
 
-              createdAt:
-                new Date().toISOString(),
+              ...offer,
 
-              ...offer
+              createdAt:
+                new Date().toISOString()
+
             }
 
           ]
@@ -380,17 +456,17 @@ export const useWebsiteStore = create(
 
           offers:
             state.offers.filter(
-
-              (offer) =>
-                offer.id !== id
-
+              (offer) => offer.id !== id
             )
 
         })),
 
-      // ================= SERVICES =================
+      setOffers: (offers) =>
+        set({
+          offers: offers || []
+        }),
 
-      services: [],
+      // ================= SERVICES =================
 
       addService: (service) =>
 
@@ -401,12 +477,14 @@ export const useWebsiteStore = create(
             ...state.services,
 
             {
+
               id: generateId(),
 
-              createdAt:
-                new Date().toISOString(),
+              ...service,
 
-              ...service
+              createdAt:
+                new Date().toISOString()
+
             }
 
           ]
@@ -419,17 +497,17 @@ export const useWebsiteStore = create(
 
           services:
             state.services.filter(
-
-              (service) =>
-                service.id !== id
-
+              (service) => service.id !== id
             )
 
         })),
 
-      // ================= VIDEOS =================
+      setServices: (services) =>
+        set({
+          services: services || []
+        }),
 
-      videos: [],
+      // ================= VIDEOS =================
 
       addVideo: (video) =>
 
@@ -440,12 +518,14 @@ export const useWebsiteStore = create(
             ...state.videos,
 
             {
+
               id: generateId(),
 
-              createdAt:
-                new Date().toISOString(),
+              ...video,
 
-              ...video
+              createdAt:
+                new Date().toISOString()
+
             }
 
           ]
@@ -458,228 +538,133 @@ export const useWebsiteStore = create(
 
           videos:
             state.videos.filter(
-
-              (video) =>
-                video.id !== id
-
+              (video) => video.id !== id
             )
 
         })),
 
-      // ================= CART =================
-
-      cart: [],
-
-      addToCart: (product) => {
-
-        const currentProducts =
-          get().products
-
-        const foundProduct =
-          currentProducts.find(
-
-            (p) =>
-              p.id === product.id
-
-          )
-
-        if (!foundProduct) {
-
-          alert(
-            'المنتج غير موجود'
-          )
-
-          return
-
-        }
-
-        if (
-          foundProduct.hidden
-        ) {
-
-          alert(
-            'المنتج غير متاح حالياً'
-          )
-
-          return
-
-        }
-
-        if (
-          Number(
-            foundProduct.stock || 0
-          ) <= 0
-        ) {
-
-          alert(
-            'المنتج غير متوفر حالياً'
-          )
-
-          return
-
-        }
-
-        const cartItems =
-          get().cart.filter(
-
-            (item) =>
-              item.id === product.id
-
-          )
-
-        if (
-
-          cartItems.length >=
-
-          Number(
-            foundProduct.stock
-          )
-
-        ) {
-
-          alert(
-            'لا توجد كمية كافية بالمخزن'
-          )
-
-          return
-
-        }
-
-        set((state) => ({
-
-          cart: [
-
-            ...state.cart,
-
-            {
-
-              cartId:
-                generateId(),
-
-              quantity: 1,
-
-              ...product
-
-            }
-
-          ]
-
-        }))
-
-      },
-
-      removeFromCart: (
-        cartId
-      ) =>
-
-        set((state) => ({
-
-          cart:
-            state.cart.filter(
-
-              (item) =>
-                item.cartId !==
-                cartId
-
-            )
-
-        })),
-
-      clearCart: () =>
-
+      setVideos: (videos) =>
         set({
-          cart: []
+          videos: videos || []
         }),
 
-      // ================= ORDERS =================
+      // ================= TRANSFERS =================
 
-      orders: [],
+      transfers: [],
 
-      addOrder: (order) => {
+      transferProductQuantity: ({
+        productId,
+        fromWarehouseId,
+        toWarehouseId,
+        quantity
+      }) => {
 
-        const currentProducts =
-          get().products
+        const state = get()
 
-        let updatedProducts =
-          [...currentProducts]
+        const product =
+          state.products.find(
 
-        let validItems = []
+            (p) =>
 
-        for (const item of order.items) {
+              p.id === productId &&
 
-          const productIndex =
-            updatedProducts.findIndex(
+              p.warehouseId ===
+                fromWarehouseId
 
-              (p) =>
-                p.id === item.id
-
-            )
-
-          if (
-            productIndex === -1
           )
-            continue
 
-          const product =
-            updatedProducts[
-              productIndex
-            ]
+        if (!product) {
 
-          const currentStock =
-            Number(
-              product.stock || 0
-            )
+          alert(
+            '❌ المنتج غير موجود'
+          )
 
-          if (currentStock <= 0)
-            continue
+          return
+        }
 
-          updatedProducts[
-            productIndex
-          ] = {
+        if (product.stock < quantity) {
 
-            ...product,
+          alert(
+            '❌ الكمية غير متوفرة'
+          )
 
-            sold:
-              Number(
-                product.sold || 0
-              ) + 1,
+          return
+        }
+
+        const updatedProducts =
+          state.products.map((p) => {
+
+            if (
+
+              p.id === productId &&
+
+              p.warehouseId ===
+                fromWarehouseId
+
+            ) {
+
+              return {
+
+                ...p,
+
+                stock:
+                  p.stock - quantity
+
+              }
+            }
+
+            return p
+          })
+
+        const targetIndex =
+          updatedProducts.findIndex(
+
+            (p) =>
+
+              p.name === product.name &&
+
+              p.warehouseId ===
+                toWarehouseId
+
+          )
+
+        if (targetIndex !== -1) {
+
+          updatedProducts[targetIndex] = {
+
+            ...updatedProducts[targetIndex],
 
             stock:
-              Math.max(
-                0,
-                currentStock - 1
-              )
+
+              updatedProducts[targetIndex]
+                .stock + quantity
 
           }
 
-          validItems.push(item)
+        } else {
 
-        }
+          updatedProducts.push({
 
-        if (
-          validItems.length === 0
-        ) {
+            id: generateId(),
 
-          alert(
-            'لا توجد منتجات متاحة لإتمام الطلب'
-          )
+            name: product.name,
 
-          return
+            price: product.price || '',
 
-        }
+            image: product.image || '',
 
-        const updatedOrder = {
+            stock: quantity,
 
-          id: generateId(),
+            hidden:
+              product.hidden || false,
 
-          status: 'طلب جديد',
+            warehouseId:
+              toWarehouseId,
 
-          createdAt:
-            new Date().toISOString(),
+            createdAt:
+              new Date().toISOString()
 
-          ...order,
-
-          items: validItems
+          })
 
         }
 
@@ -688,202 +673,84 @@ export const useWebsiteStore = create(
           products:
             updatedProducts,
 
-          orders: [
+          transfers: [
 
-            ...state.orders,
+            ...state.transfers,
 
-            updatedOrder
+            {
 
-          ],
+              id: generateId(),
 
-          cart: []
+              productId,
+
+              quantity,
+
+              fromWarehouseId,
+
+              toWarehouseId,
+
+              createdAt:
+                new Date().toISOString()
+
+            }
+
+          ]
 
         }))
-
-        alert(
-          'تم تسجيل الطلب بنجاح'
-        )
-
       },
-
-      // ================= DELETE ORDER =================
-
-      deleteOrder: (id) =>
-
-        set((state) => ({
-
-          orders:
-            state.orders.filter(
-
-              (order) =>
-                order.id !== id
-
-            )
-
-        })),
-
-      // ================= ORDER STATUS =================
-
-      updateOrderStatus: (
-        id,
-        status
-      ) =>
-
-        set((state) => ({
-
-          orders:
-            state.orders.map(
-
-              (order) =>
-
-                order.id === id
-
-                  ? {
-
-                      ...order,
-
-                      status
-
-                    }
-
-                  : order
-
-            )
-
-        })),
 
       // ================= ANALYTICS =================
 
-      getTotalSales: () => {
+      getWarehouseStats: () => {
+
+        const products =
+          get().products
 
         const orders =
-          get().orders
+          get().orders || []
 
-        return orders.reduce(
+        const totalSales =
+          orders.reduce(
 
-          (acc, order) =>
-
-            acc +
-
-            Number(
-              order.total || 0
-            ),
-
-          0
-
-        )
-
-      },
-
-      getTotalProductsSold:
-        () => {
-
-          const products =
-            get().products
-
-          return products.reduce(
-
-            (acc, product) =>
+            (acc, o) =>
 
               acc +
-
-              Number(
-                product.sold || 0
-              ),
+              Number(o.total || 0),
 
             0
 
           )
 
-        },
+        return {
 
-      getLowStockProducts:
-        () => {
+          products:
+            products.length,
 
-          const products =
-            get().products
+          orders:
+            orders.length,
 
-          return products.filter(
+          sales:
+            totalSales
 
-            (product) =>
-
-              Number(
-                product.stock || 0
-              ) <= 3
-
-          )
-
-        },
-
-      // ================= TOP PRODUCT =================
-
-      getTopProduct: () => {
-
-        const products =
-          get().products
-
-        if (
-          products.length === 0
-        )
-          return null
-
-        return [...products].sort(
-
-          (a, b) =>
-
-            Number(
-              b.sold || 0
-            ) -
-
-            Number(
-              a.sold || 0
-            )
-
-        )[0]
-
-      },
-
-      // ================= TOTAL STOCK =================
-
-      getTotalStock: () => {
-
-        const products =
-          get().products
-
-        return products.reduce(
-
-          (acc, product) =>
-
-            acc +
-
-            Number(
-              product.stock || 0
-            ),
-
-          0
-
-        )
-
-      },
-
-      // ================= TOTAL PRODUCTS =================
-
-      getTotalProducts:
-        () =>
-
-          get().products.length,
-
-      // ================= TOTAL ORDERS =================
-
-      getTotalOrders:
-        () =>
-
-          get().orders.length
+        }
+      }
 
     }),
 
     {
-      name: 'elola-storage'
+
+      name: 'elola-storage',
+
+      onRehydrateStorage: () => (state) => {
+
+        if (state) {
+
+          state.setHydrated(true)
+
+        }
+
+      }
+
     }
 
   )

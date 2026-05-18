@@ -4,6 +4,8 @@ import {
   Navigate
 } from 'react-router-dom'
 
+import { useWebsiteStore } from './store/websiteStore'
+
 import DashboardLayout from './layout/DashboardLayout'
 
 import Dashboard from './pages/Dashboard'
@@ -18,20 +20,59 @@ import Company from './pages/Company'
 import Login from './pages/Login'
 import Admin from './pages/Admin'
 
+import WarehouseDashboard from './pages/WarehouseDashboard'
+import WarehouseAdminPanel from './pages/WarehouseAdminPanel'
+
 // ================= PROTECTED ROUTE =================
 
 function ProtectedRoute({ children }) {
 
-  // 🔓 الحماية معطلة مؤقتاً
+  const currentUser = useWebsiteStore(
+    (state) => state.currentUser
+  )
 
-  const isLoggedIn = true
+  if (!currentUser) {
+    return <Navigate to="/login" replace />
+  }
 
-  return isLoggedIn
+  return children
+}
 
-    ? children
+// ================= OWNER ONLY =================
 
-    : <Navigate to="/login" replace />
+function OwnerRoute({ children }) {
 
+  const currentUser = useWebsiteStore(
+    (state) => state.currentUser
+  )
+
+  if (!currentUser || currentUser.role !== 'owner') {
+    return <Navigate to="/home" replace />
+  }
+
+  return children
+}
+
+// ================= WAREHOUSE ROUTE =================
+
+function WarehouseRoute({ children }) {
+
+  const currentUser = useWebsiteStore(
+    (state) => state.currentUser
+  )
+
+  if (!currentUser) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (
+    currentUser.role !== 'warehouse' &&
+    currentUser.role !== 'owner'
+  ) {
+    return <Navigate to="/home" replace />
+  }
+
+  return children
 }
 
 // ================= DASHBOARD WRAPPER =================
@@ -39,65 +80,40 @@ function ProtectedRoute({ children }) {
 function DashboardPage({ children }) {
 
   return (
-
     <ProtectedRoute>
-
       <DashboardLayout>
-
         {children}
-
       </DashboardLayout>
-
     </ProtectedRoute>
-
   )
-
 }
+
+// ================= APP =================
 
 export default function App() {
 
   return (
-
     <div className="bg-black min-h-screen">
 
       <Routes>
 
         {/* ================= LOGIN ================= */}
-
-        <Route
-          path="/login"
-          element={<Login />}
-        />
+        <Route path="/login" element={<Login />} />
 
         {/* ================= WEBSITE ================= */}
-
-        <Route
-          path="/home"
-          element={<Home />}
-        />
+        <Route path="/home" element={<Home />} />
 
         {/* ================= ADMIN ================= */}
-
-        <Route
-          path="/"
-          element={
-            <DashboardPage>
-              <Admin />
-            </DashboardPage>
-          }
-        />
-
         <Route
           path="/admin"
           element={
-            <DashboardPage>
+            <OwnerRoute>
               <Admin />
-            </DashboardPage>
+            </OwnerRoute>
           }
         />
 
-        {/* ================= DASHBOARD ================= */}
-
+        {/* ================= MAIN DASHBOARD ================= */}
         <Route
           path="/dashboard"
           element={
@@ -107,8 +123,31 @@ export default function App() {
           }
         />
 
-        {/* ================= PRODUCTS ================= */}
+        {/* ================= WAREHOUSE DASHBOARD (FIXED) ================= */}
+        <Route
+          path="/warehouse-dashboard"
+          element={
+            <WarehouseRoute>
+              <DashboardLayout>
+                <WarehouseDashboard />
+              </DashboardLayout>
+            </WarehouseRoute>
+          }
+        />
 
+        {/* ================= WAREHOUSE ADMIN ================= */}
+        <Route
+          path="/warehouse-admin"
+          element={
+            <OwnerRoute>
+              <DashboardPage>
+                <WarehouseAdminPanel />
+              </DashboardPage>
+            </OwnerRoute>
+          }
+        />
+
+        {/* ================= PRODUCTS ================= */}
         <Route
           path="/products"
           element={
@@ -119,7 +158,6 @@ export default function App() {
         />
 
         {/* ================= SLIDES ================= */}
-
         <Route
           path="/slides"
           element={
@@ -130,7 +168,6 @@ export default function App() {
         />
 
         {/* ================= OFFERS ================= */}
-
         <Route
           path="/offers"
           element={
@@ -141,7 +178,6 @@ export default function App() {
         />
 
         {/* ================= SERVICES ================= */}
-
         <Route
           path="/services"
           element={
@@ -152,7 +188,6 @@ export default function App() {
         />
 
         {/* ================= VIDEOS ================= */}
-
         <Route
           path="/videos"
           element={
@@ -163,7 +198,6 @@ export default function App() {
         />
 
         {/* ================= ORDERS ================= */}
-
         <Route
           path="/orders"
           element={
@@ -174,7 +208,6 @@ export default function App() {
         />
 
         {/* ================= COMPANY ================= */}
-
         <Route
           path="/company"
           element={
@@ -185,61 +218,13 @@ export default function App() {
         />
 
         {/* ================= 404 ================= */}
-
         <Route
           path="*"
-          element={
-
-            <div
-              className="
-                min-h-screen
-                flex
-                flex-col
-                items-center
-                justify-center
-                text-white
-                bg-black
-                p-10
-                text-center
-              "
-            >
-
-              <div className="text-9xl mb-6">
-                ⚠
-              </div>
-
-              <h1
-                className="
-                  text-6xl
-                  font-black
-                  text-yellow-400
-                  mb-6
-                "
-              >
-                الصفحة غير موجودة
-              </h1>
-
-              <p
-                className="
-                  text-2xl
-                  text-gray-400
-                  mb-10
-                "
-              >
-                الرابط الذي تحاول الوصول إليه غير متوفر
-              </p>
-
-              <Navigate to="/" replace />
-
-            </div>
-
-          }
+          element={<Navigate to="/home" replace />}
         />
 
       </Routes>
 
     </div>
-
   )
-
 }
