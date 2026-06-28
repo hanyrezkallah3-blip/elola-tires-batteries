@@ -1,306 +1,811 @@
-import { useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
+
 import {
   NavLink,
-  useNavigate,
-  useLocation
+  useLocation,
+  useNavigate
 } from 'react-router-dom'
 
 import { useWebsiteStore } from '../store/websiteStore'
 
+import { useERPBrain } from '../ai/ERPBrain'
+
 export default function DashboardLayout({ children }) {
+
+  useERPBrain()
 
   const navigate = useNavigate()
   const location = useLocation()
 
-  const {
-    products,
-    orders,
-    currentUser
-  } = useWebsiteStore()
+  // ================= STORE =================
 
-  const [menuOpen, setMenuOpen] = useState(false)
+  const currentUser =
+    useWebsiteStore((s) => s.currentUser)
 
-  // ================= LOW STOCK =================
+  const logout =
+    useWebsiteStore((s) => s.logout)
 
-  const lowStockProducts = products.filter(
-    (product) => Number(product.stock || 0) <= 5
-  )
+  const notifications =
+    useWebsiteStore((s) => s.notifications || [])
 
-  // ================= LOGOUT =================
+  const products =
+    useWebsiteStore((s) => s.products || [])
 
-  const handleLogout = () => {
-    localStorage.removeItem('auth')
-    navigate('/login')
+  const orders =
+    useWebsiteStore((s) => s.orders || [])
+
+  const transfers =
+    useWebsiteStore((s) => s.transfers || [])
+
+  // ================= SIDEBAR =================
+
+  const [open, setOpen] = useState(false)
+
+  // ================= USER =================
+
+  const isOwner =
+    currentUser?.role === 'owner'
+
+  const isWarehouse =
+    currentUser?.role === 'warehouse'
+
+  const isBranch =
+    currentUser?.role === 'branch'
+
+  const isShop =
+    currentUser?.role === 'shop'
+
+  const username =
+    currentUser?.username || 'مستخدم'
+
+  const warehouseName =
+    currentUser?.warehouseName || ''
+
+  const permissions = [
+  'all'
+]
+
+  // ================= ERP AI STATUS =================
+
+  const aiStatus = useMemo(() => {
+
+    const totalSales =
+      orders.reduce(
+        (acc, o) =>
+          acc + Number(o.total || 0),
+        0
+      )
+
+    if (totalSales > 1000000)
+      return {
+        text: 'نشط بقوة',
+        color: 'text-green-400'
+      }
+
+    if (totalSales > 200000)
+      return {
+        text: 'مستقر',
+        color: 'text-yellow-400'
+      }
+
+    return {
+      text: 'يحتاج تحسين',
+      color: 'text-red-400'
+    }
+
+  }, [orders])
+
+  // ================= ROLE NAME =================
+
+  const getRoleName = () => {
+
+    if (isOwner)
+      return '👑 مالك النظام'
+
+    if (isWarehouse)
+      return '🏭 إدارة مخزن'
+
+    if (isBranch)
+      return '🏢 إدارة فرع'
+
+    if (isShop)
+      return '🏪 إدارة معرض'
+
+    return 'مستخدم'
+
   }
 
-  // ================= NAVIGATION HELPERS =================
+  // ================= PERMISSIONS =================
 
-  const goHome = () => navigate('/home')
-  const goDashboard = () => navigate('/dashboard')
-  const goBack = () => navigate(-1)
+  const hasPermission = (permission) => {
+
+    if (isOwner) return true
+
+    if (permissions.includes('all'))
+      return true
+
+    return permissions.includes(permission)
+
+  }
+
+  // ================= ROUTE PROTECTION =================
+
+  const allowedRoutes = useMemo(() => {
+
+    return [
+
+      '/dashboard',
+
+      ...(hasPermission('bi')
+        ? ['/bi']
+        : []),
+
+      ...(hasPermission('ai')
+        ? ['/ai']
+        : []),
+
+      ...(hasPermission('products')
+        ? ['/products']
+        : []),
+
+      ...(hasPermission('orders')
+        ? ['/orders']
+        : []),
+
+      ...(hasPermission('offers')
+        ? ['/offers']
+        : []),
+
+      ...(hasPermission('services')
+        ? ['/services']
+        : []),
+
+      ...(hasPermission('videos')
+        ? ['/videos']
+        : []),
+
+      ...(isOwner
+  ? [
+      '/slides',
+      '/warehouses',
+      '/transfers',
+      '/users',
+      '/permissions',
+      '/finance',
+      '/wallets',
+      '/company',
+      '/home'
+    ]
+  : [])
+
+    ]
+
+  }, [currentUser])
+
+  // ================= AUTO BLOCK =================
+
+  useEffect(() => {
+
+    if (!currentUser) {
+
+      navigate('/login')
+
+      return
+    }
+
+    const currentPath =
+      location.pathname
+
+    const allowed =
+      allowedRoutes.includes(currentPath)
+
+    if (!allowed) {
+
+      navigate('/dashboard')
+    }
+
+  }, [
+    currentUser,
+    location.pathname,
+    allowedRoutes
+  ])
 
   // ================= LINKS =================
 
-  const links = [
+  const links = useMemo(() => [
 
     {
       path: '/dashboard',
-      title: 'الإحصائيات',
-      icon: '📊'
+      title: '📊 لوحة التحكم',
+      visible: true
     },
 
     {
-      path: '/admin',
-      title: 'لوحة التحكم',
-      icon: '🛠'
+      path: '/bi',
+      title: '📈 التحليلات الذكية',
+      visible: hasPermission('bi')
     },
 
     {
-      path: '/warehouse-admin',
-      title: 'إدارة المخازن',
-      icon: '🏭'
+      path: '/ai',
+      title: '🤖 الذكاء الاصطناعي',
+      visible: hasPermission('ai')
     },
 
     {
-      path: '/home',
-      title: 'الموقع الرئيسي',
-      icon: '🏠'
+      path: '/finance',
+      title: '💰 الإدارة المالية',
+      visible: isOwner
     },
-
+    
     {
-      path: '/slides',
-      title: 'السلايدر',
-      icon: '🖼'
+      path: '/wallets',
+      title: '💳 المحافظ',
+      visible: isOwner
     },
 
     {
       path: '/products',
-      title: 'المنتجات',
-      icon: '📦'
-    },
-
-    {
-      path: '/offers',
-      title: 'العروض',
-      icon: '🔥'
-    },
-
-    {
-      path: '/services',
-      title: 'الخدمات',
-      icon: '🛠'
-    },
-
-    {
-      path: '/videos',
-      title: 'الفيديوهات',
-      icon: '🎥'
-    },
-
-    {
-      path: '/company',
-      title: 'إعدادات الشركة',
-      icon: '🏢'
+      title: '📦 إدارة المنتجات',
+      visible: hasPermission('products')
     },
 
     {
       path: '/orders',
-      title: 'طلبات العملاء',
-      icon: '🛒'
+      title: '🛒 إدارة الطلبات',
+      visible: hasPermission('orders')
+    },
+
+    {
+      path: '/offers',
+      title: '🏷 إدارة العروض',
+      visible: hasPermission('offers')
+    },
+
+    {
+      path: '/services',
+      title: '🛠 إدارة الخدمات',
+      visible: hasPermission('services')
+    },
+
+    {
+      path: '/videos',
+      title: '🎬 إدارة الفيديوهات',
+      visible: hasPermission('videos')
+    },
+
+    {
+      path: '/slides',
+      title: '🖼 إدارة السلايدر',
+      visible: isOwner
+    },
+
+    {
+      path: '/warehouses',
+      title: '🏭 إدارة المخازن',
+      visible: isOwner
+    },
+
+    {
+      path: '/transfers',
+      title: '🚚 التحويلات',
+      visible: isOwner
+    },
+
+    {
+  path: '/users',
+  title: '👥 المستخدمون',
+  visible: isOwner
+},
+
+{
+  path: '/permissions',
+  title: '🔐 الصلاحيات',
+  visible: isOwner
+},
+
+    {
+      path: '/company',
+      title: '🏢 بيانات الشركة',
+      visible: isOwner
+    },
+
+    {
+      path: '/home',
+      title: '🌍 الموقع الإلكتروني',
+      visible: true
     }
 
-  ]
+  ], [currentUser])
 
-  // ================= FILTER WAREHOUSE LINKS =================
+  const filteredLinks = links
+    
 
-  const filteredLinks = links.filter(link => {
+  // ================= LOGOUT =================
 
-    if (link.path === '/warehouse-admin') {
-      return currentUser?.role === 'owner'
-    }
+  const handleLogout = () => {
 
-    return true
-  })
+    const ok =
+      window.confirm(
+        'هل تريد تسجيل الخروج؟'
+      )
+
+    if (!ok) return
+
+    logout()
+
+    navigate('/login')
+
+  }
 
   // ================= LINK STYLE =================
 
   const linkClass = ({ isActive }) => `
-    flex items-center justify-between gap-3
-    py-4 px-5 rounded-2xl text-lg font-bold
-    transition-all duration-300
+
+    flex
+    items-center
+    gap-3
+    p-4
+    rounded-2xl
+    font-bold
+    transition-all
+    duration-300
 
     ${
       isActive
-        ? 'bg-yellow-500 text-black shadow-2xl scale-105'
-        : 'bg-slate-800 hover:bg-yellow-500 hover:text-black hover:scale-105'
+
+        ? 'bg-yellow-500 text-black scale-[1.02] shadow-2xl'
+
+        : `
+          bg-slate-900
+          hover:bg-yellow-500
+          hover:text-black
+          hover:translate-x-1
+        `
     }
+
   `
+
+  // ================= TOTALS =================
+
+  const totalProducts =
+    products.length
+
+  const totalOrders =
+    orders.length
+
+  const totalTransfers =
+    transfers.length
+
+  // ================= UI =================
 
   return (
 
-    <div className="flex min-h-screen bg-black text-white overflow-hidden">
+    <div className="
+      min-h-screen
+      bg-black
+      text-white
+      flex
+      overflow-hidden
+    ">
+
+      {/* MOBILE OVERLAY */}
+
+      {open && (
+
+        <div
+          onClick={() => setOpen(false)}
+          className="
+            lg:hidden
+            fixed
+            inset-0
+            bg-black/80
+            z-40
+          "
+        />
+
+      )}
 
       {/* MOBILE BUTTON */}
+
       <button
-        onClick={() => setMenuOpen(!menuOpen)}
+        onClick={() => setOpen(!open)}
         className="
-          fixed top-5 right-5 z-[100]
-          lg:hidden bg-yellow-500 text-black
-          w-16 h-16 rounded-2xl text-3xl font-black shadow-2xl
+          lg:hidden
+          fixed
+          top-4
+          left-4   
+          z-50
+          bg-yellow-500
+          text-black
+          w-14
+          h-14
+          rounded-2xl
+          text-2xl
+          font-black
+          shadow-2xl
         "
       >
+
         ☰
+
       </button>
 
       {/* SIDEBAR */}
+
       <aside className={`
-        fixed lg:relative top-0 right-0 z-50 h-screen w-[320px]
-        bg-gradient-to-b from-blue-950 via-slate-950 to-black
-        border-r-4 border-yellow-400 p-6 flex flex-col
-        transition-all duration-500 overflow-y-auto
-        ${menuOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
+
+        fixed
+        lg:static
+        top-0
+        right-0
+        z-50
+        h-screen
+        w-[340px]
+
+        bg-gradient-to-b
+        from-slate-950
+        to-black
+
+        border-l-4
+        border-yellow-500
+
+        flex
+        flex-col
+
+        transition-all
+        duration-300
+
+        ${
+          open
+            ? 'translate-x-0'
+            : 'translate-x-full lg:translate-x-0'
+        }
+
       `}>
 
-        {/* TOP */}
-        <div className="mb-8">
+        {/* HEADER */}
 
-          <div className="
-            bg-black/40 rounded-3xl p-6 border border-yellow-400 text-center
-          ">
+        <div className="
+          p-6
+          border-b
+          border-slate-800
+          space-y-5
+        ">
 
-            <h1 className="text-4xl font-extrabold text-yellow-400 animate-pulse mb-4">
-              شركة العلا
+          <div className="text-center">
+
+            <h1 className="
+              text-4xl
+              font-black
+              text-yellow-400
+            ">
+
+              نظام ERP
+
             </h1>
 
-            <p className="text-blue-300 text-lg">
-              لوحة التحكم الرئيسية
-            </p>
+            <div className="
+              text-gray-400
+              mt-2
+              text-sm
+            ">
 
-          </div>
-
-          {/* 🔥 QUICK NAV BUTTONS */}
-          <div className="flex gap-2 mt-4">
-
-            <button
-              onClick={goHome}
-              className="flex-1 bg-blue-600 p-2 rounded-xl text-sm"
-            >
-              الموقع
-            </button>
-
-            <button
-              onClick={goDashboard}
-              className="flex-1 bg-green-600 p-2 rounded-xl text-sm"
-            >
-              داشبورد
-            </button>
-
-            <button
-              onClick={goBack}
-              className="flex-1 bg-gray-600 p-2 rounded-xl text-sm"
-            >
-              رجوع
-            </button>
-
-          </div>
-
-        </div>
-
-        {/* ANALYTICS */}
-        <div className="space-y-5 mb-8">
-
-          <div className="bg-green-700 rounded-3xl p-5 text-center shadow-2xl">
-            <div className="text-xl mb-2">عدد الطلبات</div>
-            <div className="text-5xl font-black">{orders.length}</div>
-          </div>
-
-          <div className="bg-red-700 rounded-3xl p-5 text-center shadow-2xl">
-            <div className="text-xl mb-2">المنتجات القريبة من النفاد</div>
-            <div className="text-5xl font-black">{lowStockProducts.length}</div>
-          </div>
-
-        </div>
-
-        {/* LINKS */}
-        <div className="flex flex-col gap-4">
-
-          {filteredLinks.map((link) => (
-            <NavLink
-              key={link.path}
-              to={link.path}
-              className={linkClass}
-              onClick={() => setMenuOpen(false)}
-            >
-              <span>{link.title}</span>
-              <span className="text-2xl">{link.icon}</span>
-            </NavLink>
-          ))}
-
-        </div>
-
-        {/* LOW STOCK */}
-        {lowStockProducts.length > 0 && (
-          <div className="
-            mt-10 bg-black/50 border border-red-500
-            rounded-3xl p-5
-          ">
-            <h2 className="text-2xl font-black text-red-400 mb-5 text-center">
-              تنبيه المخزون
-            </h2>
-
-            <div className="space-y-4">
-
-              {lowStockProducts.slice(0, 5).map((product) => (
-                <div
-                  key={product.id}
-                  className="bg-slate-900 rounded-2xl p-4 border border-red-500"
-                >
-                  <div className="text-lg font-bold mb-2">
-                    {product.name}
-                  </div>
-
-                  <div className="text-red-400 font-black">
-                    المتبقي: {product.stock}
-                  </div>
-
-                </div>
-              ))}
+              شركة العلا للإطارات والبطاريات
 
             </div>
-          </div>
-        )}
 
-        {/* LOGOUT */}
-        <button
-          onClick={handleLogout}
-          className="
-            mt-10 bg-red-700 hover:bg-red-800
-            py-4 rounded-2xl text-xl font-black
-          "
-        >
-          تسجيل الخروج
-        </button>
+          </div>
+
+          {/* USER */}
+
+          <div className="
+            bg-slate-900
+            rounded-3xl
+            p-5
+            border
+            border-slate-800
+            space-y-3
+          ">
+
+            <div className="
+              text-2xl
+              font-black
+              text-yellow-400
+            ">
+
+              {username}
+
+            </div>
+
+            <div className="text-gray-300">
+
+              {getRoleName()}
+
+            </div>
+
+            {!!warehouseName && (
+
+              <div className="
+                text-cyan-400
+                font-bold
+              ">
+
+                📍 {warehouseName}
+
+              </div>
+
+            )}
+
+          </div>
+
+          {/* AI STATUS */}
+
+          <div className="
+            bg-slate-900
+            rounded-3xl
+            p-5
+            border
+            border-slate-800
+            space-y-3
+          ">
+
+            <div className="
+              text-lg
+              font-black
+            ">
+
+              🤖 حالة الذكاء الاصطناعي
+
+            </div>
+
+            <div className={`
+              text-2xl
+              font-black
+              ${aiStatus.color}
+            `}>
+
+              {aiStatus.text}
+
+            </div>
+
+          </div>
+
+          {/* QUICK STATS */}
+
+          <div className="
+            grid
+            grid-cols-3
+            gap-3
+          ">
+
+            <div className="
+              bg-blue-700
+              p-3
+              rounded-2xl
+              text-center
+            ">
+
+              <div className="text-xs">
+                منتجات
+              </div>
+
+              <div className="
+                text-xl
+                font-black
+              ">
+
+                {totalProducts}
+
+              </div>
+
+            </div>
+
+            <div className="
+              bg-green-700
+              p-3
+              rounded-2xl
+              text-center
+            ">
+
+              <div className="text-xs">
+                طلبات
+              </div>
+
+              <div className="
+                text-xl
+                font-black
+              ">
+
+                {totalOrders}
+
+              </div>
+
+            </div>
+
+            <div className="
+              bg-purple-700
+              p-3
+              rounded-2xl
+              text-center
+            ">
+
+              <div className="text-xs">
+                تحويلات
+              </div>
+
+              <div className="
+                text-xl
+                font-black
+              ">
+
+                {totalTransfers}
+
+              </div>
+
+            </div>
+
+          </div>
+
+          {/* NOTIFICATIONS */}
+
+          <div className="
+            bg-slate-900
+            p-4
+            rounded-2xl
+            flex
+            justify-between
+            items-center
+          ">
+
+            <span className="font-bold">
+
+              🔔 الإشعارات
+
+            </span>
+
+            <span className="
+              bg-red-600
+              w-10
+              h-10
+              rounded-full
+              flex
+              items-center
+              justify-center
+              font-black
+            ">
+
+              {notifications.length}
+
+            </span>
+
+          </div>
+
+        </div>
+
+        {/* NAVIGATION */}
+
+        <div className="
+          flex-1
+          overflow-y-auto
+          p-5
+        ">
+
+          <nav className="space-y-3">
+
+            {filteredLinks.map((link) => (
+
+              <NavLink
+                key={link.path}
+                to={link.path}
+                className={linkClass}
+                onClick={() => setOpen(false)}
+              >
+
+                {link.title}
+
+              </NavLink>
+
+            ))}
+
+          </nav>
+
+        </div>
 
         {/* FOOTER */}
-        <div className="mt-10 pt-6 text-center text-gray-500 text-sm">
-          Elola Dashboard v3.0
+
+        <div className="
+          p-5
+          border-t
+          border-slate-800
+          space-y-4
+        ">
+
+          <div className="
+            bg-slate-900
+            p-4
+            rounded-2xl
+            text-center
+            text-sm
+            text-gray-400
+          ">
+
+            الصفحة الحالية
+
+            <div className="
+              text-yellow-400
+              mt-2
+              font-bold
+              break-all
+            ">
+
+              {location.pathname}
+
+            </div>
+
+          </div>
+
+          <button
+            onClick={handleLogout}
+            className="
+              w-full
+              bg-red-600
+              hover:bg-red-700
+              py-4
+              rounded-2xl
+              font-black
+              transition
+            "
+          >
+
+            🚪 تسجيل الخروج
+
+          </button>
+
         </div>
 
       </aside>
 
-      {/* OVERLAY */}
-      {menuOpen && (
-        <div
-          onClick={() => setMenuOpen(false)}
-          className="fixed inset-0 bg-black/70 z-40 lg:hidden"
-        />
-      )}
-
       {/* CONTENT */}
-      <main className="flex-1 bg-black overflow-auto p-4 lg:p-8">
-        {children}
+
+      <main className="
+        flex-1
+        overflow-auto
+        p-4
+        lg:p-8
+      ">
+
+        <div className="
+          max-w-[1900px]
+          mx-auto
+        ">
+
+          {children ? children : (
+
+            <div className="
+              bg-red-900/30
+              border
+              border-red-500
+              p-10
+              rounded-3xl
+              text-center
+              text-red-400
+              text-2xl
+              font-black
+            ">
+
+              ⚠ الصفحة غير متاحة
+
+            </div>
+
+          )}
+
+        </div>
+
       </main>
 
     </div>
+
   )
+
 }

@@ -1,24 +1,67 @@
-import { useWebsiteStore } from '../store/websiteStore'
+import { useMemo } from 'react'
+
+import { useWebsiteStore }
+  from '../store/websiteStore'
 
 export default function Orders() {
 
   const {
     orders,
     deleteOrder,
-    updateOrderStatus
+    updateOrderStatus,
+    currentUser
   } = useWebsiteStore()
 
-  // ================= TOTAL REVENUE =================
+  // ================= SECURITY FILTER =================
 
-  const totalRevenue = orders.reduce(
+  const visibleOrders = useMemo(() => {
 
-    (acc, order) =>
+    if (currentUser?.role === 'owner') {
+      return orders
+    }
 
-      acc + Number(order.total || 0),
+    // كل مستخدم يرى طلباته فقط
+    return orders.filter(order =>
+      order.createdBy === currentUser?.username
+    )
 
-    0
+  }, [orders, currentUser])
 
-  )
+  // ================= MEMOIZED DATA =================
+
+  const totalRevenue = useMemo(() => {
+
+    return visibleOrders.reduce(
+
+      (acc, order) =>
+        acc + Number(order.total || 0),
+
+      0
+
+    )
+
+  }, [visibleOrders])
+
+  const newOrdersCount = useMemo(() => {
+
+    return visibleOrders.filter(
+      (o) => o.status === 'طلب جديد'
+    ).length
+
+  }, [visibleOrders])
+
+  // ================= DELETE =================
+
+  const handleDelete = (id) => {
+
+    const confirmDelete = window.confirm(
+      'هل تريد حذف الطلب؟'
+    )
+
+    if (!confirmDelete) return
+
+    deleteOrder(id)
+  }
 
   return (
 
@@ -49,8 +92,7 @@ export default function Orders() {
         "
       >
 
-        <div
-          className="
+        <div className="
             bg-blue-700
             p-8
             rounded-3xl
@@ -63,13 +105,12 @@ export default function Orders() {
           </h2>
 
           <p className="text-6xl font-extrabold">
-            {orders.length}
+            {visibleOrders.length}
           </p>
 
         </div>
 
-        <div
-          className="
+        <div className="
             bg-green-700
             p-8
             rounded-3xl
@@ -87,8 +128,7 @@ export default function Orders() {
 
         </div>
 
-        <div
-          className="
+        <div className="
             bg-yellow-500
             text-black
             p-8
@@ -102,13 +142,7 @@ export default function Orders() {
           </h2>
 
           <p className="text-6xl font-extrabold">
-
-            {
-              orders.filter(
-                (o) => o.status === 'طلب جديد'
-              ).length
-            }
-
+            {newOrdersCount}
           </p>
 
         </div>
@@ -117,10 +151,9 @@ export default function Orders() {
 
       {/* EMPTY */}
 
-      {orders.length === 0 && (
+      {visibleOrders.length === 0 && (
 
-        <div
-          className="
+        <div className="
             text-center
             text-4xl
             text-gray-400
@@ -136,7 +169,7 @@ export default function Orders() {
 
       <div className="space-y-10">
 
-        {orders.map((order) => (
+        {visibleOrders.map((order) => (
 
           <div
             key={order.id}
@@ -152,8 +185,7 @@ export default function Orders() {
 
             {/* HEADER */}
 
-            <div
-              className="
+            <div className="
                 flex
                 flex-col
                 md:flex-row
@@ -166,29 +198,22 @@ export default function Orders() {
               <div className="space-y-3">
 
                 <h2 className="text-4xl font-extrabold">
-
                   {order.customerName}
-
                 </h2>
 
                 <p className="text-2xl text-gray-300">
-
                   📞 {order.phone}
-
                 </p>
 
                 <p className="text-xl text-gray-400">
-
                   📍 {order.address}
-
                 </p>
 
               </div>
 
               <div className="space-y-4">
 
-                <div
-                  className="
+                <div className="
                     bg-black
                     border
                     border-green-600
@@ -202,15 +227,12 @@ export default function Orders() {
                   💰 الإجمالي:
 
                   <span className="text-green-400 font-bold mr-2">
-
                     {order.total} ج
-
                   </span>
 
                 </div>
 
-                <div
-                  className="
+                <div className="
                     bg-black
                     border
                     border-blue-600
@@ -220,9 +242,7 @@ export default function Orders() {
                     text-xl
                   "
                 >
-
                   📅 {order.date}
-
                 </div>
 
               </div>
@@ -235,15 +255,13 @@ export default function Orders() {
 
               <select
 
-                value={order.status}
+                value={order.status || 'طلب جديد'}
 
                 onChange={(e) =>
-
                   updateOrderStatus(
                     order.id,
                     e.target.value
                   )
-
                 }
 
                 className="
@@ -256,25 +274,11 @@ export default function Orders() {
                 "
               >
 
-                <option>
-                  طلب جديد
-                </option>
-
-                <option>
-                  جاري التجهيز
-                </option>
-
-                <option>
-                  تم الشحن
-                </option>
-
-                <option>
-                  تم التسليم
-                </option>
-
-                <option>
-                  ملغي
-                </option>
+                <option value="طلب جديد">طلب جديد</option>
+                <option value="جاري التجهيز">جاري التجهيز</option>
+                <option value="تم الشحن">تم الشحن</option>
+                <option value="تم التسليم">تم التسليم</option>
+                <option value="ملغي">ملغي</option>
 
               </select>
 
@@ -284,10 +288,10 @@ export default function Orders() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
 
-              {order.items.map((item) => (
+              {(order.items || []).map((item) => (
 
                 <div
-                  key={item.cartId}
+                  key={item.cartId || item.id}
                   className="
                     bg-black
                     rounded-3xl
@@ -297,35 +301,22 @@ export default function Orders() {
                   "
                 >
 
-                  <img
-                    src={item.image}
-                    alt=""
-                    className="
-                      w-full
-                      h-56
-                      object-cover
-                    "
-                  />
+                  {!!item.image && (
+                    <img
+                      src={item.image}
+                      alt={item.name || ''}
+                      loading="lazy"
+                      className="w-full h-56 object-cover"
+                    />
+                  )}
 
                   <div className="p-5">
 
-                    <h3
-                      className="
-                        text-2xl
-                        font-bold
-                        mb-4
-                      "
-                    >
+                    <h3 className="text-2xl font-bold mb-4">
                       {item.name}
                     </h3>
 
-                    <p
-                      className="
-                        text-yellow-400
-                        text-3xl
-                        font-extrabold
-                      "
-                    >
+                    <p className="text-yellow-400 text-3xl font-extrabold">
                       {item.price}
                     </p>
 
@@ -340,21 +331,8 @@ export default function Orders() {
             {/* DELETE */}
 
             <button
-
-              onClick={() => {
-
-                const confirmDelete = confirm(
-                  'هل تريد حذف الطلب؟'
-                )
-
-                if (confirmDelete) {
-
-                  deleteOrder(order.id)
-
-                }
-
-              }}
-
+              type="button"
+              onClick={() => handleDelete(order.id)}
               className="
                 bg-red-600
                 hover:bg-red-700
@@ -375,7 +353,5 @@ export default function Orders() {
       </div>
 
     </div>
-
   )
-
 }

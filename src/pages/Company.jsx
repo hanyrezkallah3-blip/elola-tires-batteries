@@ -157,22 +157,30 @@ export default function Company() {
 
   const handleLogoUpload = (e) => {
 
-    const file = e.target.files[0]
+  const file = e.target.files[0]
 
-    if (!file) return
+  if (!file) return
 
-    const reader = new FileReader()
+  if (file.size > 10000000) {
+  alert('يرجى استخدام شعار أقل من 1MB')
+  return
+}
 
-    reader.onloadend = () => {
+  const reader = new FileReader()
 
-      setLogo(reader.result)
+  reader.onloadend = () => {
 
-    }
+    setLogo(reader.result)
 
-    reader.readAsDataURL(file)
+    alert(
+      'تم رفع الشعار بنجاح'
+    )
 
   }
 
+  reader.readAsDataURL(file)
+
+}
   return (
 
     <div
@@ -563,24 +571,39 @@ export default function Company() {
         {/* SAVE */}
 
         <button
+  type="button"
+  onClick={() => {
+    try {
 
-          onClick={handleSave}
+      handleSave()
 
-          className="
-            w-full
-            bg-yellow-500
-            hover:bg-yellow-600
-            py-5
-            rounded-3xl
-            text-2xl
-            font-extrabold
-            text-black
-          "
-        >
+      console.log(
+        'Company Saved'
+      )
 
-          حفظ جميع البيانات
+    } catch (error) {
 
-        </button>
+      console.error(error)
+
+      alert(
+        'حدث خطأ أثناء الحفظ'
+      )
+
+    }
+  }}
+  className="
+    w-full
+    bg-yellow-500
+    hover:bg-yellow-600
+    py-5
+    rounded-3xl
+    text-2xl
+    font-extrabold
+    text-black
+  "
+>
+  حفظ جميع البيانات
+</button>
 
       </div>
 

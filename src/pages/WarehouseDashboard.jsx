@@ -1,339 +1,452 @@
-import { useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useWebsiteStore } from '../store/websiteStore'
+import حماية_الصفحة from '../security/حماية_الصفحة'
 
 export default function WarehouseDashboard() {
-
   const navigate = useNavigate()
 
-  const {
-    currentUser,
-    products,
-    orders,
-    users,
-    getWarehouseStats,
-    logout,
-    transferProductQuantity
-  } = useWebsiteStore()
+  const currentUser =
+    useWebsiteStore((state) => state.currentUser)
 
-  // ================= TRANSFER STATE =================
+  const products =
+    useWebsiteStore((state) => state.products || [])
 
-  const [selectedProduct, setSelectedProduct] = useState('')
-  const [targetWarehouse, setTargetWarehouse] = useState('')
-  const [quantity, setQuantity] = useState('')
+  const orders =
+    useWebsiteStore((state) => state.orders || [])
 
-  // ================= GUARD =================
+  const users =
+    useWebsiteStore((state) => state.users || [])
 
-  if (!currentUser || currentUser.role !== 'warehouse') {
-    return (
-      <div className="p-10 text-white text-2xl">
-        غير مسموح بالدخول
-      </div>
+  const transfers =
+    useWebsiteStore((state) => state.transfers || [])
+
+  const stockHistory =
+    useWebsiteStore((state) => state.stockHistory || [])
+
+  const logout =
+    useWebsiteStore((state) => state.logout)
+
+  const transferProductQuantity =
+    useWebsiteStore(
+      (state) => state.transferProductQuantity
     )
+
+  const [selectedProduct, setSelectedProduct] =
+    useState('')
+
+  const [targetWarehouse, setTargetWarehouse] =
+    useState('')
+
+  const [quantity, setQuantity] =
+    useState('')
+
+  const [search, setSearch] =
+    useState('')
+
+  useEffect(() => {
+    if (!currentUser) {
+      navigate('/login')
+      return
+    }
+
+    const allowedRoles = [
+      'warehouse',
+      'branch',
+      'shop',
+      'owner'
+    ]
+
+    if (!allowedRoles.includes(currentUser.role)) {
+      navigate('/home')
+    }
+  }, [currentUser, navigate])
+
+  if (!currentUser) return null
+
+  const warehouseProducts = useMemo(() => {
+    return products.filter(
+      (p) =>
+        p.warehouseId === currentUser.warehouseId
+    )
+  }, [products, currentUser])
+
+  const warehouseOrders = useMemo(() => {
+    return orders.filter(
+      (o) =>
+        o.warehouseId === currentUser.warehouseId
+    )
+  }, [orders, currentUser])
+
+  const availableUnits = useMemo(() => {
+    return users.filter(
+      (u) =>
+        (
+          u.role === 'warehouse' ||
+          u.role === 'branch' ||
+          u.role === 'shop'
+        ) &&
+        u.warehouseId !== currentUser.warehouseId
+    )
+  }, [users, currentUser])
+
+  const totalProducts =
+    warehouseProducts.length
+
+  const totalOrders =
+    warehouseOrders.length
+
+  const totalSales =
+    warehouseOrders.reduce(
+      (acc, o) =>
+        acc + Number(o.total || 0),
+      0
+    )
+
+  const totalStock =
+    warehouseProducts.reduce(
+      (acc, p) =>
+        acc + Number(p.stock || 0),
+      0
+    )
+
+  const lowStockProducts =
+    warehouseProducts.filter(
+      (p) => Number(p.stock || 0) <= 5
+    )
+
+  const filteredProducts =
+    warehouseProducts.filter((p) =>
+      (p.name || '')
+        .toLowerCase()
+        .includes(search.toLowerCase())
+    )
+
+  const warehouseTransfers =
+    transfers.filter(
+      (t) =>
+        t.fromWarehouseId ===
+          currentUser.warehouseId ||
+        t.toWarehouseId ===
+          currentUser.warehouseId
+    )
+
+  const warehouseHistory =
+    stockHistory.filter(
+      (h) =>
+        h.warehouseId ===
+        currentUser.warehouseId
+    )
+
+  const getRoleName = (role) => {
+    if (role === 'warehouse')
+      return '🏭 المخزن'
+
+    if (role === 'branch')
+      return '🏢 الفرع'
+
+    if (role === 'shop')
+      return '🏪 المعرض'
+
+    if (role === 'owner')
+      return '👑 الإدارة'
+
+    return role
   }
 
-  // ================= FILTER =================
-
-  const warehouseProducts = products.filter(
-    (p) => p.warehouseId === currentUser.warehouseId
-  )
-
-  const warehouseOrders = orders.filter(
-    (o) => o.warehouseId === currentUser.warehouseId
-  )
-
-  const warehouseUsers = users.filter(
-    (u) =>
-      u.role === 'warehouse' &&
-      u.warehouseId !== currentUser.warehouseId
-  )
-
-  const stats = getWarehouseStats()
-
-  // ================= TRANSFER =================
-
   const handleTransfer = () => {
-
     if (
       !selectedProduct ||
       !targetWarehouse ||
       !quantity
     ) {
-      alert('يرجى إدخال جميع البيانات')
+      alert('يرجى استكمال البيانات')
       return
     }
 
     transferProductQuantity({
-
       productId: selectedProduct,
-
       fromWarehouseId:
         currentUser.warehouseId,
-
-      toWarehouseId:
-        targetWarehouse,
-
+      toWarehouseId: targetWarehouse,
       quantity: Number(quantity)
-
     })
 
     setSelectedProduct('')
     setTargetWarehouse('')
     setQuantity('')
 
-    alert('✅ تم نقل المنتج بنجاح')
+    alert('تم التحويل بنجاح')
   }
 
-  // ================= UI =================
-
   return (
+    <حماية_الصفحة
+      requiredPermission="warehouse_dashboard"
+      requiredRole="warehouse"
+      page="warehouse_dashboard"
+    >
+      <div className="min-h-screen bg-red text-white p-8 space-y-8">
 
-    <div className="p-10 space-y-10 text-white">
+        <div className="flex flex-wrap justify-between gap-4">
 
-      {/* ================= TOP BAR ================= */}
+          <div>
+            <h1 className="text-4xl font-black text-yellow-400">
+              {getRoleName(currentUser.role)}
+            </h1>
 
-      <div className="flex flex-wrap gap-4 justify-between items-center">
+            <div className="text-gray-400 mt-2">
+              {currentUser.warehouseName ||
+                currentUser.username}
+            </div>
+          </div>
 
-        <div>
+          <div className="flex gap-3 flex-wrap">
 
-          <h1 className="text-5xl font-black text-yellow-400">
-            🏬 لوحة المخزن
-          </h1>
+            <button
+              onClick={() =>
+                navigate('/products')
+              }
+              className="bg-green-600 px-4 py-3 rounded-xl font-bold"
+            >
+              المنتجات
+            </button>
 
-          <p className="text-gray-300 mt-2">
-            مرحباً {currentUser.username}
-          </p>
+            <button
+              onClick={() => {
+                logout()
+                navigate('/login')
+              }}
+              className="bg-red-600 px-4 py-3 rounded-xl font-bold"
+            >
+              خروج
+            </button>
+
+          </div>
 
         </div>
 
-        {/* ================= ACTION BUTTONS ================= */}
+        <div className="grid md:grid-cols-4 gap-4">
 
-        <div className="flex gap-4 flex-wrap">
+          <div className="bg-slate-900 p-5 rounded-2xl">
+            <div>الأصناف</div>
+            <div className="text-3xl font-black">
+              {totalProducts}
+            </div>
+          </div>
 
-          {/* 🔙 BACK */}
+          <div className="bg-slate-900 p-5 rounded-2xl">
+            <div>الطلبات</div>
+            <div className="text-3xl font-black">
+              {totalOrders}
+            </div>
+          </div>
+
+          <div className="bg-slate-900 p-5 rounded-2xl">
+            <div>إجمالي المخزون</div>
+            <div className="text-3xl font-black">
+              {totalStock}
+            </div>
+          </div>
+
+          <div className="bg-slate-900 p-5 rounded-2xl">
+            <div>المبيعات</div>
+            <div className="text-3xl font-black">
+              {totalSales}
+            </div>
+          </div>
+
+        </div>
+
+        <div className="bg-slate-900 p-5 rounded-2xl space-y-4">
+
+          <h2 className="text-2xl font-black">
+            🚚 تحويل بين المخازن
+          </h2>
+
+          <select
+            className="w-full p-3 rounded text-black"
+            value={selectedProduct}
+            onChange={(e) =>
+              setSelectedProduct(
+                e.target.value
+              )
+            }
+          >
+            <option value="">
+              اختر المنتج
+            </option>
+
+            {warehouseProducts.map(
+              (product) => (
+                <option
+                  key={product.id}
+                  value={product.id}
+                >
+                  {product.name}
+                </option>
+              )
+            )}
+          </select>
+
+          <select
+            className="w-full p-3 rounded text-black"
+            value={targetWarehouse}
+            onChange={(e) =>
+              setTargetWarehouse(
+                e.target.value
+              )
+            }
+          >
+            <option value="">
+              اختر الوجهة
+            </option>
+
+            {availableUnits.map((unit) => (
+              <option
+                key={unit.id}
+                value={unit.warehouseId}
+              >
+                {unit.warehouseName}
+              </option>
+            ))}
+          </select>
+
+          <input
+            type="number"
+            min="1"
+            value={quantity}
+            onChange={(e) =>
+              setQuantity(e.target.value)
+            }
+            className="w-full p-3 rounded text-black"
+            placeholder="الكمية"
+          />
+
           <button
-            onClick={() => navigate('/home')}
+            onClick={handleTransfer}
             className="bg-blue-600 px-5 py-3 rounded-xl font-bold"
           >
-            🏠 الرئيسية
-          </button>
-
-          {/* 📊 DASHBOARD */}
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="bg-green-600 px-5 py-3 rounded-xl font-bold"
-          >
-            📊 الداشبورد
-          </button>
-
-          {/* 🚪 LOGOUT */}
-          <button
-            onClick={() => {
-              logout()
-              navigate('/login')
-            }}
-            className="bg-red-600 px-5 py-3 rounded-xl font-bold"
-          >
-            تسجيل الخروج
+            تنفيذ التحويل
           </button>
 
         </div>
 
-      </div>
+        <div className="bg-slate-900 p-5 rounded-2xl">
 
-      {/* ================= STATS ================= */}
+          <div className="flex justify-between mb-4">
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <h2 className="text-2xl font-black">
+              📦 المنتجات
+            </h2>
 
-        <div className="bg-blue-700 p-6 rounded-2xl">
-          📦 المنتجات
-          <div className="text-4xl font-black">
-            {stats.products}
+            <input
+              value={search}
+              onChange={(e) =>
+                setSearch(e.target.value)
+              }
+              placeholder="بحث"
+              className="p-2 rounded text-black"
+            />
+
           </div>
-        </div>
 
-        <div className="bg-green-700 p-6 rounded-2xl">
-          🛒 الطلبات
-          <div className="text-4xl font-black">
-            {stats.orders}
+          <div className="overflow-auto">
+
+            <table className="w-full">
+              <thead>
+                <tr>
+                  <th className="text-right p-2">الصنف</th>
+                  <th className="text-right p-2">المخزون</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {filteredProducts.map(
+                  (product) => (
+                    <tr
+                      key={product.id}
+                      className="border-t border-slate-700"
+                    >
+                      <td className="p-2">
+                        {product.name}
+                      </td>
+
+                      <td className="p-2">
+                        {product.stock}
+                      </td>
+                    </tr>
+                  )
+                )}
+              </tbody>
+            </table>
+
           </div>
+
         </div>
 
-        <div className="bg-yellow-500 text-black p-6 rounded-2xl">
-          💰 المبيعات
-          <div className="text-4xl font-black">
-            {stats.sales}
+        <div className="grid lg:grid-cols-2 gap-6">
+
+          <div className="bg-slate-900 p-5 rounded-2xl">
+
+            <h2 className="text-xl font-black mb-4">
+              ⚠ الأصناف منخفضة المخزون
+            </h2>
+
+            {lowStockProducts.map((p) => (
+              <div
+                key={p.id}
+                className="border-b border-slate-700 py-2"
+              >
+                {p.name} - {p.stock}
+              </div>
+            ))}
+
           </div>
+
+          <div className="bg-slate-900 p-5 rounded-2xl">
+
+            <h2 className="text-xl font-black mb-4">
+              🚚 آخر التحويلات
+            </h2>
+
+            {warehouseTransfers
+              .slice(-10)
+              .reverse()
+              .map((t) => (
+                <div
+                  key={t.id}
+                  className="border-b border-slate-700 py-2"
+                >
+                  {t.productName || t.productId}
+                </div>
+              ))}
+
+          </div>
+
         </div>
 
-      </div>
+        <div className="bg-slate-900 p-5 rounded-2xl">
 
-      {/* ================= TRANSFER PANEL ================= */}
+          <h2 className="text-xl font-black mb-4">
+            📈 حركة المخزون
+          </h2>
 
-      <div className="bg-slate-900 p-8 rounded-3xl space-y-6">
-
-        <h2 className="text-3xl font-bold text-yellow-400">
-          🚚 نقل المنتجات بين المخازن
-        </h2>
-
-        {/* PRODUCT */}
-
-        <select
-          value={selectedProduct}
-          onChange={(e) =>
-            setSelectedProduct(e.target.value)
-          }
-          className="w-full p-4 rounded-xl text-black"
-        >
-
-          <option value="">
-            اختر المنتج
-          </option>
-
-          {warehouseProducts.map((p) => (
-
-            <option
-              key={p.id}
-              value={p.id}
-            >
-              {p.name} — المتوفر: {p.stock}
-            </option>
-
-          ))}
-
-        </select>
-
-        {/* TARGET WAREHOUSE */}
-
-        <select
-          value={targetWarehouse}
-          onChange={(e) =>
-            setTargetWarehouse(e.target.value)
-          }
-          className="w-full p-4 rounded-xl text-black"
-        >
-
-          <option value="">
-            اختر المخزن الهدف
-          </option>
-
-          {warehouseUsers.map((w) => (
-
-            <option
-              key={w.id}
-              value={w.warehouseId}
-            >
-              {w.warehouseName || w.username}
-            </option>
-
-          ))}
-
-        </select>
-
-        {/* QUANTITY */}
-
-        <input
-          type="number"
-          placeholder="الكمية"
-          value={quantity}
-          onChange={(e) =>
-            setQuantity(e.target.value)
-          }
-          className="w-full p-4 rounded-xl text-black"
-        />
-
-        {/* BUTTON */}
-
-        <button
-          onClick={handleTransfer}
-          className="
-            bg-yellow-500
-            hover:bg-yellow-600
-            text-black
-            px-8
-            py-4
-            rounded-2xl
-            font-black
-            text-xl
-          "
-        >
-          🚚 تنفيذ النقل
-        </button>
-
-      </div>
-
-      {/* ================= PRODUCTS ================= */}
-
-      <div className="bg-slate-900 p-6 rounded-3xl">
-
-        <h2 className="text-3xl font-bold mb-6">
-          📦 منتجات المخزن
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-          {warehouseProducts.map((p) => (
-
-            <div
-              key={p.id}
-              className="bg-slate-800 p-4 rounded-2xl"
-            >
-
-              <h3 className="text-xl font-bold">
-                {p.name}
-              </h3>
-
-              <p className="text-yellow-400 font-black">
-                المخزون: {p.stock}
-              </p>
-
-            </div>
-
-          ))}
+          {warehouseHistory
+            .slice(-20)
+            .reverse()
+            .map((item, index) => (
+              <div
+                key={index}
+                className="border-b border-slate-700 py-2"
+              >
+                {item.action || item.type} -
+                {item.productName}
+              </div>
+            ))}
 
         </div>
 
       </div>
-
-      {/* ================= ORDERS ================= */}
-
-      <div className="bg-slate-900 p-6 rounded-3xl">
-
-        <h2 className="text-3xl font-bold mb-6">
-          🛒 الطلبات
-        </h2>
-
-        <div className="space-y-4">
-
-          {warehouseOrders.map((o) => (
-
-            <div
-              key={o.id}
-              className="
-                bg-slate-800
-                p-4
-                rounded-2xl
-                flex
-                justify-between
-              "
-            >
-
-              <span>
-                {o.status}
-              </span>
-
-              <span className="text-yellow-400 font-black">
-                {o.total} جنيه
-              </span>
-
-            </div>
-
-          ))}
-
-        </div>
-
-      </div>
-
-    </div>
+    </حماية_الصفحة>
   )
 }

@@ -4,7 +4,7 @@ import { useWebsiteStore } from '../store/websiteStore'
 export default function Videos() {
 
   const {
-    videos,
+    videos = [],
     addVideo,
     deleteVideo
   } = useWebsiteStore()
@@ -12,24 +12,32 @@ export default function Videos() {
   const [title, setTitle] = useState('')
   const [video, setVideo] = useState('')
   const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(false)
 
   // ================= VIDEO UPLOAD =================
 
   const handleVideoUpload = (e) => {
 
-    const file = e.target.files[0]
+    const file = e.target.files?.[0]
 
     if (!file) return
 
-    const reader = new FileReader()
+    // IMPORTANT FIX
+    // منع رفع فيديوهات ضخمة تسبب crash
+    if (file.size > 100 * 1024 * 1024) {
 
-    reader.onloadend = () => {
-
-      setVideo(reader.result)
+      alert('حجم الفيديو كبير جداً (الحد الأقصى 100MB)')
+      return
 
     }
 
-    reader.readAsDataURL(file)
+    setLoading(true)
+
+    const videoURL = URL.createObjectURL(file)
+
+    setVideo(videoURL)
+
+    setLoading(false)
 
   }
 
@@ -40,16 +48,16 @@ export default function Videos() {
     if (!title || !video) {
 
       alert('يرجى إدخال جميع البيانات')
-
       return
 
     }
 
     addVideo({
 
+      id: Date.now(),
       title,
-
-      video
+      video,
+      createdAt: new Date().toISOString()
 
     })
 
@@ -64,7 +72,7 @@ export default function Videos() {
 
   const handleDelete = (id) => {
 
-    const confirmDelete = confirm(
+    const confirmDelete = window.confirm(
       'هل تريد حذف الفيديو؟'
     )
 
@@ -84,7 +92,7 @@ export default function Videos() {
 
       .filter((item) =>
 
-        item.title
+        item?.title
           ?.toLowerCase()
           .includes(
             search.toLowerCase()
@@ -96,8 +104,8 @@ export default function Videos() {
 
         (a, b) =>
 
-          new Date(b.createdAt) -
-          new Date(a.createdAt)
+          new Date(b.createdAt || 0) -
+          new Date(a.createdAt || 0)
 
       )
 
@@ -109,19 +117,20 @@ export default function Videos() {
 
   return (
 
-    <div className="min-h-screen bg-slate-950 text-white p-10">
+    <div className="min-h-screen bg-slate-950 text-white p-4 md:p-10">
 
       {/* TITLE */}
 
       <h1
         className="
-          text-5xl
+          text-4xl
+          md:text-5xl
           font-extrabold
           text-purple-400
           mb-10
         "
       >
-        إدارة الفيديوهات
+        🎬 إدارة الفيديوهات
       </h1>
 
       {/* ANALYTICS */}
@@ -148,7 +157,7 @@ export default function Videos() {
 
           <h2
             className="
-              text-3xl
+              text-2xl
               font-bold
               mb-4
             "
@@ -158,7 +167,7 @@ export default function Videos() {
 
           <p
             className="
-              text-6xl
+              text-5xl
               font-extrabold
             "
           >
@@ -179,7 +188,7 @@ export default function Videos() {
 
           <h2
             className="
-              text-3xl
+              text-2xl
               font-bold
               mb-4
             "
@@ -189,15 +198,13 @@ export default function Videos() {
 
           <p
             className="
-              text-2xl
+              text-xl
               font-extrabold
               break-words
             "
           >
             {videos.length > 0
-              ? videos[
-                  videos.length - 1
-                ]?.title
+              ? videos[videos.length - 1]?.title
               : 'لا توجد فيديوهات'}
           </p>
 
@@ -216,7 +223,7 @@ export default function Videos() {
 
           <h2
             className="
-              text-3xl
+              text-2xl
               font-bold
               mb-4
             "
@@ -226,7 +233,7 @@ export default function Videos() {
 
           <p
             className="
-              text-6xl
+              text-5xl
               font-extrabold
             "
           >
@@ -253,13 +260,13 @@ export default function Videos() {
 
         <h2
           className="
-            text-4xl
+            text-3xl
             font-extrabold
             text-yellow-400
             mb-8
           "
         >
-          إضافة فيديو جديد
+          ➕ إضافة فيديو جديد
         </h2>
 
         <div className="space-y-6">
@@ -278,12 +285,13 @@ export default function Videos() {
               bg-white
               text-black
               text-xl
+              outline-none
             "
           />
 
           <input
             type="file"
-            accept="video/*"
+            accept="video/mp4,video/webm,video/ogg"
             onChange={handleVideoUpload}
             className="
               w-full
@@ -295,6 +303,14 @@ export default function Videos() {
             "
           />
 
+          {loading && (
+
+            <div className="text-center text-yellow-400 text-2xl">
+              جاري تحميل الفيديو...
+            </div>
+
+          )}
+
           {/* PREVIEW */}
 
           {video && (
@@ -302,18 +318,26 @@ export default function Videos() {
             <div className="relative">
 
               <video
-                src={video}
+                key={video}
                 controls
+                preload="metadata"
+                controlsList="nodownload"
                 className="
                   w-full
-                  h-[450px]
-                  object-cover
+                  max-h-[500px]
                   rounded-3xl
                   border-4
                   border-purple-500
                   shadow-2xl
+                  bg-black
                 "
-              />
+              >
+
+                <source src={video} type="video/mp4" />
+
+                متصفحك لا يدعم تشغيل الفيديو
+
+              </video>
 
               <div
                 className="
@@ -324,7 +348,7 @@ export default function Videos() {
                   px-5
                   py-3
                   rounded-2xl
-                  text-xl
+                  text-lg
                   font-bold
                 "
               >
@@ -349,7 +373,7 @@ export default function Videos() {
               transition-all
             "
           >
-            إضافة الفيديو
+            حفظ الفيديو
           </button>
 
         </div>
@@ -381,6 +405,7 @@ export default function Videos() {
             bg-white
             text-black
             text-xl
+            outline-none
           "
         />
 
@@ -396,7 +421,7 @@ export default function Videos() {
             rounded-3xl
             p-16
             text-center
-            text-4xl
+            text-3xl
             text-gray-400
           "
         >
@@ -420,25 +445,32 @@ export default function Videos() {
               border
               border-purple-500
               shadow-2xl
-              hover:scale-[1.01]
-              transition-all
             "
           >
 
             {/* VIDEO */}
 
-            <div className="relative">
+            <div className="relative bg-black">
 
               <video
-                src={item.video}
                 controls
+                preload="metadata"
+                controlsList="nodownload"
                 className="
                   w-full
                   h-[350px]
-                  object-cover
                   bg-black
                 "
-              />
+              >
+
+                <source
+                  src={item.video}
+                  type="video/mp4"
+                />
+
+                متصفحك لا يدعم تشغيل الفيديو
+
+              </video>
 
               <div
                 className="

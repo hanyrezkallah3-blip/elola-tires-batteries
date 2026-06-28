@@ -4,32 +4,49 @@ import { useWebsiteStore } from '../store/websiteStore'
 export default function Slides() {
 
   const {
-    slides,
+    slides = [],
     addSlide,
     deleteSlide
   } = useWebsiteStore()
 
-  const [preview, setPreview] = useState('')
+  // ================= STATE =================
 
+  const [preview, setPreview] = useState('')
   const [search, setSearch] = useState('')
 
   // ================= UPLOAD IMAGE =================
 
   const handleImageUpload = (e) => {
 
-    const file = e.target.files[0]
+    const file = e.target.files?.[0]
 
     if (!file) return
 
-    const reader = new FileReader()
+    // FIX IMAGE VALIDATION
 
-    reader.readAsDataURL(file)
+    if (!file.type.startsWith('image/')) {
+
+      alert('يرجى اختيار صورة فقط')
+
+      return
+
+    }
+
+    const reader = new FileReader()
 
     reader.onload = () => {
 
       setPreview(reader.result)
 
     }
+
+    reader.onerror = () => {
+
+      alert('حدث خطأ أثناء تحميل الصورة')
+
+    }
+
+    reader.readAsDataURL(file)
 
   }
 
@@ -45,13 +62,29 @@ export default function Slides() {
 
     }
 
+    // FIX STORE ERROR
+
+    if (typeof addSlide !== 'function') {
+
+      alert('دالة addSlide غير موجودة داخل WebsiteStore')
+
+      return
+
+    }
+
     addSlide({
-      image: preview
+
+      id: Date.now(),
+
+      image: preview,
+
+      createdAt: new Date().toISOString()
+
     })
 
     setPreview('')
 
-    alert('تم إضافة الصورة بنجاح')
+    alert('✅ تم إضافة الصورة بنجاح')
 
   }
 
@@ -59,7 +92,15 @@ export default function Slides() {
 
   const handleDelete = (id) => {
 
-    const confirmDelete = confirm(
+    if (typeof deleteSlide !== 'function') {
+
+      alert('دالة deleteSlide غير موجودة داخل WebsiteStore')
+
+      return
+
+    }
+
+    const confirmDelete = window.confirm(
       'هل تريد حذف الصورة؟'
     )
 
@@ -79,7 +120,7 @@ export default function Slides() {
 
       .filter((slide) =>
 
-        slide.id
+        slide?.id
           ?.toString()
           .includes(search)
 
@@ -89,8 +130,8 @@ export default function Slides() {
 
         (a, b) =>
 
-          new Date(b.createdAt) -
-          new Date(a.createdAt)
+          new Date(b?.createdAt || 0) -
+          new Date(a?.createdAt || 0)
 
       )
 
@@ -98,20 +139,29 @@ export default function Slides() {
 
   return (
 
-    <div className="p-10 bg-black min-h-screen text-white">
+    <div className="min-h-screen bg-slate-950 text-white p-4 md:p-10">
 
       {/* TITLE */}
 
-      <h1
-        className="
-          text-5xl
-          font-extrabold
-          text-yellow-400
-          mb-10
-        "
-      >
-        إدارة السلايدر
-      </h1>
+      <div className="mb-10">
+
+        <h1
+          className="
+            text-4xl
+            md:text-5xl
+            font-extrabold
+            text-yellow-400
+            mb-4
+          "
+        >
+          🖼 إدارة السلايدر
+        </h1>
+
+        <p className="text-gray-400 text-lg">
+          إدارة صور السلايدر الخاصة بالموقع
+        </p>
+
+      </div>
 
       {/* ANALYTICS */}
 
@@ -127,7 +177,9 @@ export default function Slides() {
 
         <div
           className="
-            bg-blue-700
+            bg-gradient-to-br
+            from-blue-700
+            to-blue-900
             p-8
             rounded-3xl
             text-center
@@ -137,7 +189,7 @@ export default function Slides() {
 
           <h2
             className="
-              text-3xl
+              text-2xl
               font-bold
               mb-4
             "
@@ -158,7 +210,9 @@ export default function Slides() {
 
         <div
           className="
-            bg-green-700
+            bg-gradient-to-br
+            from-green-700
+            to-green-900
             p-8
             rounded-3xl
             text-center
@@ -168,7 +222,7 @@ export default function Slides() {
 
           <h2
             className="
-              text-3xl
+              text-2xl
               font-bold
               mb-4
             "
@@ -178,16 +232,14 @@ export default function Slides() {
 
           <p
             className="
-              text-2xl
+              text-xl
               font-extrabold
               break-words
             "
           >
             {slides.length > 0
               ? new Date(
-                  slides[
-                    slides.length - 1
-                  ]?.createdAt
+                  slides[0]?.createdAt
                 ).toLocaleDateString()
               : 'لا توجد بيانات'}
           </p>
@@ -196,7 +248,9 @@ export default function Slides() {
 
         <div
           className="
-            bg-yellow-500
+            bg-gradient-to-br
+            from-yellow-400
+            to-yellow-600
             text-black
             p-8
             rounded-3xl
@@ -207,12 +261,12 @@ export default function Slides() {
 
           <h2
             className="
-              text-3xl
+              text-2xl
               font-bold
               mb-4
             "
           >
-            صور جاهزة للعرض
+            صور جاهزة
           </h2>
 
           <p
@@ -233,7 +287,8 @@ export default function Slides() {
       <div
         className="
           bg-slate-900
-          p-8
+          p-6
+          md:p-8
           rounded-3xl
           mb-12
           border
@@ -244,13 +299,14 @@ export default function Slides() {
 
         <h2
           className="
-            text-4xl
+            text-3xl
+            md:text-4xl
             font-extrabold
             mb-8
             text-blue-400
           "
         >
-          إضافة صورة جديدة
+          ➕ إضافة صورة جديدة
         </h2>
 
         <input
@@ -268,13 +324,15 @@ export default function Slides() {
           "
         />
 
+        {/* PREVIEW */}
+
         {preview && (
 
           <div className="relative">
 
             <img
               src={preview}
-              alt=""
+              alt="preview"
               className="
                 w-full
                 h-[450px]
@@ -318,6 +376,7 @@ export default function Slides() {
             text-2xl
             font-extrabold
             transition-all
+            duration-300
           "
         >
           إضافة الصورة للسلايدر
@@ -338,7 +397,7 @@ export default function Slides() {
 
         <input
           type="text"
-          placeholder="بحث برقم الصورة..."
+          placeholder="🔍 بحث برقم الصورة..."
           value={search}
           onChange={(e) =>
             setSearch(e.target.value)
@@ -350,6 +409,7 @@ export default function Slides() {
             bg-white
             text-black
             text-xl
+            outline-none
           "
         />
 
@@ -365,7 +425,7 @@ export default function Slides() {
             rounded-3xl
             p-16
             text-center
-            text-4xl
+            text-3xl
             text-gray-400
           "
         >
@@ -376,7 +436,7 @@ export default function Slides() {
 
       {/* SLIDES LIST */}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
 
         {filteredSlides.map((slide, index) => (
 
@@ -391,6 +451,7 @@ export default function Slides() {
               shadow-2xl
               hover:scale-[1.02]
               transition-all
+              duration-300
             "
           >
 
@@ -400,11 +461,12 @@ export default function Slides() {
 
               <img
                 src={slide.image}
-                alt=""
+                alt={`slide-${index}`}
                 className="
                   w-full
                   h-72
                   object-cover
+                  bg-black
                 "
               />
 
@@ -496,6 +558,7 @@ export default function Slides() {
                     text-center
                     text-xl
                     font-bold
+                    transition-all
                   "
                 >
                   عرض الصورة
@@ -513,6 +576,7 @@ export default function Slides() {
                     rounded-2xl
                     text-xl
                     font-bold
+                    transition-all
                   "
                 >
                   حذف الصورة

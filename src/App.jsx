@@ -1,10 +1,8 @@
-import {
-  Routes,
-  Route,
-  Navigate
-} from 'react-router-dom'
-
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import { useWebsiteStore } from './store/websiteStore'
+
+import ERPController from './erp/ERPController'
 
 import DashboardLayout from './layout/DashboardLayout'
 
@@ -22,29 +20,46 @@ import Admin from './pages/Admin'
 
 import WarehouseDashboard from './pages/WarehouseDashboard'
 import WarehouseAdminPanel from './pages/WarehouseAdminPanel'
+import BIDashboard from './pages/BIDashboard'
 
-// ================= PROTECTED ROUTE =================
+import Wallets from './pages/Wallets'
+import FinanceDashboard from './pages/FinanceDashboard'
+
+import Warehouses from './pages/Warehouses'
+import Users from './pages/Users'
+import Transfers from './pages/Transfers'
+import Permissions from './pages/Permissions'
+
+// ================= LOADING =================
+
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white text-3xl font-black">
+      جاري التحميل...
+    </div>
+  )
+}
+
+// ================= ROUTES GUARDS (FIXED) =================
 
 function ProtectedRoute({ children }) {
+  const currentUser = useWebsiteStore((s) => s.currentUser)
+  const hydrated = useWebsiteStore((s) => s.hydrated)
 
-  const currentUser = useWebsiteStore(
-    (state) => state.currentUser
-  )
+  if (!hydrated) return <LoadingScreen />
 
-  if (!currentUser) {
+  if (!currentUser || !currentUser.id) {
     return <Navigate to="/login" replace />
   }
 
   return children
 }
 
-// ================= OWNER ONLY =================
-
 function OwnerRoute({ children }) {
+  const currentUser = useWebsiteStore((s) => s.currentUser)
+  const hydrated = useWebsiteStore((s) => s.hydrated)
 
-  const currentUser = useWebsiteStore(
-    (state) => state.currentUser
-  )
+  if (!hydrated) return <LoadingScreen />
 
   if (!currentUser || currentUser.role !== 'owner') {
     return <Navigate to="/home" replace />
@@ -53,178 +68,250 @@ function OwnerRoute({ children }) {
   return children
 }
 
-// ================= WAREHOUSE ROUTE =================
-
-function WarehouseRoute({ children }) {
-
-  const currentUser = useWebsiteStore(
-    (state) => state.currentUser
-  )
-
-  if (!currentUser) {
-    return <Navigate to="/login" replace />
-  }
-
-  if (
-    currentUser.role !== 'warehouse' &&
-    currentUser.role !== 'owner'
-  ) {
-    return <Navigate to="/home" replace />
-  }
-
-  return children
-}
-
-// ================= DASHBOARD WRAPPER =================
-
-function DashboardPage({ children }) {
-
-  return (
-    <ProtectedRoute>
-      <DashboardLayout>
-        {children}
-      </DashboardLayout>
-    </ProtectedRoute>
-  )
-}
-
 // ================= APP =================
 
 export default function App() {
 
+  const hydrated = useWebsiteStore((s) => s.hydrated)
+  const setHydrated = useWebsiteStore((s) => s.setHydrated)
+
+  // ERP INIT (SAFE WRAP TO PREVENT CRASH)
+  useEffect(() => {
+    try {
+      if (ERPController?.init) {
+        ERPController.init()
+      }
+    } catch (err) {
+      console.error('ERPController Error:', err)
+    }
+  }, [])
+
+  // FIXED HYDRATION (NO TIMEOUT)
+  useEffect(() => {
+    setHydrated(true)
+  }, [setHydrated])
+
+  // if (!hydrated) return <LoadingScreen />
+
   return (
-    <div className="bg-black min-h-screen">
+    <Routes>
 
-      <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/home" element={<Home />} />
 
-        {/* ================= LOGIN ================= */}
-        <Route path="/login" element={<Login />} />
-
-        {/* ================= WEBSITE ================= */}
-        <Route path="/home" element={<Home />} />
-
-        {/* ================= ADMIN ================= */}
-        <Route
-          path="/admin"
-          element={
-            <OwnerRoute>
-              <Admin />
-            </OwnerRoute>
-          }
-        />
-
-        {/* ================= MAIN DASHBOARD ================= */}
-        <Route
-          path="/dashboard"
-          element={
-            <DashboardPage>
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
               <Dashboard />
-            </DashboardPage>
-          }
-        />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
 
-        {/* ================= WAREHOUSE DASHBOARD (FIXED) ================= */}
-        <Route
-          path="/warehouse-dashboard"
-          element={
-            <WarehouseRoute>
-              <DashboardLayout>
-                <WarehouseDashboard />
-              </DashboardLayout>
-            </WarehouseRoute>
-          }
-        />
+      <Route
+        path="/bi"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <BIDashboard />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
 
-        {/* ================= WAREHOUSE ADMIN ================= */}
-        <Route
-          path="/warehouse-admin"
-          element={
-            <OwnerRoute>
-              <DashboardPage>
-                <WarehouseAdminPanel />
-              </DashboardPage>
-            </OwnerRoute>
-          }
-        />
+      <Route
+        path="/ai"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <BIDashboard />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
 
-        {/* ================= PRODUCTS ================= */}
-        <Route
-          path="/products"
-          element={
-            <DashboardPage>
+      <Route
+        path="/admin"
+        element={
+          <OwnerRoute>
+            <DashboardLayout>
+              <Admin />
+            </DashboardLayout>
+          </OwnerRoute>
+        }
+      />
+
+      <Route
+        path="/warehouse-dashboard"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <WarehouseDashboard />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/warehouses"
+        element={
+          <OwnerRoute>
+            <DashboardLayout>
+              <Warehouses />
+            </DashboardLayout>
+          </OwnerRoute>
+        }
+      />
+
+      <Route
+        path="/transfers"
+        element={
+          <OwnerRoute>
+            <DashboardLayout>
+              <Transfers />
+            </DashboardLayout>
+          </OwnerRoute>
+        }
+      />
+
+      <Route
+        path="/users"
+        element={
+          <OwnerRoute>
+            <DashboardLayout>
+              <Users />
+            </DashboardLayout>
+          </OwnerRoute>
+        }
+      />
+
+      <Route
+        path="/permissions"
+        element={
+          <OwnerRoute>
+            <DashboardLayout>
+              <Permissions />
+            </DashboardLayout>
+          </OwnerRoute>
+        }
+      />
+
+      <Route
+        path="/warehouse-admin"
+        element={
+          <OwnerRoute>
+            <DashboardLayout>
+              <WarehouseAdminPanel />
+            </DashboardLayout>
+          </OwnerRoute>
+        }
+      />
+
+      <Route
+        path="/products"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
               <Products />
-            </DashboardPage>
-          }
-        />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
 
-        {/* ================= SLIDES ================= */}
-        <Route
-          path="/slides"
-          element={
-            <DashboardPage>
+      <Route
+        path="/slides"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
               <Slides />
-            </DashboardPage>
-          }
-        />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
 
-        {/* ================= OFFERS ================= */}
-        <Route
-          path="/offers"
-          element={
-            <DashboardPage>
+      <Route
+        path="/offers"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
               <Offers />
-            </DashboardPage>
-          }
-        />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
 
-        {/* ================= SERVICES ================= */}
-        <Route
-          path="/services"
-          element={
-            <DashboardPage>
+      <Route
+        path="/services"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
               <Services />
-            </DashboardPage>
-          }
-        />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
 
-        {/* ================= VIDEOS ================= */}
-        <Route
-          path="/videos"
-          element={
-            <DashboardPage>
+      <Route
+        path="/videos"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
               <Videos />
-            </DashboardPage>
-          }
-        />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
 
-        {/* ================= ORDERS ================= */}
-        <Route
-          path="/orders"
-          element={
-            <DashboardPage>
+      <Route
+        path="/orders"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
               <Orders />
-            </DashboardPage>
-          }
-        />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
 
-        {/* ================= COMPANY ================= */}
-        <Route
-          path="/company"
-          element={
-            <DashboardPage>
+      <Route
+        path="/company"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
               <Company />
-            </DashboardPage>
-          }
-        />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
 
-        {/* ================= 404 ================= */}
-        <Route
-          path="*"
-          element={<Navigate to="/home" replace />}
-        />
+      <Route
+        path="/wallets"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <Wallets />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
 
-      </Routes>
+      <Route
+        path="/finance"
+        element={
+          <OwnerRoute>
+            <DashboardLayout>
+              <FinanceDashboard />
+            </DashboardLayout>
+          </OwnerRoute>
+        }
+      />
 
-    </div>
+      <Route path="/" element={<Navigate to="/home" replace />} />
+
+      <Route path="*" element={<Navigate to="/home" replace />} />
+
+    </Routes>
   )
 }

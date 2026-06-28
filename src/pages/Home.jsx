@@ -1,20 +1,24 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useWebsiteStore } from '../store/websiteStore'
-import Footer from '../components/Footer'
-import Cart from '../components/Cart'
+
+import { useWebsiteStore }
+  from '../store/websiteStore'
+
+import Footer
+  from '../components/Footer'
+
+import Cart
+  from '../components/Cart'
 
 export default function Home() {
 
   const {
 
-    slides,
-    products,
-    offers,
-    services,
-    videos,
-
-    // COMPANY
+    slides = [],
+    products = [],
+    offers = [],
+    services = [],
+    videos = [],
 
     companyName,
     logo,
@@ -27,9 +31,13 @@ export default function Home() {
     companyEmail,
 
     addToCart,
-    cart
+    cart = [],
+
+    hydrated
 
   } = useWebsiteStore()
+
+  // ================= STATES =================
 
   const [currentSlide, setCurrentSlide] =
     useState(0)
@@ -37,36 +45,87 @@ export default function Home() {
   const [cartOpen, setCartOpen] =
     useState(false)
 
-  // ================= SLIDER =================
+  const [mobileMenu, setMobileMenu] =
+    useState(false)
+
+  const [imageLoaded, setImageLoaded] =
+    useState(false)
+
+  // ================= FIX HYDRATION =================
+
+  if (false && !hydrated) {
+
+    return (
+
+      <div className="
+        min-h-screen
+        bg-black
+        flex
+        items-center
+        justify-center
+        text-white
+        text-4xl
+        font-black
+      ">
+
+        جاري تحميل الموقع...
+
+      </div>
+
+    )
+
+  }
+
+  // ================= FIX SLIDER =================
 
   useEffect(() => {
 
     if (!slides?.length) return
 
+    if (cartOpen) return
+
     const interval = setInterval(() => {
 
       setCurrentSlide((prev) =>
 
-        prev === slides.length - 1
+        prev >= slides.length - 1
           ? 0
           : prev + 1
 
       )
 
-    }, 3000)
+    }, 5000)
 
     return () => clearInterval(interval)
 
-  }, [slides])
+  }, [slides, cartOpen])
+
+  // ================= FIX CURRENT SLIDE =================
+
+  useEffect(() => {
+
+    if (
+      currentSlide >
+      slides.length - 1
+    ) {
+
+      setCurrentSlide(0)
+
+    }
+
+  }, [slides, currentSlide])
 
   // ================= PRODUCTS =================
 
-  const visibleProducts =
-    products.filter(
+  const visibleProducts = useMemo(() => {
+
+    return products.filter(
       (product) => !product.hidden
     )
 
-  // ================= SCROLL FUNCTION =================
+  }, [products])
+
+  // ================= SCROLL =================
 
   const scrollToSection = (id) => {
 
@@ -78,14 +137,42 @@ export default function Home() {
       element.scrollIntoView({
 
         behavior: 'smooth',
-
         block: 'start'
 
       })
 
     }
 
+    setMobileMenu(false)
+
   }
+
+  // ================= SOCIALS =================
+
+  const socials = [
+
+    {
+      show: companyFacebook,
+      title: 'Facebook',
+      value: companyFacebook,
+      color: 'bg-blue-700'
+    },
+
+    {
+      show: companyInstagram,
+      title: 'Instagram',
+      value: companyInstagram,
+      color: 'bg-pink-600'
+    },
+
+    {
+      show: companyYoutube,
+      title: 'Youtube',
+      value: companyYoutube,
+      color: 'bg-red-600'
+    }
+
+  ]
 
   return (
 
@@ -93,32 +180,36 @@ export default function Home() {
       bg-black
       min-h-screen
       text-white
-      overflow-hidden
+      overflow-x-hidden
     ">
 
-      {/* DASHBOARD BUTTON */}
+      {/* DASHBOARD */}
 
       <Link
         to="/dashboard"
         className="
           fixed
-          top-7
-          left-2
+          top-25
+          left-0
           z-50
           bg-blue-700
           hover:bg-blue-800
           text-white
-          px-6
-          py-4
+          px-5
+          py-3
           rounded-2xl
-          text-xl
+          text-sm
+          md:text-lg
           font-extrabold
           shadow-2xl
           border-2
           border-yellow-400
+          transition
         "
       >
+
         لوحة التحكم
+
       </Link>
 
       {/* CART */}
@@ -132,28 +223,33 @@ export default function Home() {
 
       <button
 
+        type="button"
+
         onClick={() =>
           setCartOpen(true)
         }
 
         className="
           fixed
-          bottom-8
-          left-8
+          bottom-6
+          left-6
           z-50
           bg-yellow-400
           hover:bg-yellow-500
-          w-24
-          h-24
+          w-20
+          h-20
+          md:w-24
+          md:h-24
           rounded-full
           shadow-2xl
           flex
           items-center
           justify-center
-          text-5xl
+          text-4xl
+          md:text-5xl
           border-4
           border-white
-          animate-bounce
+          transition
         "
       >
 
@@ -166,84 +262,157 @@ export default function Home() {
             -right-2
             bg-red-600
             text-white
-            w-10
-            h-10
+            w-9
+            h-9
             rounded-full
             flex
             items-center
             justify-center
-            text-lg
+            text-sm
             font-extrabold
           "
         >
+
           {cart.length}
+
         </span>
 
       </button>
 
       {/* HEADER */}
 
-      <div className="
-        h-24
+      <header className="
         bg-gradient-to-r
         from-blue-950
         via-blue-700
         to-yellow-500
-        flex
-        items-center
-        justify-between
-        px-8
         border-b-4
         border-yellow-400
+        px-4
+        md:px-8
+        py-5
       ">
 
         <div className="
-          w-16
-          h-16
-          rounded-full
-          overflow-hidden
-          bg-white
-          border-4
-          border-yellow-400
+          flex
+          items-center
+          justify-between
+          gap-4
         ">
 
-          {logo && (
+          {/* LOGO */}
 
-            <img
-              src={logo}
-              alt=""
-              className="
-                w-full
-                h-full
-                object-cover
-              "
-            />
+          <div className="
+            w-16
+            h-16
+            md:w-20
+            md:h-20
+            rounded-full
+            overflow-hidden
+            bg-white
+            border-4
+            border-yellow-400
+            shadow-xl
+            shrink-0
+          ">
 
-          )}
+            {
+
+              logo ? (
+
+                <img
+                  src={logo}
+                  alt="logo"
+                  className="
+                    w-full
+                    h-full
+                    object-cover
+                  "
+                />
+
+              ) : (
+
+                <div className="
+                  w-full
+                  h-full
+                  flex
+                  items-center
+                  justify-center
+                  text-black
+                  font-black
+                ">
+
+                  LOGO
+
+                </div>
+
+              )
+
+            }
+
+          </div>
+
+          {/* TITLE */}
+
+          <div className="flex-1 text-center">
+
+            <h1 className="
+              text-2xl
+              md:text-5xl
+              font-extrabold
+              leading-tight
+            ">
+
+              {
+
+                companyName ||
+
+                'شركة العلا للإطارات والبطاريات'
+
+              }
+
+            </h1>
+
+            <p className="
+              text-sm
+              md:text-lg
+              mt-2
+              text-white/90
+            ">
+
+              أفضل الإطارات والبطاريات والخدمات المتكاملة
+
+            </p>
+
+          </div>
+
+          {/* MENU */}
+
+          <button
+            type="button"
+            onClick={() =>
+              setMobileMenu(!mobileMenu)
+            }
+            className="
+              lg:hidden
+              bg-black/30
+              w-14
+              h-14
+              rounded-2xl
+              text-3xl
+              font-black
+            "
+          >
+
+            ☰
+
+          </button>
 
         </div>
 
-        <h1 className="
-          text-3xl
-          md:text-5xl
-          font-extrabold
-          animate-pulse
-          text-center
-        ">
-          {
+      </header>
 
-            companyName ||
-
-            'شركة العلا للإطارات والبطاريات'
-
-          }
-        </h1>
-
-        <div className="w-16"></div>
-
-      </div>
-
-      {/* QUICK NAVIGATION */}
+      {/* NAVIGATION */}
 
       <div className="
         sticky
@@ -253,119 +422,136 @@ export default function Home() {
         backdrop-blur-md
         border-b
         border-yellow-500
-        py-4
-        px-4
       ">
 
-        <div className="
-          flex
-          flex-wrap
-          justify-center
-          gap-4
-        ">
+        <div className={`
+          px-4
+          py-4
 
-          <button
-            onClick={() =>
-              scrollToSection('slider')
-            }
-            className="
-              bg-blue-700
-              hover:bg-blue-800
-              px-6
-              py-3
-              rounded-2xl
-              font-bold
-              transition-all
-            "
-          >
-            الرئيسية
-          </button>
+          ${mobileMenu
+            ? 'block'
+            : 'hidden lg:block'}
+        `}>
 
-          <button
-            onClick={() =>
-              scrollToSection('products')
-            }
-            className="
-              bg-yellow-500
-              hover:bg-yellow-600
-              text-black
-              px-6
-              py-3
-              rounded-2xl
-              font-bold
-              transition-all
-            "
-          >
-            المنتجات
-          </button>
+          <div className="
+            flex
+            flex-col
+            lg:flex-row
+            flex-wrap
+            justify-center
+            gap-4
+          ">
 
-          <button
-            onClick={() =>
-              scrollToSection('offers')
-            }
-            className="
-              bg-red-600
-              hover:bg-red-700
-              px-6
-              py-3
-              rounded-2xl
-              font-bold
-              transition-all
-            "
-          >
-            العروض
-          </button>
+            <button
+              type="button"
+              onClick={() =>
+                scrollToSection('slider')
+              }
+              className="
+                bg-blue-700
+                hover:bg-blue-800
+                px-6
+                py-3
+                rounded-2xl
+                font-bold
+                transition
+              "
+            >
+              الرئيسية
+            </button>
 
-          <button
-            onClick={() =>
-              scrollToSection('services')
-            }
-            className="
-              bg-cyan-600
-              hover:bg-cyan-700
-              px-6
-              py-3
-              rounded-2xl
-              font-bold
-              transition-all
-            "
-          >
-            الخدمات
-          </button>
+            <button
+              type="button"
+              onClick={() =>
+                scrollToSection('products')
+              }
+              className="
+                bg-yellow-500
+                hover:bg-yellow-600
+                text-black
+                px-6
+                py-3
+                rounded-2xl
+                font-bold
+                transition
+              "
+            >
+              المنتجات
+            </button>
 
-          <button
-            onClick={() =>
-              scrollToSection('videos')
-            }
-            className="
-              bg-purple-600
-              hover:bg-purple-700
-              px-6
-              py-3
-              rounded-2xl
-              font-bold
-              transition-all
-            "
-          >
-            الفيديوهات
-          </button>
+            <button
+              type="button"
+              onClick={() =>
+                scrollToSection('offers')
+              }
+              className="
+                bg-red-600
+                hover:bg-red-700
+                px-6
+                py-3
+                rounded-2xl
+                font-bold
+                transition
+              "
+            >
+              العروض
+            </button>
 
-          <button
-            onClick={() =>
-              scrollToSection('footer')
-            }
-            className="
-              bg-green-600
-              hover:bg-green-700
-              px-6
-              py-3
-              rounded-2xl
-              font-bold
-              transition-all
-            "
-          >
-            تواصل معنا
-          </button>
+            <button
+              type="button"
+              onClick={() =>
+                scrollToSection('services')
+              }
+              className="
+                bg-cyan-600
+                hover:bg-cyan-700
+                px-6
+                py-3
+                rounded-2xl
+                font-bold
+                transition
+              "
+            >
+              الخدمات
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                scrollToSection('videos')
+              }
+              className="
+                bg-purple-600
+                hover:bg-purple-700
+                px-6
+                py-3
+                rounded-2xl
+                font-bold
+                transition
+              "
+            >
+              الفيديوهات
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                scrollToSection('footer')
+              }
+              className="
+                bg-green-600
+                hover:bg-green-700
+                px-6
+                py-3
+                rounded-2xl
+                font-bold
+                transition
+              "
+            >
+              تواصل معنا
+            </button>
+
+          </div>
 
         </div>
 
@@ -373,138 +559,163 @@ export default function Home() {
 
       {/* COMPANY INFO */}
 
-      <div className="
+      <section className="
         bg-slate-950
         border-b
         border-yellow-500
-        py-6
-        px-8
+        py-8
+        px-4
+        md:px-8
       ">
 
         <div className="
           grid
           grid-cols-1
-          md:grid-cols-3
-          gap-6
-          text-lg
+          md:grid-cols-2
+          xl:grid-cols-4
+          gap-5
         ">
 
-          {companyPhone && (
+          {
 
-            <div className="
-              bg-slate-900
-              p-4
-              rounded-2xl
-            ">
-              📞 الهاتف:
-              {' '}
-              {companyPhone}
-            </div>
+            companyPhone && (
 
-          )}
+              <div className="
+                bg-slate-900
+                p-5
+                rounded-3xl
+                text-lg
+                font-bold
+                border
+                border-slate-700
+              ">
 
-          {companyWhatsapp && (
+                📞 الهاتف:
+                {' '}
+                {companyPhone}
 
-            <div className="
-              bg-slate-900
-              p-4
-              rounded-2xl
-            ">
-              💬 واتساب:
-              {' '}
-              {companyWhatsapp}
-            </div>
+              </div>
 
-          )}
+            )
 
-          {companyEmail && (
+          }
 
-            <div className="
-              bg-slate-900
-              p-4
-              rounded-2xl
-            ">
-              ✉ البريد:
-              {' '}
-              {companyEmail}
-            </div>
+          {
 
-          )}
+            companyWhatsapp && (
 
-          {companyAddress && (
+              <div className="
+                bg-green-700
+                p-5
+                rounded-3xl
+                text-lg
+                font-bold
+              ">
 
-            <div className="
-              bg-slate-900
-              p-4
-              rounded-2xl
-            ">
-              📍 العنوان:
-              {' '}
-              {companyAddress}
-            </div>
+                💬 واتساب:
+                {' '}
+                {companyWhatsapp}
 
-          )}
+              </div>
 
-          {companyFacebook && (
+            )
 
-            <a
-              href={companyFacebook}
-              target="_blank"
-              rel="noreferrer"
-              className="
-                bg-blue-700
-                hover:bg-blue-800
-                p-4
-                rounded-2xl
-                transition-all
-              "
-            >
-              🔵 Facebook
-            </a>
+          }
 
-          )}
+          {
 
-          {companyInstagram && (
+            companyEmail && (
 
-            <a
-              href={companyInstagram}
-              target="_blank"
-              rel="noreferrer"
-              className="
-                bg-pink-600
-                hover:bg-pink-700
-                p-4
-                rounded-2xl
-                transition-all
-              "
-            >
-              📸 Instagram
-            </a>
+              <div className="
+                bg-slate-900
+                p-5
+                rounded-3xl
+                text-lg
+                font-bold
+                border
+                border-slate-700
+                break-all
+              ">
 
-          )}
+                ✉ البريد:
+                {' '}
+                {companyEmail}
 
-          {companyYoutube && (
+              </div>
 
-            <a
-              href={companyYoutube}
-              target="_blank"
-              rel="noreferrer"
-              className="
-                bg-red-600
-                hover:bg-red-700
-                p-4
-                rounded-2xl
-                transition-all
-              "
-            >
-              ▶ YouTube
-            </a>
+            )
 
-          )}
+          }
+
+          {
+
+            companyAddress && (
+
+              <div className="
+                bg-slate-900
+                p-5
+                rounded-3xl
+                text-lg
+                font-bold
+                border
+                border-slate-700
+              ">
+
+                📍 العنوان:
+                {' '}
+                {companyAddress}
+
+              </div>
+
+            )
+
+          }
 
         </div>
 
-      </div>
+        {/* SOCIALS */}
+
+        <div className="
+          flex
+          flex-wrap
+          gap-4
+          justify-center
+          mt-8
+        ">
+
+          {
+
+            socials
+              .filter((s) => s.show)
+              .map((social, index) => (
+
+                <a
+                  key={index}
+                  href={social.value}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={`
+                    ${social.color}
+                    px-6
+                    py-3
+                    rounded-2xl
+                    font-black
+                    hover:scale-105
+                    transition
+                  `}
+                >
+
+                  {social.title}
+
+                </a>
+
+              ))
+
+          }
+
+        </div>
+
+      </section>
 
       {/* SLIDER */}
 
@@ -512,38 +723,167 @@ export default function Home() {
         id="slider"
         className="
           relative
-          h-[90vh]
+          h-[60vh]
+          md:h-[90vh]
           overflow-hidden
+          bg-black
         "
       >
 
-        {slides.length > 0 ? (
+        {
 
-          <img
-            src={
-              slides[currentSlide]?.image
-            }
-            alt=""
-            className="
-              w-full
+          slides.length > 0 ? (
+
+            <>
+
+              {!imageLoaded && (
+
+                <div className="
+                  absolute
+                  inset-0
+                  flex
+                  items-center
+                  justify-center
+                  text-4xl
+                  font-black
+                  bg-black
+                  z-10
+                ">
+
+                  جاري تحميل الصورة...
+
+                </div>
+
+              )}
+
+              <img
+                src={slides[currentSlide]?.image}
+                alt="slide"
+                onLoad={() =>
+                  setImageLoaded(true)
+                }
+                onError={() =>
+                  setImageLoaded(false)
+                }
+                className="
+                  w-full
+                  h-full
+                  object-cover
+                "
+              />
+
+              {/* OVERLAY */}
+
+              <div className="
+                absolute
+                inset-0
+                bg-black/40
+              " />
+
+              {/* TEXT */}
+
+              <div className="
+                absolute
+                inset-0
+                flex
+                flex-col
+                items-center
+                justify-center
+                text-center
+                px-6
+                z-20
+              ">
+
+                <h2 className="
+                  text-4xl
+                  md:text-7xl
+                  font-black
+                  mb-6
+                ">
+
+                  شركة العلا
+
+                </h2>
+
+                <p className="
+                  text-xl
+                  md:text-3xl
+                  max-w-4xl
+                  leading-relaxed
+                ">
+
+                  أفضل خدمات الإطارات والبطاريات
+                  والصيانة بأعلى جودة
+
+                </p>
+
+              </div>
+
+              {/* DOTS */}
+
+              <div className="
+                absolute
+                bottom-6
+                left-1/2
+                -translate-x-1/2
+                flex
+                gap-3
+                z-20
+              ">
+
+                {
+
+                  slides.map((_, index) => (
+
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() =>
+                        setCurrentSlide(index)
+                      }
+                      className={`
+                        w-4
+                        h-4
+                        rounded-full
+                        transition
+
+                        ${currentSlide === index
+
+                          ? 'bg-yellow-400 scale-125'
+
+                          : 'bg-white/50'
+
+                        }
+                      `}
+                    />
+
+                  ))
+
+                }
+
+              </div>
+
+            </>
+
+          ) : (
+
+            <div className="
+              flex
+              items-center
+              justify-center
               h-full
-              object-cover
-            "
-          />
+              text-3xl
+              md:text-5xl
+              font-black
+            ">
 
-        ) : (
+              لا توجد صور حالياً
 
-          <div className="
-            flex
-            items-center
-            justify-center
-            h-full
-            text-5xl
-          ">
-            لا توجد صور
-          </div>
+            </div>
 
-        )}
+          )
+
+        }
 
       </section>
 
@@ -553,95 +893,149 @@ export default function Home() {
         id="products"
         className="
           py-20
-          px-8
+          px-4
+          md:px-8
           bg-slate-950
         "
       >
 
         <h2 className="
-          text-5xl
+          text-4xl
+          md:text-6xl
           text-yellow-400
           font-extrabold
           text-center
           mb-14
         ">
+
           المنتجات
+
         </h2>
 
-        <div className="
-          grid
-          grid-cols-1
-          md:grid-cols-4
-          gap-10
-        ">
+        {
 
-          {visibleProducts.map((product) => (
+          visibleProducts.length === 0 ? (
 
-            <div
-              key={product.id}
-              className="
-                bg-slate-900
-                rounded-3xl
-                overflow-hidden
-                shadow-2xl
-              "
-            >
+            <div className="
+              text-center
+              text-3xl
+              text-gray-400
+            ">
 
-              <img
-                src={product.image}
-                alt=""
-                className="
-                  w-full
-                  h-64
-                  object-cover
-                "
-              />
-
-              <div className="p-6">
-
-                <h3 className="
-                  text-2xl
-                  font-bold
-                  mb-4
-                ">
-                  {product.name}
-                </h3>
-
-                <p className="
-                  text-yellow-400
-                  text-3xl
-                  font-extrabold
-                ">
-                  {product.price}
-                </p>
-
-                <button
-
-                  onClick={() =>
-                    addToCart(product)
-                  }
-
-                  className="
-                    w-full
-                    mt-4
-                    bg-yellow-500
-                    hover:bg-yellow-600
-                    py-4
-                    rounded-2xl
-                    text-black
-                    font-extrabold
-                  "
-                >
-                  إضافة للسلة
-                </button>
-
-              </div>
+              لا توجد منتجات حالياً
 
             </div>
 
-          ))}
+          ) : (
 
-        </div>
+            <div className="
+              grid
+              grid-cols-1
+              sm:grid-cols-2
+              lg:grid-cols-3
+              xl:grid-cols-4
+              gap-10
+            ">
+
+              {
+
+                visibleProducts.map((product) => (
+
+                  <div
+                    key={product.id}
+                    className="
+                      bg-slate-900
+                      rounded-3xl
+                      overflow-hidden
+                      shadow-2xl
+                      border
+                      border-slate-800
+                      hover:-translate-y-2
+                      transition
+                    "
+                  >
+
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="
+                        w-full
+                        h-72
+                        object-cover
+                      "
+                    />
+
+                    <div className="p-6">
+
+                      <h3 className="
+                        text-2xl
+                        font-black
+                        mb-4
+                        min-h-[70px]
+                      ">
+
+                        {product.name}
+
+                      </h3>
+
+                      <p className="
+                        text-yellow-400
+                        text-4xl
+                        font-extrabold
+                      ">
+
+                        {product.price} ج
+
+                      </p>
+
+                      <div className="
+                        mt-4
+                        text-lg
+                        text-gray-300
+                      ">
+
+                        📦 المتوفر:
+                        {' '}
+                        {product.stock || 0}
+
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          addToCart(product)
+                        }
+                        className="
+                          w-full
+                          mt-6
+                          bg-yellow-500
+                          hover:bg-yellow-600
+                          py-4
+                          rounded-2xl
+                          text-black
+                          text-xl
+                          font-extrabold
+                          transition
+                        "
+                      >
+
+                        إضافة للسلة
+
+                      </button>
+
+                    </div>
+
+                  </div>
+
+                ))
+
+              }
+
+            </div>
+
+          )
+
+        }
 
       </section>
 
@@ -651,63 +1045,129 @@ export default function Home() {
         id="offers"
         className="
           py-20
-          px-8
+          px-4
+          md:px-8
           bg-black
         "
       >
 
         <h2 className="
-          text-5xl
+          text-4xl
+          md:text-6xl
           text-red-500
           font-extrabold
           text-center
           mb-14
         ">
+
           العروض
+
         </h2>
 
         <div className="
           grid
           grid-cols-1
-          md:grid-cols-3
+          md:grid-cols-2
+          xl:grid-cols-3
           gap-10
         ">
 
-          {offers.map((offer) => (
+          {
 
-            <div
-              key={offer.id}
-              className="
-                bg-slate-900
-                rounded-3xl
-                overflow-hidden
-              "
-            >
+            offers.map((offer) => (
 
-              <img
-                src={offer.image}
-                alt=""
+              <div
+                key={offer.id}
                 className="
-                  w-full
-                  h-72
-                  object-cover
+                  bg-slate-900
+                  rounded-3xl
+                  overflow-hidden
+                  shadow-2xl
                 "
-              />
+              >
 
-              <div className="p-6">
+                <img
+                  src={offer.image}
+                  alt={offer.title}
+                  className="
+                    w-full
+                    h-80
+                    object-cover
+                  "
+                />
 
-                <h3 className="
-                  text-3xl
-                  font-extrabold
-                ">
-                  {offer.title}
-                </h3>
+                <div className="p-6">
+
+  <h3
+    className="
+      text-3xl
+      font-extrabold
+      mb-4
+    "
+  >
+    {offer.title}
+  </h3>
+
+  {offer.price && (
+    <div
+      className="
+        text-yellow-400
+        text-4xl
+        font-extrabold
+        mb-4
+      "
+    >
+      {offer.price}
+    </div>
+  )}
+
+  {offer.description && (
+    <p
+      className="
+        text-gray-300
+        text-lg
+        leading-relaxed
+        mb-6
+      "
+    >
+      {offer.description}
+    </p>
+  )}
+
+  <button
+    type="button"
+    onClick={() =>
+      addToCart({
+        id: `offer-${offer.id}`,
+        name: offer.title,
+        price: offer.price || 0,
+        image: offer.image,
+        stock: 9999,
+        isOffer: true
+      })
+    }
+    className="
+      w-full
+      bg-yellow-500
+      hover:bg-yellow-600
+      py-4
+      rounded-2xl
+      text-black
+      text-xl
+      font-extrabold
+      transition
+    "
+  >
+    إضافة العرض للسلة
+  </button>
+
+</div>
 
               </div>
 
-            </div>
+            ))
 
-          ))}
+          }
 
         </div>
 
@@ -719,78 +1179,96 @@ export default function Home() {
         id="services"
         className="
           py-20
-          px-8
+          px-4
+          md:px-8
           bg-slate-950
         "
       >
 
         <h2 className="
-          text-5xl
+          text-4xl
+          md:text-6xl
           text-cyan-400
           font-extrabold
           text-center
           mb-14
         ">
+
           الخدمات
+
         </h2>
 
         <div className="
           grid
           grid-cols-1
-          md:grid-cols-3
+          md:grid-cols-2
+          xl:grid-cols-3
           gap-10
         ">
 
-          {services.map((service) => (
+          {
 
-            <div
-              key={service.id}
-              className="
-                bg-slate-900
-                rounded-3xl
-                overflow-hidden
-                p-6
-              "
-            >
+            services.map((service) => (
 
-              {(service.image ||
-                service.img) && (
+              <div
+                key={service.id}
+                className="
+                  bg-slate-900
+                  rounded-3xl
+                  overflow-hidden
+                  p-6
+                  shadow-2xl
+                "
+              >
 
-                <img
-                  src={
-                    service.image ||
-                    service.img
-                  }
-                  alt=""
-                  className="
-                    w-full
-                    h-56
-                    object-cover
-                    rounded-2xl
-                    mb-6
-                  "
-                />
+                {
 
-              )}
+                  (service.image || service.img) && (
 
-              <h3 className="
-                text-3xl
-                font-extrabold
-                mb-4
-              ">
-                {service.title}
-              </h3>
+                    <img
+                      src={
+                        service.image ||
+                        service.img
+                      }
+                      alt={service.title}
+                      className="
+                        w-full
+                        h-64
+                        object-cover
+                        rounded-2xl
+                        mb-6
+                      "
+                    />
 
-              <p className="
-                text-xl
-                text-gray-300
-              ">
-                {service.description}
-              </p>
+                  )
 
-            </div>
+                }
 
-          ))}
+                <h3 className="
+                  text-3xl
+                  font-extrabold
+                  mb-4
+                ">
+
+                  {service.title}
+
+                </h3>
+
+                <p className="
+                  text-xl
+                  text-gray-300
+                  leading-relaxed
+                ">
+
+                  {service.description}
+
+                </p>
+
+              </div>
+
+            ))
+
+          }
 
         </div>
 
@@ -802,58 +1280,68 @@ export default function Home() {
         id="videos"
         className="
           py-20
-          px-8
+          px-4
+          md:px-8
           bg-black
         "
       >
 
         <h2 className="
-          text-5xl
+          text-4xl
+          md:text-6xl
           text-purple-400
           font-extrabold
           text-center
           mb-14
         ">
+
           الفيديوهات
+
         </h2>
 
         <div className="
           grid
           grid-cols-1
-          md:grid-cols-3
+          md:grid-cols-2
+          xl:grid-cols-3
           gap-10
         ">
 
-          {videos.map((video) => (
+          {
 
-            <div
-              key={video.id}
-              className="
-                bg-slate-900
-                rounded-3xl
-                overflow-hidden
-              "
-            >
+            videos.map((video) => (
 
-              <video
-                src={video.video}
-                controls
+              <div
+                key={video.id}
                 className="
-                  w-full
-                  h-64
-                  object-cover
+                  bg-slate-900
+                  rounded-3xl
+                  overflow-hidden
+                  shadow-2xl
                 "
-              />
+              >
 
-            </div>
+                <video
+                  src={video.video}
+                  controls
+                  className="
+                    w-full
+                    h-72
+                    object-cover
+                  "
+                />
 
-          ))}
+              </div>
+
+            ))
+
+          }
 
         </div>
 
       </section>
 
-      {/* FOOTER WRAPPER */}
+      {/* FOOTER */}
 
       <div id="footer">
 

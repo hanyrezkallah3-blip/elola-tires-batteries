@@ -1,178 +1,572 @@
+import { useMemo, useState } from 'react'
 import { useWebsiteStore } from '../store/websiteStore'
 
 export default function Warehouses() {
 
-  const {
-    currentUser,
-    getVisibleProducts,
-    getVisibleOrders,
-    getWarehouseStats
-  } = useWebsiteStore()
+  const users =
+    useWebsiteStore((s) => s.users || [])
 
-  // ================= DATA =================
+  const setUsers =
+    useWebsiteStore((s) => s.setUsers)
 
-  const products = getVisibleProducts()
-  const orders = getVisibleOrders()
-  const stats = getWarehouseStats()
+  const products =
+    useWebsiteStore((s) => s.products || [])
 
-  // ================= حماية الدخول =================
+  const currentUser =
+    useWebsiteStore((s) => s.currentUser)
 
-  if (!currentUser) {
-    return (
-      <div className="p-10 text-white text-2xl">
-        ⚠ يجب تسجيل الدخول أولاً
-      </div>
+  const isOwner =
+    currentUser?.role === 'owner'
+
+  const [warehouseName, setWarehouseName] =
+    useState('')
+
+  const [managerName, setManagerName] =
+    useState('')
+
+  const [warehouseType, setWarehouseType] =
+    useState('warehouse')
+
+  const [username, setUsername] =
+    useState('')
+
+  const [password, setPassword] =
+    useState('123456')
+
+  const warehouseUsers = useMemo(() => {
+
+    return users.filter(
+      (u) =>
+        u.role === 'warehouse' ||
+        u.role === 'branch' ||
+        u.role === 'shop' ||
+        u.role === 'service'
     )
+
+  }, [users])
+
+  const warehouseStats = useMemo(() => {
+
+    const stats = {}
+
+    warehouseUsers.forEach((user) => {
+
+      const name =
+        user.warehouseName ||
+        'غير محدد'
+
+      if (!stats[name]) {
+
+        stats[name] = {
+
+          users: 0,
+
+          products: 0,
+
+          type:
+            user.warehouseType ||
+            user.role,
+
+          username:
+            user.username,
+
+          password:
+            user.password,
+
+          manager:
+            user.managerName ||
+            ''
+
+        }
+
+      }
+
+      stats[name].users += 1
+
+    })
+
+    products.forEach((product) => {
+
+      const name =
+        product.warehouseName ||
+        'غير محدد'
+
+      if (!stats[name]) {
+
+        stats[name] = {
+
+          users: 0,
+
+          products: 0,
+
+          type: 'warehouse',
+
+          username: '',
+
+          password: '',
+
+          manager: ''
+
+        }
+
+      }
+
+      stats[name].products += 1
+
+    })
+
+    return stats
+
+  }, [warehouseUsers, products])
+
+  const getRoleFromType = (type) => {
+
+    if (type === 'warehouse')
+      return 'warehouse'
+
+    if (type === 'branch')
+      return 'branch'
+
+    if (type === 'showroom')
+      return 'shop'
+
+    if (type === 'distributor')
+      return 'service'
+
+    return 'warehouse'
+
+  }
+
+  const getTypeName = (type) => {
+
+    if (type === 'warehouse')
+      return '🏭 مخزن'
+
+    if (type === 'branch')
+      return '🏢 فرع'
+
+    if (type === 'showroom')
+      return '🏪 معرض'
+
+    if (type === 'distributor')
+      return '🚚 موزع معتمد'
+
+    return '🏭 مخزن'
+
+  }
+
+  const createWarehouse = () => {
+
+    if (!isOwner) return
+
+    if (!warehouseName.trim()) {
+
+      alert('ادخل اسم الجهة')
+
+      return
+
+    }
+
+    const exists = users.some(
+      (u) =>
+        u.warehouseName ===
+        warehouseName.trim()
+    )
+
+    if (exists) {
+
+      alert('الجهة موجودة بالفعل')
+
+      return
+
+    }
+
+    const warehouseId =
+      Date.now().toString()
+
+    const newUser = {
+
+      id:
+        warehouseId,
+
+      username:
+        username.trim() ||
+        `user_${warehouseId}`,
+
+      password:
+        password.trim() ||
+        '123456',
+
+      role:
+        getRoleFromType(
+          warehouseType
+        ),
+
+      warehouseType,
+
+      warehouseId,
+
+      warehouseName:
+        warehouseName.trim(),
+
+      managerName:
+        managerName.trim(),
+
+      active: true,
+
+      permissions: [
+
+        'warehouse_dashboard',
+
+        'products_view',
+
+        'orders_view',
+
+        'transfers_view',
+
+        'transfers_create'
+
+      ]
+
+    }
+
+    setUsers([
+      ...users,
+      newUser
+    ])
+
+    setWarehouseName('')
+    setManagerName('')
+    setUsername('')
+    setPassword('123456')
+    setWarehouseType('warehouse')
+
+    alert(
+      'تم إنشاء الجهة بنجاح'
+    )
+
+  }
+
+  const deleteWarehouse = (
+    warehouseName
+  ) => {
+
+    if (!isOwner) return
+
+    const ok =
+      window.confirm(
+        `حذف ${warehouseName} ؟`
+      )
+
+    if (!ok) return
+
+    const updated =
+      users.filter(
+        (u) =>
+          u.warehouseName !==
+          warehouseName
+      )
+
+    setUsers(updated)
+
+  }
+
+  if (!isOwner) {
+
+    return (
+
+      <div className="p-6">
+
+        <div
+          className="
+          bg-red-900/30
+          border
+          border-red-500
+          text-red-300
+          p-4
+          rounded-xl
+        "
+        >
+          لا تملك صلاحية الوصول
+        </div>
+
+      </div>
+
+    )
+
   }
 
   return (
 
-    <div className="p-10 space-y-10 text-white">
+    <div
+      className="
+      p-6
+      space-y-6
+      text-white
+    "
+    >
 
-      {/* ================= HEADER ================= */}
+      <div>
 
-      <div className="bg-gradient-to-r from-blue-900 via-blue-700 to-yellow-500 p-10 rounded-3xl shadow-2xl">
-
-        <h1 className="text-5xl font-black mb-4">
-          🏭 داشبورد المخزن
+        <h1
+          className="
+          text-3xl
+          font-black
+          text-yellow-400
+        "
+        >
+          🏭 إدارة المخازن والفروع
         </h1>
 
-        <p className="text-2xl">
-          مرحباً 👋 {currentUser.username}
+        <p className="text-gray-400">
+
+          إدارة المخازن والفروع والمعارض
+          والموزعين المعتمدين
+
         </p>
 
       </div>
 
-      {/* ================= STATS ================= */}
+      <div
+        className="
+        bg-slate-900
+        border
+        border-slate-700
+        rounded-2xl
+        p-5
+        space-y-4
+      "
+      >
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <h2
+          className="
+          text-xl
+          font-black
+        "
+        >
+          إنشاء جهة جديدة
+        </h2>
 
-        <div className="bg-blue-700 p-6 rounded-3xl text-center">
-          <div className="text-xl mb-2">📦 المنتجات</div>
-          <div className="text-4xl font-black">
-            {stats.products}
-          </div>
-        </div>
+        <select
+          value={warehouseType}
+          onChange={(e) =>
+            setWarehouseType(
+              e.target.value
+            )
+          }
+          className="
+            w-full
+            p-3
+            rounded-xl
+            bg-black
+            border
+            border-slate-700
+            text-white
+          "
+        >
 
-        <div className="bg-green-700 p-6 rounded-3xl text-center">
-          <div className="text-xl mb-2">🛒 الطلبات</div>
-          <div className="text-4xl font-black">
-            {stats.orders}
-          </div>
-        </div>
+          <option value="warehouse">
+            مخزن
+          </option>
 
-        <div className="bg-yellow-500 text-black p-6 rounded-3xl text-center">
-          <div className="text-xl mb-2">💰 المبيعات</div>
-          <div className="text-4xl font-black">
-            {stats.sales}
-          </div>
-        </div>
+          <option value="branch">
+            فرع
+          </option>
 
-        <div className="bg-purple-700 p-6 rounded-3xl text-center">
-          <div className="text-xl mb-2">📊 الكمية المباعة</div>
-          <div className="text-4xl font-black">
-            {stats.sold}
-          </div>
-        </div>
+          <option value="showroom">
+            معرض
+          </option>
+
+          <option value="distributor">
+            موزع معتمد
+          </option>
+
+        </select>
+
+        <input
+          value={warehouseName}
+          onChange={(e) =>
+            setWarehouseName(
+              e.target.value
+            )
+          }
+          placeholder="اسم الجهة"
+          className="
+            w-full
+            p-3
+            rounded-xl
+            bg-black
+            border
+            border-slate-700
+            text-white
+          "
+        />
+
+        <input
+          value={managerName}
+          onChange={(e) =>
+            setManagerName(
+              e.target.value
+            )
+          }
+          placeholder="اسم المسؤول"
+          className="
+            w-full
+            p-3
+            rounded-xl
+            bg-black
+            border
+            border-slate-700
+            text-white
+          "
+        />
+
+        <input
+          value={username}
+          onChange={(e) =>
+            setUsername(
+              e.target.value
+            )
+          }
+          placeholder="اسم المستخدم"
+          className="
+            w-full
+            p-3
+            rounded-xl
+            bg-black
+            border
+            border-slate-700
+            text-white
+          "
+        />
+
+        <input
+          value={password}
+          onChange={(e) =>
+            setPassword(
+              e.target.value
+            )
+          }
+          placeholder="كلمة المرور"
+          className="
+            w-full
+            p-3
+            rounded-xl
+            bg-black
+            border
+            border-slate-700
+            text-white
+          "
+        />
+
+        <button
+          onClick={createWarehouse}
+          className="
+            w-full
+            bg-yellow-500
+            text-black
+            font-black
+            py-3
+            rounded-xl
+          "
+        >
+          إنشاء
+        </button>
 
       </div>
 
-      {/* ================= PRODUCTS ================= */}
+      <div
+        className="
+        grid
+        md:grid-cols-2
+        lg:grid-cols-3
+        gap-4
+      "
+      >
 
-      <div className="bg-slate-900 p-8 rounded-3xl">
+        {Object.entries(
+          warehouseStats
+        ).map(
+          ([name, stats]) => (
 
-        <h2 className="text-3xl font-bold mb-6">
-          📦 منتجات المخزن
-        </h2>
-
-        {products.length === 0 ? (
-
-          <div className="text-gray-400 text-xl">
-            لا توجد منتجات لهذا المخزن
-          </div>
-
-        ) : (
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-            {products.map((p) => (
-
-              <div
-                key={p.id}
-                className="bg-slate-800 rounded-2xl overflow-hidden shadow-2xl"
-              >
-
-                <img
-                  src={p.image}
-                  className="w-full h-48 object-cover"
-                />
-
-                <div className="p-4 space-y-2">
-
-                  <h3 className="text-2xl font-bold">
-                    {p.name}
-                  </h3>
-
-                  <div>💰 السعر: {p.price}</div>
-                  <div>📦 المخزون: {p.stock}</div>
-                  <div>🛒 المبيعات: {p.sold}</div>
-
-                </div>
-
-              </div>
-
-            ))}
-
-          </div>
-
-        )}
-
-      </div>
-
-      {/* ================= ORDERS ================= */}
-
-      <div className="bg-slate-900 p-8 rounded-3xl">
-
-        <h2 className="text-3xl font-bold mb-6">
-          🛒 طلبات المخزن
-        </h2>
-
-        {orders.length === 0 ? (
-
-          <div className="text-gray-400 text-xl">
-            لا توجد طلبات حتى الآن
-          </div>
-
-        ) : (
-
-          <div className="space-y-4">
-
-            {orders.map((o) => (
+            <div
+              key={name}
+              className="
+              bg-slate-900
+              border
+              border-slate-700
+              rounded-2xl
+              p-5
+            "
+            >
 
               <div
-                key={o.id}
-                className="bg-slate-800 p-5 rounded-2xl flex justify-between items-center"
+                className="
+                text-yellow-400
+                text-xl
+                font-black
+              "
               >
-
-                <div>
-                  <div className="font-bold text-xl">
-                    طلب #{o.id}
-                  </div>
-                  <div className="text-gray-400">
-                    {o.status}
-                  </div>
-                </div>
-
-                <div className="text-green-400 font-bold text-xl">
-                  {o.total || 0} ج
-                </div>
-
+                {name}
               </div>
 
-            ))}
+              <div className="mt-3">
+                {getTypeName(
+                  stats.type
+                )}
+              </div>
 
-          </div>
+              <div>
+                👤 المسؤول:
+                {' '}
+                {stats.manager}
+              </div>
 
+              <div>
+                🔑 المستخدم:
+                {' '}
+                {stats.username}
+              </div>
+
+              <div>
+                🔒 كلمة المرور:
+                {' '}
+                {stats.password}
+              </div>
+
+              <div>
+                👥 المستخدمون:
+                {' '}
+                {stats.users}
+              </div>
+
+              <div>
+                📦 المنتجات:
+                {' '}
+                {stats.products}
+              </div>
+
+              <button
+                onClick={() =>
+                  deleteWarehouse(
+                    name
+                  )
+                }
+                className="
+                  mt-4
+                  bg-red-600
+                  px-4
+                  py-2
+                  rounded-xl
+                  font-bold
+                "
+              >
+                حذف
+              </button>
+
+            </div>
+
+          )
         )}
 
       </div>
@@ -180,4 +574,5 @@ export default function Warehouses() {
     </div>
 
   )
+
 }

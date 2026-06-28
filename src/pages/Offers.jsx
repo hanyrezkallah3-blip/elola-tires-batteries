@@ -3,14 +3,30 @@ import { useWebsiteStore } from '../store/websiteStore'
 
 export default function Offers() {
 
-  const {
-    offers,
-    addOffer,
-    deleteOffer
-  } = useWebsiteStore()
+  const store = useWebsiteStore()
+
+  // ================= SAFE STORE =================
+
+  const offers =
+    Array.isArray(store.offers)
+      ? store.offers
+      : []
+
+  const addOffer =
+    typeof store.addOffer === 'function'
+      ? store.addOffer
+      : () => {}
+
+  const deleteOffer =
+    typeof store.deleteOffer === 'function'
+      ? store.deleteOffer
+      : () => {}
+
+  // ================= STATES =================
 
   const [title, setTitle] = useState('')
   const [price, setPrice] = useState('')
+  const [description, setDescription] = useState('')
   const [image, setImage] = useState('')
   const [search, setSearch] = useState('')
 
@@ -18,9 +34,17 @@ export default function Offers() {
 
   const handleImageUpload = (e) => {
 
-    const file = e.target.files[0]
+    const file = e.target.files?.[0]
 
     if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+
+      alert('يرجى اختيار صورة صحيحة')
+
+      return
+
+    }
 
     const reader = new FileReader()
 
@@ -38,7 +62,11 @@ export default function Offers() {
 
   const handleAddOffer = () => {
 
-    if (!title || !price || !image) {
+    if (
+      !title.trim() ||
+      !price.trim() ||
+      !image
+    ) {
 
       alert('يرجى إدخال جميع البيانات')
 
@@ -48,19 +76,29 @@ export default function Offers() {
 
     addOffer({
 
-      title,
+      id: Date.now(),
 
-      price,
+      title: title.trim(),
 
-      image
+      price: price.trim(),
+
+      description: description.trim(),
+
+      image,
+
+      active: true,
+
+      createdAt:
+        new Date().toISOString()
 
     })
 
     setTitle('')
     setPrice('')
+    setDescription('')
     setImage('')
 
-    alert('تم إضافة العرض بنجاح')
+    alert('✅ تم إضافة العرض بنجاح')
 
   }
 
@@ -68,15 +106,13 @@ export default function Offers() {
 
   const handleDelete = (id) => {
 
-    const confirmDelete = confirm(
+    const confirmDelete = window.confirm(
       'هل تريد حذف العرض؟'
     )
 
-    if (confirmDelete) {
+    if (!confirmDelete) return
 
-      deleteOffer(id)
-
-    }
+    deleteOffer(id)
 
   }
 
@@ -86,22 +122,38 @@ export default function Offers() {
 
     return [...offers]
 
-      .filter((offer) =>
+      .filter((offer) => {
 
-        offer.title
-          ?.toLowerCase()
-          .includes(
-            search.toLowerCase()
-          )
+        const searchText =
+          search.toLowerCase()
 
-      )
+        return (
+
+          offer?.title
+            ?.toLowerCase()
+            .includes(searchText)
+
+          ||
+
+          offer?.price
+            ?.toLowerCase()
+            .includes(searchText)
+
+        )
+
+      })
 
       .sort(
 
         (a, b) =>
 
-          new Date(b.createdAt) -
-          new Date(a.createdAt)
+          new Date(
+            b.createdAt || 0
+          ) -
+
+          new Date(
+            a.createdAt || 0
+          )
 
       )
 
@@ -109,24 +161,38 @@ export default function Offers() {
 
   // ================= TOTALS =================
 
-  const totalOffers = offers.length
+  const totalOffers =
+    offers.length
 
   return (
 
-    <div className="min-h-screen bg-slate-950 text-white p-10">
+    <div className="min-h-screen bg-slate-950 text-white p-4 md:p-10">
 
-      {/* TITLE */}
+      {/* HEADER */}
 
-      <h1
-        className="
-          text-5xl
-          font-extrabold
-          text-yellow-400
-          mb-10
-        "
-      >
-        إدارة العروض
-      </h1>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
+
+        <div>
+
+          <h1
+            className="
+              text-4xl
+              md:text-5xl
+              font-extrabold
+              text-yellow-400
+              mb-3
+            "
+          >
+            🏷 إدارة العروض
+          </h1>
+
+          <p className="text-gray-400 text-lg">
+            إدارة عروض شركة العلا للإطارات والبطاريات
+          </p>
+
+        </div>
+
+      </div>
 
       {/* ANALYTICS */}
 
@@ -135,14 +201,16 @@ export default function Offers() {
           grid
           grid-cols-1
           md:grid-cols-3
-          gap-8
-          mb-12
+          gap-6
+          mb-10
         "
       >
 
         <div
           className="
-            bg-red-600
+            bg-gradient-to-br
+            from-red-600
+            to-red-800
             rounded-3xl
             p-8
             text-center
@@ -152,7 +220,7 @@ export default function Offers() {
 
           <h2
             className="
-              text-3xl
+              text-2xl
               font-bold
               mb-4
             "
@@ -173,7 +241,9 @@ export default function Offers() {
 
         <div
           className="
-            bg-yellow-500
+            bg-gradient-to-br
+            from-yellow-400
+            to-yellow-600
             text-black
             rounded-3xl
             p-8
@@ -184,7 +254,7 @@ export default function Offers() {
 
           <h2
             className="
-              text-3xl
+              text-2xl
               font-bold
               mb-4
             "
@@ -200,9 +270,7 @@ export default function Offers() {
             "
           >
             {offers.length > 0
-              ? offers[
-                  offers.length - 1
-                ]?.title
+              ? offers[0]?.title
               : 'لا توجد عروض'}
           </p>
 
@@ -210,7 +278,9 @@ export default function Offers() {
 
         <div
           className="
-            bg-blue-700
+            bg-gradient-to-br
+            from-blue-700
+            to-cyan-700
             rounded-3xl
             p-8
             text-center
@@ -220,7 +290,7 @@ export default function Offers() {
 
           <h2
             className="
-              text-3xl
+              text-2xl
               font-bold
               mb-4
             "
@@ -234,7 +304,7 @@ export default function Offers() {
               font-extrabold
             "
           >
-            {offers.length}
+            {filteredOffers.length}
           </p>
 
         </div>
@@ -246,24 +316,25 @@ export default function Offers() {
       <div
         className="
           bg-slate-900
-          p-8
+          p-6 md:p-8
           rounded-3xl
           border
           border-yellow-400
           shadow-2xl
-          mb-12
+          mb-10
         "
       >
 
         <h2
           className="
-            text-4xl
+            text-3xl
+            md:text-4xl
             font-extrabold
             text-blue-400
             mb-8
           "
         >
-          إضافة عرض جديد
+          ➕ إضافة عرض جديد
         </h2>
 
         <div className="space-y-6">
@@ -282,6 +353,7 @@ export default function Offers() {
               bg-white
               text-black
               text-xl
+              outline-none
             "
           />
 
@@ -299,6 +371,25 @@ export default function Offers() {
               bg-white
               text-black
               text-xl
+              outline-none
+            "
+          />
+
+          <textarea
+            placeholder="وصف العرض"
+            value={description}
+            onChange={(e) =>
+              setDescription(e.target.value)
+            }
+            className="
+              w-full
+              p-5
+              rounded-2xl
+              bg-white
+              text-black
+              text-xl
+              h-40
+              outline-none
             "
           />
 
@@ -316,13 +407,15 @@ export default function Offers() {
             "
           />
 
+          {/* PREVIEW */}
+
           {image && (
 
             <div className="relative">
 
               <img
                 src={image}
-                alt=""
+                alt="offer-preview"
                 className="
                   w-full
                   h-[400px]
@@ -366,6 +459,7 @@ export default function Offers() {
               text-2xl
               font-extrabold
               transition-all
+              duration-300
             "
           >
             إضافة العرض
@@ -382,13 +476,13 @@ export default function Offers() {
           bg-slate-900
           p-6
           rounded-3xl
-          mb-12
+          mb-10
         "
       >
 
         <input
           type="text"
-          placeholder="بحث باسم العرض..."
+          placeholder="بحث باسم العرض أو السعر..."
           value={search}
           onChange={(e) =>
             setSearch(e.target.value)
@@ -400,6 +494,7 @@ export default function Offers() {
             bg-white
             text-black
             text-xl
+            outline-none
           "
         />
 
@@ -426,7 +521,7 @@ export default function Offers() {
 
       {/* OFFERS LIST */}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
 
         {filteredOffers.map((offer, index) => (
 
@@ -441,6 +536,7 @@ export default function Offers() {
               shadow-2xl
               hover:scale-[1.02]
               transition-all
+              duration-300
             "
           >
 
@@ -449,12 +545,16 @@ export default function Offers() {
             <div className="relative">
 
               <img
-                src={offer.image}
-                alt=""
+                src={
+                  offer.image ||
+                  'https://via.placeholder.com/500x300'
+                }
+                alt={offer.title}
                 className="
                   w-full
                   h-72
                   object-cover
+                  bg-black
                 "
               />
 
@@ -486,7 +586,7 @@ export default function Offers() {
                 className="
                   text-3xl
                   font-bold
-                  mb-5
+                  mb-4
                 "
               >
                 {offer.title}
@@ -503,7 +603,34 @@ export default function Offers() {
                 {offer.price}
               </p>
 
-              {/* CREATED DATE */}
+              {offer.description && (
+
+                <div
+                  className="
+                    bg-black/40
+                    border
+                    border-slate-700
+                    p-4
+                    rounded-2xl
+                    mb-6
+                  "
+                >
+
+                  <p
+                    className="
+                      text-gray-300
+                      leading-loose
+                      text-lg
+                    "
+                  >
+                    {offer.description}
+                  </p>
+
+                </div>
+
+              )}
+
+              {/* DATE */}
 
               <div
                 className="
@@ -550,6 +677,7 @@ export default function Offers() {
                     text-center
                     text-xl
                     font-bold
+                    transition-all
                   "
                 >
                   عرض الصورة
@@ -567,6 +695,7 @@ export default function Offers() {
                     rounded-2xl
                     text-xl
                     font-bold
+                    transition-all
                   "
                 >
                   حذف العرض

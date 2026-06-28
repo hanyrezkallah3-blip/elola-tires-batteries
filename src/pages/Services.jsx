@@ -4,10 +4,12 @@ import { useWebsiteStore } from '../store/websiteStore'
 export default function Services() {
 
   const {
-    services,
+    services = [],
     addService,
     deleteService
   } = useWebsiteStore()
+
+  // ================= STATE =================
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -18,15 +20,31 @@ export default function Services() {
 
   const handleImageUpload = (e) => {
 
-    const file = e.target.files[0]
+    const file = e.target.files?.[0]
 
     if (!file) return
 
+    // FIX IMAGE TYPES
+
+    if (!file.type.startsWith('image/')) {
+
+      alert('يرجى اختيار صورة فقط')
+
+      return
+
+    }
+
     const reader = new FileReader()
 
-    reader.onloadend = () => {
+    reader.onload = () => {
 
       setImage(reader.result)
+
+    }
+
+    reader.onerror = () => {
+
+      alert('حدث خطأ أثناء تحميل الصورة')
 
     }
 
@@ -39,8 +57,8 @@ export default function Services() {
   const handleAddService = () => {
 
     if (
-      !title ||
-      !description ||
+      !title.trim() ||
+      !description.trim() ||
       !image
     ) {
 
@@ -50,13 +68,27 @@ export default function Services() {
 
     }
 
+    // FIX STORE ERROR
+
+    if (typeof addService !== 'function') {
+
+      alert('دالة إضافة الخدمات غير موجودة داخل WebsiteStore')
+
+      return
+
+    }
+
     addService({
 
-      title,
+      id: Date.now(),
 
-      description,
+      title: title.trim(),
 
-      image
+      description: description.trim(),
+
+      image,
+
+      createdAt: new Date().toISOString()
 
     })
 
@@ -64,7 +96,7 @@ export default function Services() {
     setDescription('')
     setImage('')
 
-    alert('تم إضافة الخدمة بنجاح')
+    alert('✅ تم إضافة الخدمة بنجاح')
 
   }
 
@@ -72,7 +104,15 @@ export default function Services() {
 
   const handleDelete = (id) => {
 
-    const confirmDelete = confirm(
+    if (typeof deleteService !== 'function') {
+
+      alert('دالة حذف الخدمات غير موجودة داخل WebsiteStore')
+
+      return
+
+    }
+
+    const confirmDelete = window.confirm(
       'هل تريد حذف الخدمة؟'
     )
 
@@ -92,7 +132,7 @@ export default function Services() {
 
       .filter((service) =>
 
-        service.title
+        service?.title
           ?.toLowerCase()
           .includes(
             search.toLowerCase()
@@ -104,8 +144,8 @@ export default function Services() {
 
         (a, b) =>
 
-          new Date(b.createdAt) -
-          new Date(a.createdAt)
+          new Date(b?.createdAt || 0) -
+          new Date(a?.createdAt || 0)
 
       )
 
@@ -117,20 +157,29 @@ export default function Services() {
 
   return (
 
-    <div className="min-h-screen bg-slate-950 text-white p-10">
+    <div className="min-h-screen bg-slate-950 text-white p-4 md:p-10">
 
       {/* TITLE */}
 
-      <h1
-        className="
-          text-5xl
-          font-extrabold
-          text-blue-400
-          mb-10
-        "
-      >
-        إدارة الخدمات
-      </h1>
+      <div className="mb-10">
+
+        <h1
+          className="
+            text-4xl
+            md:text-5xl
+            font-extrabold
+            text-blue-400
+            mb-4
+          "
+        >
+          🛠 إدارة الخدمات
+        </h1>
+
+        <p className="text-gray-400 text-lg">
+          إدارة خدمات شركة العلا للإطارات والبطاريات
+        </p>
+
+      </div>
 
       {/* ANALYTICS */}
 
@@ -146,7 +195,9 @@ export default function Services() {
 
         <div
           className="
-            bg-blue-700
+            bg-gradient-to-br
+            from-blue-700
+            to-blue-900
             rounded-3xl
             p-8
             text-center
@@ -156,7 +207,7 @@ export default function Services() {
 
           <h2
             className="
-              text-3xl
+              text-2xl
               font-bold
               mb-4
             "
@@ -177,7 +228,9 @@ export default function Services() {
 
         <div
           className="
-            bg-green-700
+            bg-gradient-to-br
+            from-green-700
+            to-green-900
             rounded-3xl
             p-8
             text-center
@@ -187,7 +240,7 @@ export default function Services() {
 
           <h2
             className="
-              text-3xl
+              text-2xl
               font-bold
               mb-4
             "
@@ -197,15 +250,13 @@ export default function Services() {
 
           <p
             className="
-              text-2xl
+              text-xl
               font-extrabold
               break-words
             "
           >
             {services.length > 0
-              ? services[
-                  services.length - 1
-                ]?.title
+              ? services[0]?.title
               : 'لا توجد خدمات'}
           </p>
 
@@ -213,7 +264,9 @@ export default function Services() {
 
         <div
           className="
-            bg-yellow-500
+            bg-gradient-to-br
+            from-yellow-400
+            to-yellow-600
             text-black
             rounded-3xl
             p-8
@@ -224,7 +277,7 @@ export default function Services() {
 
           <h2
             className="
-              text-3xl
+              text-2xl
               font-bold
               mb-4
             "
@@ -250,7 +303,8 @@ export default function Services() {
       <div
         className="
           bg-slate-900
-          p-8
+          p-6
+          md:p-8
           rounded-3xl
           border
           border-blue-500
@@ -261,13 +315,14 @@ export default function Services() {
 
         <h2
           className="
-            text-4xl
+            text-3xl
+            md:text-4xl
             font-extrabold
             text-yellow-400
             mb-8
           "
         >
-          إضافة خدمة جديدة
+          ➕ إضافة خدمة جديدة
         </h2>
 
         <div className="space-y-6">
@@ -286,6 +341,7 @@ export default function Services() {
               bg-white
               text-black
               text-xl
+              outline-none
             "
           />
 
@@ -305,6 +361,7 @@ export default function Services() {
               text-black
               text-xl
               h-40
+              outline-none
             "
           />
 
@@ -322,13 +379,15 @@ export default function Services() {
             "
           />
 
+          {/* PREVIEW */}
+
           {image && (
 
             <div className="relative">
 
               <img
                 src={image}
-                alt=""
+                alt="preview"
                 className="
                   w-full
                   h-[400px]
@@ -372,6 +431,7 @@ export default function Services() {
               text-2xl
               font-extrabold
               transition-all
+              duration-300
             "
           >
             إضافة الخدمة
@@ -394,7 +454,7 @@ export default function Services() {
 
         <input
           type="text"
-          placeholder="بحث باسم الخدمة..."
+          placeholder="🔍 بحث باسم الخدمة..."
           value={search}
           onChange={(e) =>
             setSearch(e.target.value)
@@ -406,6 +466,7 @@ export default function Services() {
             bg-white
             text-black
             text-xl
+            outline-none
           "
         />
 
@@ -421,7 +482,7 @@ export default function Services() {
             rounded-3xl
             p-16
             text-center
-            text-4xl
+            text-3xl
             text-gray-400
           "
         >
@@ -432,7 +493,7 @@ export default function Services() {
 
       {/* SERVICES LIST */}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
 
         {filteredServices.map((service, index) => (
 
@@ -447,6 +508,7 @@ export default function Services() {
               shadow-2xl
               hover:scale-[1.02]
               transition-all
+              duration-300
             "
           >
 
@@ -456,11 +518,12 @@ export default function Services() {
 
               <img
                 src={service.image}
-                alt=""
+                alt={service.title}
                 className="
                   w-full
                   h-72
                   object-cover
+                  bg-black
                 "
               />
 
@@ -493,6 +556,7 @@ export default function Services() {
                   text-3xl
                   font-bold
                   mb-5
+                  text-blue-300
                 "
               >
                 {service.title}
@@ -501,7 +565,7 @@ export default function Services() {
               <p
                 className="
                   text-gray-300
-                  text-xl
+                  text-lg
                   leading-loose
                   mb-6
                 "
@@ -556,6 +620,7 @@ export default function Services() {
                     text-center
                     text-xl
                     font-bold
+                    transition-all
                   "
                 >
                   عرض الصورة
@@ -575,6 +640,7 @@ export default function Services() {
                     rounded-2xl
                     text-xl
                     font-bold
+                    transition-all
                   "
                 >
                   حذف الخدمة

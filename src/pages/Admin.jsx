@@ -1,21 +1,44 @@
-import DashboardLayout from '../layout/DashboardLayout'
-import { useWebsiteStore } from '../store/websiteStore'
+import { useMemo, useState } from 'react'
+
+import DashboardLayout
+  from '../layout/DashboardLayout'
+
+import {
+  useWebsiteStore
+} from '../store/websiteStore'
 
 export default function Admin() {
 
   const {
+
     products,
     offers,
     videos,
     services,
     slides,
     orders,
-    currentUser
+    currentUser,
+
+    users,
+    setUsers,
+
+    notifications,
+    toggleUserStatus,
+    updateUserPermissions
+
   } = useWebsiteStore()
 
-  // ================= WAREHOUSE FILTER =================
+  // ================= STATES =================
 
-  const isOwner = currentUser?.role === 'owner'
+  const [search, setSearch] =
+    useState('')
+
+  // ================= USER =================
+
+  const isOwner =
+    currentUser?.role === 'owner'
+
+  // ================= FILTER =================
 
   const filterByWarehouse = (items) => {
 
@@ -23,100 +46,224 @@ export default function Admin() {
 
     return items.filter(
       (item) =>
+
         !item.warehouseId ||
-        item.warehouseId === currentUser?.id
+
+        item.warehouseId ===
+          currentUser?.warehouseId
     )
+
   }
 
-  const myProducts = filterByWarehouse(products)
-  const myOffers = filterByWarehouse(offers)
-  const myVideos = filterByWarehouse(videos)
-  const myServices = filterByWarehouse(services)
-  const mySlides = filterByWarehouse(slides)
-  const myOrders = filterByWarehouse(orders)
+  // ================= DATA =================
 
-  // ================= TOTAL SALES =================
+  const myProducts =
+    filterByWarehouse(products)
 
-  const totalSales = myOrders.reduce(
-    (acc, order) =>
-      acc + Number(order.total || 0),
-    0
-  )
+  const myOffers =
+    filterByWarehouse(offers)
 
-  // ================= TOTAL SOLD PRODUCTS =================
+  const myVideos =
+    filterByWarehouse(videos)
 
-  const totalSoldProducts = myProducts.reduce(
-    (acc, product) =>
-      acc + Number(product.sold || 0),
-    0
-  )
+  const myServices =
+    filterByWarehouse(services)
+
+  const mySlides =
+    filterByWarehouse(slides)
+
+  const myOrders =
+    filterByWarehouse(orders)
+
+  // ================= SALES =================
+
+  const totalSales =
+    myOrders.reduce(
+
+      (acc, order) =>
+
+        acc +
+        Number(order.total || 0),
+
+      0
+
+    )
+
+  // ================= SOLD =================
+
+  const totalSoldProducts =
+    myProducts.reduce(
+
+      (acc, product) =>
+
+        acc +
+        Number(product.sold || 0),
+
+      0
+
+    )
 
   // ================= LOW STOCK =================
 
-  const lowStockProducts = myProducts.filter(
-    (product) =>
-      Number(product.stock || 0) <= 5
-  )
+  const lowStockProducts =
+    myProducts.filter(
+
+      (product) =>
+
+        Number(product.stock || 0) <= 5
+
+    )
 
   // ================= TOP PRODUCT =================
 
-  const topProduct = [...myProducts].sort(
-    (a, b) =>
-      Number(b.sold || 0) -
-      Number(a.sold || 0)
-  )[0]
+  const topProduct =
+    [...myProducts].sort(
 
-  // ================= DASHBOARD CARDS =================
+      (a, b) =>
+
+        Number(b.sold || 0) -
+
+        Number(a.sold || 0)
+
+    )[0]
+
+  // ================= USERS =================
+
+  const systemUsers = useMemo(() => {
+
+    return users.filter(
+
+      (u) =>
+
+        u.role !== 'owner'
+
+    )
+
+  }, [users])
+
+  const filteredUsers =
+    systemUsers.filter(
+
+      (u) =>
+
+        u.username
+          ?.toLowerCase()
+          .includes(
+            search.toLowerCase()
+          ) ||
+
+        u.warehouseName
+          ?.toLowerCase()
+          .includes(
+            search.toLowerCase()
+          )
+
+    )
+
+  // ================= DELETE USER =================
+
+  const deleteUser = (id) => {
+
+    const confirmDelete =
+      confirm(
+        'هل تريد حذف الحساب؟'
+      )
+
+    if (!confirmDelete) return
+
+    const filtered =
+      users.filter(
+        (u) => u.id !== id
+      )
+
+    setUsers(filtered)
+
+    alert(
+      '✅ تم حذف الحساب'
+    )
+
+  }
+
+  // ================= ROLE =================
+
+  const getRoleName = (role) => {
+
+    if (role === 'warehouse')
+      return '🏭 مخزن'
+
+    if (role === 'branch')
+      return '🏢 فرع'
+
+    if (role === 'shop')
+      return '🏪 محل'
+
+    if (role === 'owner')
+      return '👑 مالك'
+
+    return role
+
+  }
+
+  // ================= CARDS =================
 
   const cards = [
+
     {
       id: 1,
       title: 'عدد المنتجات',
       value: myProducts.length,
       color: 'bg-blue-700'
     },
+
     {
       id: 2,
       title: 'عدد الطلبات',
       value: myOrders.length,
       color: 'bg-green-700'
     },
+
     {
       id: 3,
       title: 'العروض',
       value: myOffers.length,
       color: 'bg-red-700'
     },
+
     {
       id: 4,
       title: 'الفيديوهات',
       value: myVideos.length,
       color: 'bg-purple-700'
     },
+
     {
       id: 5,
       title: 'الخدمات',
       value: myServices.length,
       color: 'bg-cyan-700'
     },
+
     {
       id: 6,
       title: 'صور السلايدر',
       value: mySlides.length,
       color: 'bg-yellow-500 text-black'
     },
+
     {
       id: 7,
       title: 'إجمالي الأرباح',
       value: `${totalSales} ج`,
       color: 'bg-emerald-600'
     },
+
     {
       id: 8,
       title: 'إجمالي المبيعات',
       value: totalSoldProducts,
       color: 'bg-orange-500 text-black'
     }
+
   ]
 
   return (
@@ -125,7 +272,7 @@ export default function Admin() {
 
       <div className="space-y-10">
 
-        {/* PAGE TITLE */}
+        {/* HEADER */}
 
         <div className="
           bg-gradient-to-r
@@ -138,19 +285,36 @@ export default function Admin() {
           text-white
         ">
 
-          <h1 className="text-5xl font-black mb-4">
+          <h1 className="
+            text-5xl
+            font-black
+            mb-4
+          ">
+
             لوحة التحكم الرئيسية
+
           </h1>
 
-          <p className="text-2xl text-white/90">
-            {isOwner
-              ? 'مرحباً بك يا مالك النظام'
-              : `مرحباً بك داخل مخزن: ${currentUser?.username}`}
+          <p className="
+            text-2xl
+            text-white/90
+          ">
+
+            {
+
+              isOwner
+
+                ? 'مرحباً بك يا مالك النظام'
+
+                : `مرحباً بك داخل الوحدة: ${currentUser?.username}`
+
+            }
+
           </p>
 
         </div>
 
-        {/* DASHBOARD CARDS */}
+        {/* CARDS */}
 
         <div className="
           grid
@@ -167,12 +331,24 @@ export default function Admin() {
               className={`${card.color} rounded-3xl p-8 shadow-2xl`}
             >
 
-              <h2 className="text-2xl font-bold mb-6">
+              <h2 className="
+                text-2xl
+                font-bold
+                mb-6
+              ">
+
                 {card.title}
+
               </h2>
 
-              <div className="text-6xl font-extrabold break-words">
+              <div className="
+                text-6xl
+                font-extrabold
+                break-words
+              ">
+
                 {card.value}
+
               </div>
 
             </div>
@@ -181,129 +357,643 @@ export default function Admin() {
 
         </div>
 
-        {/* TOP PRODUCT */}
+        {/* USERS MANAGEMENT */}
 
-        <div className="bg-white rounded-3xl p-10 shadow-2xl">
+        {
 
-          <h2 className="text-4xl font-black text-green-700 mb-10">
-            المنتج الأكثر مبيعاً
-          </h2>
+          isOwner && (
 
-          {topProduct ? (
+            <div className="
+              bg-white
+              rounded-3xl
+              p-10
+              shadow-2xl
+            ">
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+              <div className="
+                flex
+                flex-wrap
+                justify-between
+                gap-4
+                mb-8
+              ">
 
-              <img
-                src={topProduct.image}
-                alt=""
-                className="w-full h-[400px] object-cover rounded-3xl"
-              />
+                <h2 className="
+                  text-4xl
+                  font-black
+                  text-blue-950
+                ">
 
-              <div className="space-y-6">
+                  👥 إدارة المستخدمين
 
-                <h3 className="text-5xl font-black text-blue-950">
-                  {topProduct.name}
-                </h3>
+                </h2>
 
-                <div className="bg-slate-100 p-5 rounded-2xl text-2xl font-bold">
-                  💰 السعر:
-                  <span className="text-yellow-600 mr-3">
-                    {topProduct.price}
-                  </span>
-                </div>
+                <input
+                  type="text"
+                  placeholder="بحث..."
+                  value={search}
+                  onChange={(e) =>
+                    setSearch(
+                      e.target.value
+                    )
+                  }
+                  className="
+                    border-2
+                    border-slate-300
+                    rounded-2xl
+                    px-5
+                    py-3
+                    text-xl
+                    min-w-[300px]
+                  "
+                />
 
-                <div className="bg-slate-100 p-5 rounded-2xl text-2xl font-bold">
-                  🛒 عدد المبيعات:
-                  <span className="text-green-700 mr-3">
-                    {topProduct.sold || 0}
-                  </span>
-                </div>
+              </div>
 
-                <div className="bg-slate-100 p-5 rounded-2xl text-2xl font-bold">
-                  📦 المتبقي بالمخزن:
-                  <span className="text-blue-700 mr-3">
-                    {topProduct.stock || 0}
-                  </span>
-                </div>
+              <div className="
+                grid
+                grid-cols-1
+                md:grid-cols-2
+                gap-6
+              ">
+
+                {filteredUsers.map((user) => (
+
+                  <div
+                    key={user.id}
+                    className="
+                      bg-slate-100
+                      rounded-3xl
+                      p-6
+                      border-2
+                      border-slate-200
+                      space-y-5
+                    "
+                  >
+
+                    <div className="
+                      flex
+                      justify-between
+                      items-center
+                    ">
+
+                      <h3 className="
+                        text-3xl
+                        font-black
+                        text-blue-950
+                      ">
+
+                        {
+
+                          user.warehouseName ||
+
+                          user.username
+
+                        }
+
+                      </h3>
+
+                      <div className="
+                        bg-blue-700
+                        text-white
+                        px-4
+                        py-2
+                        rounded-2xl
+                        font-bold
+                      ">
+
+                        {
+
+                          getRoleName(
+                            user.role
+                          )
+
+                        }
+
+                      </div>
+
+                    </div>
+
+                    <div className="
+                      space-y-3
+                      text-xl
+                    ">
+
+                      <div>
+
+                        👤 المستخدم:
+                        {' '}
+                        {user.username}
+
+                      </div>
+
+                      <div>
+
+                        🔐 الحالة:
+                        {' '}
+
+                        {
+
+                          user.active
+
+                            ? '✅ مفعل'
+
+                            : '❌ معطل'
+
+                        }
+
+                      </div>
+
+                    </div>
+
+                    <div className="
+                      grid
+                      grid-cols-2
+                      gap-4
+                    ">
+
+                      <button
+
+                        onClick={() =>
+                          toggleUserStatus(
+                            user.id
+                          )
+                        }
+
+                        className="
+                          bg-yellow-500
+                          hover:bg-yellow-600
+                          text-black
+                          py-3
+                          rounded-2xl
+                          font-red
+                        "
+                      >
+
+                        {
+
+                          user.active
+
+                            ? 'تعطيل'
+
+                            : 'تفعيل'
+
+                        }
+
+                      </button>
+
+                      <button
+
+                        onClick={() =>
+                          deleteUser(
+                            user.id
+                          )
+                        }
+
+                        className="
+                          bg-red-700
+                          hover:bg-red-800
+                          text-white
+                          py-3
+                          rounded-2xl
+                          font-black
+                        "
+                      >
+
+                        حذف
+
+                      </button>
+
+                    </div>
+
+                    <button
+
+                      onClick={() => {
+
+                        updateUserPermissions(
+
+                          user.id,
+
+                          ['all']
+
+                        )
+
+                        alert(
+                          '✅ تم منح جميع الصلاحيات'
+                        )
+
+                      }}
+
+                      className="
+                        w-full
+                        bg-green-700
+                        hover:bg-green-800
+                        text-white
+                        py-3
+                        rounded-2xl
+                        font-black
+                      "
+                    >
+
+                      منح جميع الصلاحيات
+
+                    </button>
+
+                  </div>
+
+                ))}
 
               </div>
 
             </div>
 
-          ) : (
+          )
 
-            <div className="text-3xl text-gray-500">
-              لا توجد بيانات مبيعات حتى الآن
-            </div>
+        }
 
-          )}
+        {/* NOTIFICATIONS */}
 
-        </div>
+        {
 
-        {/* LOW STOCK */}
+          isOwner && (
 
-        <div className="bg-white rounded-3xl p-10 shadow-2xl">
+            <div className="
+              bg-white
+              rounded-3xl
+              p-10
+              shadow-2xl
+            ">
 
-          <h2 className="text-4xl font-black text-red-700 mb-10">
-            المنتجات القريبة من النفاد
-          </h2>
+              <h2 className="
+                text-4xl
+                font-black
+                text-purple-700
+                mb-8
+              ">
 
-          {lowStockProducts.length === 0 ? (
+                🔔 الإشعارات
 
-            <div className="bg-green-700 text-white p-8 rounded-3xl text-center text-3xl font-bold">
-              جميع المنتجات متوفرة
-            </div>
+              </h2>
 
-          ) : (
+              <div className="space-y-5">
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                {
 
-              {lowStockProducts.map((product) => (
+                  notifications.length === 0 && (
 
-                <div
-                  key={product.id}
-                  className="bg-slate-100 rounded-3xl overflow-hidden border-2 border-red-500"
-                >
+                    <div className="
+                      text-3xl
+                      text-gray-500
+                    ">
 
-                  <img
-                    src={product.image}
-                    alt=""
-                    className="w-full h-64 object-cover"
-                  />
+                      لا توجد إشعارات
 
-                  <div className="p-6">
+                    </div>
 
-                    <h3 className="text-3xl font-black text-blue-950 mb-5">
-                      {product.name}
-                    </h3>
+                  )
 
-                    <div className="space-y-4">
+                }
 
-                      <div className="bg-white p-4 rounded-2xl text-xl font-bold">
-                        📦 المتبقي:
-                        <span className="text-red-600 mr-2">
-                          {product.stock}
-                        </span>
+                {
+
+                  notifications.map((n) => (
+
+                    <div
+                      key={n.id}
+                      className="
+                        bg-slate-100
+                        rounded-3xl
+                        p-6
+                      "
+                    >
+
+                      <div className="
+                        text-2xl
+                        font-black
+                        text-blue-950
+                        mb-3
+                      ">
+
+                        {n.title}
+
                       </div>
 
-                      <div className="bg-white p-4 rounded-2xl text-xl font-bold">
-                        🛒 المبيعات:
-                        <span className="text-green-700 mr-2">
-                          {product.sold || 0}
-                        </span>
+                      <div className="
+                        text-xl
+                        text-gray-700
+                      ">
+
+                        {n.message}
+
                       </div>
 
                     </div>
+
+                  ))
+
+                }
+
+              </div>
+
+            </div>
+
+          )
+
+        }
+
+        {/* TOP PRODUCT */}
+
+        <div className="
+          bg-white
+          rounded-3xl
+          p-10
+          shadow-2xl
+        ">
+
+          <h2 className="
+            text-4xl
+            font-black
+            text-green-700
+            mb-10
+          ">
+
+            المنتج الأكثر مبيعاً
+
+          </h2>
+
+          {
+
+            topProduct ? (
+
+              <div className="
+                grid
+                grid-cols-1
+                lg:grid-cols-2
+                gap-10
+                items-center
+              ">
+
+                <img
+                  src={topProduct.image}
+                  alt=""
+                  className="
+                    w-full
+                    h-[400px]
+                    object-cover
+                    rounded-3xl
+                  "
+                />
+
+                <div className="space-y-6">
+
+                  <h3 className="
+                    text-5xl
+                    font-black
+                    text-blue-950
+                  ">
+
+                    {topProduct.name}
+
+                  </h3>
+
+                  <div className="
+                    bg-slate-100
+                    p-5
+                    rounded-2xl
+                    text-2xl
+                    font-bold
+                  ">
+
+                    💰 السعر:
+                    <span className="
+                      text-yellow-600
+                      mr-3
+                    ">
+
+                      {topProduct.price}
+
+                    </span>
+
+                  </div>
+
+                  <div className="
+                    bg-slate-100
+                    p-5
+                    rounded-2xl
+                    text-2xl
+                    font-bold
+                  ">
+
+                    🛒 عدد المبيعات:
+                    <span className="
+                      text-green-700
+                      mr-3
+                    ">
+
+                      {
+
+                        topProduct.sold || 0
+
+                      }
+
+                    </span>
+
+                  </div>
+
+                  <div className="
+                    bg-slate-100
+                    p-5
+                    rounded-2xl
+                    text-2xl
+                    font-bold
+                  ">
+
+                    📦 المتبقي:
+                    <span className="
+                      text-blue-700
+                      mr-3
+                    ">
+
+                      {
+
+                        topProduct.stock || 0
+
+                      }
+
+                    </span>
 
                   </div>
 
                 </div>
 
-              ))}
+              </div>
 
-            </div>
+            ) : (
 
-          )}
+              <div className="
+                text-3xl
+                text-gray-500
+              ">
+
+                لا توجد بيانات مبيعات حتى الآن
+
+              </div>
+
+            )
+
+          }
+
+        </div>
+
+        {/* LOW STOCK */}
+
+        <div className="
+          bg-white
+          rounded-3xl
+          p-10
+          shadow-2xl
+        ">
+
+          <h2 className="
+            text-4xl
+            font-black
+            text-red-700
+            mb-10
+          ">
+
+            المنتجات القريبة من النفاد
+
+          </h2>
+
+          {
+
+            lowStockProducts.length === 0 ? (
+
+              <div className="
+                bg-green-700
+                text-white
+                p-8
+                rounded-3xl
+                text-center
+                text-3xl
+                font-bold
+              ">
+
+                جميع المنتجات متوفرة
+
+              </div>
+
+            ) : (
+
+              <div className="
+                grid
+                grid-cols-1
+                md:grid-cols-2
+                xl:grid-cols-3
+                gap-8
+              ">
+
+                {
+
+                  lowStockProducts.map((product) => (
+
+                    <div
+                      key={product.id}
+                      className="
+                        bg-slate-100
+                        rounded-3xl
+                        overflow-hidden
+                        border-2
+                        border-red-500
+                      "
+                    >
+
+                      <img
+                        src={product.image}
+                        alt=""
+                        className="
+                          w-full
+                          h-64
+                          object-cover
+                        "
+                      />
+
+                      <div className="p-6">
+
+                        <h3 className="
+                          text-3xl
+                          font-black
+                          text-blue-950
+                          mb-5
+                        ">
+
+                          {product.name}
+
+                        </h3>
+
+                        <div className="
+                          space-y-4
+                        ">
+
+                          <div className="
+                            bg-white
+                            p-4
+                            rounded-2xl
+                            text-xl
+                            font-bold
+                          ">
+
+                            📦 المتبقي:
+                            <span className="
+                              text-red-600
+                              mr-2
+                            ">
+
+                              {product.stock}
+
+                            </span>
+
+                          </div>
+
+                          <div className="
+                            bg-white
+                            p-4
+                            rounded-2xl
+                            text-xl
+                            font-bold
+                          ">
+
+                            🛒 المبيعات:
+                            <span className="
+                              text-green-700
+                              mr-2
+                            ">
+
+                              {
+
+                                product.sold || 0
+
+                              }
+
+                            </span>
+
+                          </div>
+
+                        </div>
+
+                      </div>
+
+                    </div>
+
+                  ))
+
+                }
+
+              </div>
+
+            )
+
+          }
 
         </div>
 

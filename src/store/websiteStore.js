@@ -2,757 +2,591 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 const generateId = () =>
-  Date.now() + Math.random()
+  Date.now().toString() + Math.random().toString(36).slice(2)
+
+// ================= ROLES =================
+
+const rolePermissions = {
+  owner: ['all'],
+
+  warehouse: [
+    'warehouse_dashboard',
+    'products_view',
+    'products_edit',
+    'orders_view',
+    'transfers_view',
+    'transfers_create'
+  ],
+
+  branch: ['branch_dashboard', 'products_view', 'orders_view'],
+  shop: ['shop_dashboard', 'products_view', 'orders_view'],
+  service: ['service_dashboard', 'products_view'],
+  cashier: ['orders_view', 'orders_create']
+}
+
+// ================= OWNER =================
+
+const defaultOwner = {
+  id: 'owner',
+  username: 'owner',
+  password: 'owner123',
+  role: 'owner',
+  warehouseId: 'all',
+  warehouseName: 'الإدارة الرئيسية',
+  active: true,
+  permissions: ['all'],
+  financeAccess: true,
+  walletAccess: true,
+  createdAt: new Date().toISOString()
+}
 
 export const useWebsiteStore = create(
-
   persist(
-
     (set, get) => ({
 
-      // ================= HYDRATION =================
+      // ================= SYSTEM =================
+      hydrated: true,
+      setHydrated: (value) => set({ hydrated: value }),
 
-      hydrated: false,
+      aiSystemEnabled: true,
+      setAiSystemEnabled: (value) =>
+        set({ aiSystemEnabled: Boolean(value) }),
 
-      setHydrated: (value) =>
-        set({
-          hydrated: value
-        }),
+      rolePermissions,
 
-      // ================= COMPANY =================
+      // ================= AUTH =================
+      currentUser: defaultOwner,
+      setCurrentUser: (user) => set({ currentUser: user }),
 
-      companyName:
-        'شركة العلا للإطارات والبطاريات',
+      logout: () => set({ currentUser: defaultOwner }),
+      // ================= AUTH =================
 
-      logo: '',
+login: (username, password) => {
 
-      companyPhone: '',
+  const user = get().users.find(
+    (u) =>
+      u.username === username &&
+      u.password === password &&
+      u.active !== false
+  )
 
-      companyWhatsapp: '',
+  if (!user) return false
 
-      companyAddress: '',
+  set({
+    currentUser: user
+  })
 
-      companyEmail: '',
+  return true
+},
 
-      companyFacebook: '',
+logout: () =>
+  set({
+    currentUser: null
+  }),
 
-      companyInstagram: '',
+// ================= SYSTEM =================
 
-      companyYoutube: '',
+maintenanceMode: false,
 
-      // ================= COMPANY SETTERS =================
+setMaintenanceMode: (value) =>
+  set({
+    maintenanceMode: Boolean(value)
+  }),
 
-      setCompanyName: (name) =>
-        set({
-          companyName: name || ''
-        }),
+// ================= SERVICES =================
 
-      setLogo: (logo) =>
-        set({
-          logo: logo || ''
-        }),
+services: [],
 
-      setCompanyPhone: (phone) =>
-        set({
-          companyPhone: phone || ''
-        }),
+setServices: (services) =>
+  set({
+    services:
+      Array.isArray(services)
+        ? services
+        : []
+  }),
 
-      setCompanyWhatsapp: (whatsapp) =>
-        set({
-          companyWhatsapp: whatsapp || ''
-        }),
+addService: (service) =>
+  set((state) => ({
+    services: [
+      {
+        id: generateId(),
+        createdAt: new Date().toISOString(),
+        ...service
+      },
+      ...state.services
+    ]
+  })),
 
-      setCompanyAddress: (address) =>
-        set({
-          companyAddress: address || ''
-        }),
+deleteService: (id) =>
+  set((state) => ({
+    services: state.services.filter(
+      (s) => s.id !== id
+    )
+  })),
 
-      setCompanyEmail: (email) =>
-        set({
-          companyEmail: email || ''
-        }),
+// ================= VIDEOS =================
 
-      setCompanyFacebook: (facebook) =>
-        set({
-          companyFacebook: facebook || ''
-        }),
+videos: [],
 
-      setCompanyInstagram: (instagram) =>
-        set({
-          companyInstagram: instagram || ''
-        }),
+setVideos: (videos) =>
+  set({
+    videos:
+      Array.isArray(videos)
+        ? videos
+        : []
+  }),
 
-      setCompanyYoutube: (youtube) =>
-        set({
-          companyYoutube: youtube || ''
-        }),
+addVideo: (video) =>
+  set((state) => ({
+    videos: [
+      {
+        id: generateId(),
+        createdAt: new Date().toISOString(),
+        ...video
+      },
+      ...state.videos
+    ]
+  })),
 
+deleteVideo: (id) =>
+  set((state) => ({
+    videos: state.videos.filter(
+      (v) => v.id !== id
+    )
+  })),
+
+// ================= PERMISSIONS =================
+
+permissions: [],
+
+setPermissions: (permissions) =>
+  set({
+    permissions:
+      Array.isArray(permissions)
+        ? permissions
+        : []
+  }),
+
+// ================= WALLETS =================
+
+wallets: [],
+
+setWallets: (wallets) =>
+  set({
+    wallets:
+      Array.isArray(wallets)
+        ? wallets
+        : []
+  }),
+
+addWallet: (wallet) =>
+  set((state) => ({
+    wallets: [
+      {
+        id: generateId(),
+        balance: 0,
+        totalCashback: 0,
+        createdAt: new Date().toISOString(),
+        ...wallet
+      },
+      ...state.wallets
+    ]
+  })),
+
+// ================= AUDIT =================
+
+auditLogs: [],
+
+addAuditLog: (log) =>
+  set((state) => ({
+    auditLogs: [
+      {
+        id: generateId(),
+        createdAt: new Date().toISOString(),
+        ...log
+      },
+      ...state.auditLogs
+    ]
+  })),
+
+// ================= ERP =================
+
+erpMode: true,
+
+setERPMode: (value) =>
+  set({
+    erpMode: Boolean(value)
+  }),
       // ================= USERS =================
+      users: [defaultOwner],
 
-      users: [
+      setUsers: (users) =>
+        set({ users: Array.isArray(users) ? users : [] }),
 
-        {
-          id: 'owner',
-
-          username: 'owner',
-
-          password: 'owner123',
-
-          role: 'owner',
-
-          warehouseId: 'all',
-
-          permissions: ['all']
-        }
-
-      ],
-
-      currentUser: null,
-
-      login: (username, password) => {
-
-        const user = get().users.find(
-
-          (u) =>
-
-            u.username === username &&
-
-            u.password === password
-
-        )
-
-        if (!user) return false
-
-        set({
-          currentUser: user
-        })
-
-        return true
-      },
-
-      logout: () =>
-        set({
-          currentUser: null
-        }),
-
-      getCurrentWarehouseId: () => {
-
-        const user =
-          get().currentUser
-
-        if (!user) return null
-
-        if (user.role === 'owner') {
-
-          return 'all'
-
-        }
-
-        return user.warehouseId
-      },
-
-      // ================= STOCK HISTORY =================
-
-      stockHistory: [],
-
-      addStockHistory: (history) =>
-
+      addUser: (user) =>
         set((state) => ({
-
-          stockHistory: [
-
-            ...state.stockHistory,
-
+          users: [
+            ...state.users,
             {
-
               id: generateId(),
+              active: true,
+              permissions: rolePermissions[user.role] || [],
 
-              createdAt:
-                new Date().toISOString(),
+              dataScope: 'own',
+              allowedPages: [],
+              hiddenButtons: [],
 
-              warehouseId:
-                get().getCurrentWarehouseId(),
+              canViewOwnOrdersOnly: true,
+              canViewOwnTransfersOnly: true,
+              canViewOwnSalesOnly: true,
+              canViewOwnProductsOnly: true,
 
-              ...history
+              financeAccess: false,
+              walletAccess: false,
 
+              createdAt: new Date().toISOString(),
+              ...user
             }
-
           ]
+        })),
 
+      // ================= ORDERS (FIXED) =================
+      orders: [],
+
+      setOrders: (orders) =>
+        set({ orders: Array.isArray(orders) ? orders : [] }),
+
+      addOrder: (order) =>
+        set((state) => ({
+          orders: [
+            {
+              id: generateId(),
+              status: 'طلب جديد',
+              createdAt: new Date().toISOString(),
+              ...order
+            },
+            ...state.orders
+          ]
+        })),
+
+      // ❗ FIX: MISSING FUNCTIONS (سبب الشاشة السوداء)
+      deleteOrder: (id) =>
+        set((state) => ({
+          orders: state.orders.filter((o) => o.id !== id)
+        })),
+
+      updateOrderStatus: (id, status) =>
+        set((state) => ({
+          orders: state.orders.map((o) =>
+            o.id === id ? { ...o, status } : o
+          )
         })),
 
       // ================= PRODUCTS =================
-
       products: [],
+      setProducts: (products) =>
+        set({ products: Array.isArray(products) ? products : [] }),
 
-      addProduct: (product) => {
-
-        const newProduct = {
-
-          id: generateId(),
-
-          name: product.name || '',
-
-          price: product.price || '',
-
-          image: product.image || '',
-
-          stock:
-            Number(product.stock) || 0,
-
-          hidden:
-            product.hidden || false,
-
-          sold:
-            Number(product.sold) || 0,
-
-          warehouseId:
-            get().getCurrentWarehouseId(),
-
-          createdAt:
-            new Date().toISOString()
-
-        }
-
-        get().addStockHistory({
-
-          type: 'ADD_PRODUCT',
-
-          action: 'إضافة منتج',
-
-          productName:
-            newProduct.name,
-
-          quantity:
-            newProduct.stock,
-
-          fromWarehouse: '-',
-
-          toWarehouse:
-            newProduct.warehouseId
-
-        })
-
+      addProduct: (product) =>
         set((state) => ({
-
           products: [
-
             ...state.products,
-
-            newProduct
-
+            { id: generateId(), ...product }
           ]
-
-        }))
-      },
-
-      updateProductStock: (
-        productId,
-        change
-      ) => {
-
-        const state = get()
-
-        const product =
-          state.products.find(
-            (p) => p.id === productId
-          )
-
-        if (!product) return
-
-        get().addStockHistory({
-
-          type: 'UPDATE_STOCK',
-
-          action: 'تعديل مخزون',
-
-          productName:
-            product.name,
-
-          quantity: change,
-
-          fromWarehouse:
-            product.warehouseId,
-
-          toWarehouse:
-            product.warehouseId
-
-        })
-
-        set((state) => ({
-
-          products:
-            state.products.map((p) =>
-
-              p.id === productId
-
-                ? {
-
-                    ...p,
-
-                    stock: Math.max(
-
-                      0,
-
-                      (p.stock || 0) + change
-
-                    )
-
-                  }
-
-                : p
-
-            )
-
-        }))
-      },
-
-      // ================= CART =================
-
-      cart: [],
-
-      addToCart: (product) =>
-
-        set((state) => ({
-
-          cart: [
-
-            ...state.cart,
-
-            {
-              ...product,
-              cartId: generateId()
-            }
-
-          ]
-
         })),
 
-      removeFromCart: (cartId) =>
+      // ================= TRANSFERS =================
+      transfers: [],
+      setTransfers: (t) =>
+        set({ transfers: Array.isArray(t) ? t : [] }),
 
+      addTransfer: (transfer) =>
         set((state) => ({
-
-          cart:
-            state.cart.filter(
-
-              (item) =>
-                item.cartId !== cartId
-
-            )
-
-        })),
-
-      clearCart: () =>
-        set({
-          cart: []
-        }),
-
-      // ================= ORDERS =================
-
-      orders: [],
-
-      addOrder: (order) =>
-
-        set((state) => ({
-
-          orders: [
-
-            ...state.orders,
-
+          transfers: [
             {
               id: generateId(),
-
-              createdAt:
-                new Date().toISOString(),
-
-              status: 'جديد',
-
-              ...order
-            }
-
+              createdAt: new Date().toISOString(),
+              ...transfer
+            },
+            ...state.transfers
           ]
-
         })),
-
-      // ================= WEBSITE CONTENT =================
-
-      slides: [],
-
-      offers: [],
-
-      services: [],
-
-      videos: [],
 
       // ================= SLIDES =================
+      slides: [],
+
+      setSlides: (slides) =>
+        set({ slides: Array.isArray(slides) ? slides : [] }),
 
       addSlide: (slide) =>
-
         set((state) => ({
-
           slides: [
-
-            ...state.slides,
-
             {
-
               id: generateId(),
-
-              image: slide.image || '',
-
-              createdAt:
-                new Date().toISOString()
-
-            }
-
+              createdAt: new Date().toISOString(),
+              ...slide
+            },
+            ...state.slides
           ]
-
         })),
 
       deleteSlide: (id) =>
-
         set((state) => ({
-
-          slides:
-            state.slides.filter(
-              (slide) => slide.id !== id
-            )
-
+          slides: state.slides.filter((s) => s.id !== id)
         })),
-
-      setSlides: (slides) =>
-        set({
-          slides: slides || []
-        }),
 
       // ================= OFFERS =================
-
-      addOffer: (offer) =>
-
-        set((state) => ({
-
-          offers: [
-
-            ...state.offers,
-
-            {
-
-              id: generateId(),
-
-              ...offer,
-
-              createdAt:
-                new Date().toISOString()
-
-            }
-
-          ]
-
-        })),
-
-      deleteOffer: (id) =>
-
-        set((state) => ({
-
-          offers:
-            state.offers.filter(
-              (offer) => offer.id !== id
-            )
-
-        })),
+      offers: [],
 
       setOffers: (offers) =>
-        set({
-          offers: offers || []
-        }),
+        set({ offers: Array.isArray(offers) ? offers : [] }),
 
-      // ================= SERVICES =================
-
-      addService: (service) =>
-
+      addOffer: (offer) =>
         set((state) => ({
-
-          services: [
-
-            ...state.services,
-
+          offers: [
             {
-
               id: generateId(),
-
-              ...service,
-
-              createdAt:
-                new Date().toISOString()
-
-            }
-
+              createdAt: new Date().toISOString(),
+              ...offer
+            },
+            ...state.offers
           ]
-
         })),
-
-      deleteService: (id) =>
-
-        set((state) => ({
-
-          services:
-            state.services.filter(
-              (service) => service.id !== id
-            )
-
-        })),
-
-      setServices: (services) =>
-        set({
-          services: services || []
-        }),
-
-      // ================= VIDEOS =================
-
-      addVideo: (video) =>
-
-        set((state) => ({
-
-          videos: [
-
-            ...state.videos,
-
-            {
-
-              id: generateId(),
-
-              ...video,
-
-              createdAt:
-                new Date().toISOString()
-
-            }
-
-          ]
-
-        })),
-
-      deleteVideo: (id) =>
-
-        set((state) => ({
-
-          videos:
-            state.videos.filter(
-              (video) => video.id !== id
-            )
-
-        })),
-
-      setVideos: (videos) =>
-        set({
-          videos: videos || []
-        }),
-
-      // ================= TRANSFERS =================
-
-      transfers: [],
-
-      transferProductQuantity: ({
-        productId,
-        fromWarehouseId,
-        toWarehouseId,
-        quantity
-      }) => {
-
-        const state = get()
-
-        const product =
-          state.products.find(
-
-            (p) =>
-
-              p.id === productId &&
-
-              p.warehouseId ===
-                fromWarehouseId
-
-          )
-
-        if (!product) {
-
-          alert(
-            '❌ المنتج غير موجود'
-          )
-
-          return
-        }
-
-        if (product.stock < quantity) {
-
-          alert(
-            '❌ الكمية غير متوفرة'
-          )
-
-          return
-        }
-
-        const updatedProducts =
-          state.products.map((p) => {
-
-            if (
-
-              p.id === productId &&
-
-              p.warehouseId ===
-                fromWarehouseId
-
-            ) {
-
-              return {
-
-                ...p,
-
-                stock:
-                  p.stock - quantity
-
-              }
-            }
-
-            return p
-          })
-
-        const targetIndex =
-          updatedProducts.findIndex(
-
-            (p) =>
-
-              p.name === product.name &&
-
-              p.warehouseId ===
-                toWarehouseId
-
-          )
-
-        if (targetIndex !== -1) {
-
-          updatedProducts[targetIndex] = {
-
-            ...updatedProducts[targetIndex],
-
-            stock:
-
-              updatedProducts[targetIndex]
-                .stock + quantity
-
-          }
-
-        } else {
-
-          updatedProducts.push({
-
-            id: generateId(),
-
-            name: product.name,
-
-            price: product.price || '',
-
-            image: product.image || '',
-
-            stock: quantity,
-
-            hidden:
-              product.hidden || false,
-
-            warehouseId:
-              toWarehouseId,
-
-            createdAt:
-              new Date().toISOString()
-
-          })
-
-        }
-
-        set((state) => ({
-
-          products:
-            updatedProducts,
-
-          transfers: [
-
-            ...state.transfers,
-
-            {
-
-              id: generateId(),
-
-              productId,
-
-              quantity,
-
-              fromWarehouseId,
-
-              toWarehouseId,
-
-              createdAt:
-                new Date().toISOString()
-
-            }
-
-          ]
-
-        }))
+        // ================= SERVICES =================
+
+services: [],
+
+setServices: (services) =>
+  set({
+    services:
+      Array.isArray(services)
+        ? services
+        : []
+  }),
+
+addService: (service) =>
+  set((state) => ({
+    services: [
+      {
+        id: generateId(),
+        createdAt: new Date().toISOString(),
+        ...service
       },
+      ...state.services
+    ]
+  })),
 
-      // ================= ANALYTICS =================
+deleteService: (id) =>
+  set((state) => ({
+    services:
+      state.services.filter(
+        (s) => s.id !== id
+      )
+  })),
 
-      getWarehouseStats: () => {
+// ================= VIDEOS =================
 
-        const products =
-          get().products
+videos: [],
 
-        const orders =
-          get().orders || []
+setVideos: (videos) =>
+  set({
+    videos:
+      Array.isArray(videos)
+        ? videos
+        : []
+  }),
 
-        const totalSales =
-          orders.reduce(
+addVideo: (video) =>
+  set((state) => ({
+    videos: [
+      {
+        id: generateId(),
+        createdAt: new Date().toISOString(),
+        ...video
+      },
+      ...state.videos
+    ]
+  })),
 
-            (acc, o) =>
+deleteVideo: (id) =>
+  set((state) => ({
+    videos:
+      state.videos.filter(
+        (v) => v.id !== id
+      )
+  })),
 
-              acc +
-              Number(o.total || 0),
+// ================= PERMISSIONS =================
 
-            0
+permissions: [],
 
-          )
+setPermissions: (permissions) =>
+  set({
+    permissions:
+      Array.isArray(permissions)
+        ? permissions
+        : []
+  }),
 
-        return {
+// ================= WALLETS =================
 
-          products:
-            products.length,
+wallets: [],
 
-          orders:
-            orders.length,
+setWallets: (wallets) =>
+  set({
+    wallets:
+      Array.isArray(wallets)
+        ? wallets
+        : []
+  }),
 
-          sales:
-            totalSales
+addWallet: (wallet) =>
+  set((state) => ({
+    wallets: [
+      {
+        id: generateId(),
+        balance: 0,
+        totalCashback: 0,
+        createdAt: new Date().toISOString(),
+        ...wallet
+      },
+      ...state.wallets
+    ]
+  })),
+       // ================= CART =================
 
-        }
+cart: [],
+
+addToCart: (item) =>
+  set((state) => ({
+    cart: [
+      ...state.cart,
+      {
+        ...item,
+        cartId: generateId()
       }
+    ]
+  })),
 
+removeFromCart: (cartId) =>
+  set((state) => ({
+    cart: state.cart.filter(
+      (item) => item.cartId !== cartId
+    )
+  })),
+
+clearCart: () =>
+  set({ cart: [] }),
+
+// ================= OFFERS DELETE =================
+
+deleteOffer: (id) =>
+  set((state) => ({
+    offers: state.offers.filter(
+      (offer) => offer.id !== id
+    )
+  })),
+            // ================= COMPANY =================
+
+      companyName: 'شركة العلا للإطارات والبطاريات',
+      setCompanyName: (companyName) =>
+        set({ companyName }),
+
+      logo: '',
+      setLogo: (logo) =>
+        set({ logo }),
+
+      companyPhone: '',
+      setCompanyPhone: (companyPhone) =>
+        set({ companyPhone }),
+
+      companyWhatsapp: '',
+      setCompanyWhatsapp: (companyWhatsapp) =>
+        set({ companyWhatsapp }),
+
+      companyAddress: '',
+      setCompanyAddress: (companyAddress) =>
+        set({ companyAddress }),
+
+      companyFacebook: '',
+      setCompanyFacebook: (companyFacebook) =>
+        set({ companyFacebook }),
+
+      companyInstagram: '',
+      setCompanyInstagram: (companyInstagram) =>
+        set({ companyInstagram }),
+
+      companyYoutube: '',
+      setCompanyYoutube: (companyYoutube) =>
+        set({ companyYoutube }),
+
+      companyEmail: '',
+      setCompanyEmail: (companyEmail) =>
+        set({ companyEmail }),
+
+      // ================= NOTIFICATIONS =================
+      notifications: [],
+
+      addNotification: (title, message) =>
+        set((state) => ({
+          notifications: [
+            {
+              id: generateId(),
+              title,
+              message,
+              createdAt: new Date().toISOString()
+            },
+            ...state.notifications
+          ]
+        }))
     }),
+{
+  name: 'elola-store-v4-clean',
 
-    {
+  partialize: (state) => ({
 
-      name: 'elola-storage',
+    currentUser: state.currentUser,
 
-      onRehydrateStorage: () => (state) => {
+    users: state.users,
 
-        if (state) {
+    products: state.products,
 
-          state.setHydrated(true)
+    orders: state.orders,
 
-        }
+    transfers: state.transfers,
 
-      }
+    slides: state.slides,
 
-    }
+    offers: state.offers,
 
+    services: state.services,
+
+    videos: state.videos,
+
+    wallets: state.wallets,
+
+    permissions: state.permissions,
+
+    companyName: state.companyName,
+
+    logo: state.logo,
+
+    companyPhone: state.companyPhone,
+
+    companyWhatsapp: state.companyWhatsapp,
+
+    companyAddress: state.companyAddress,
+
+    companyFacebook: state.companyFacebook,
+
+    companyInstagram: state.companyInstagram,
+
+    companyYoutube: state.companyYoutube,
+
+    companyEmail: state.companyEmail
+
+  })
+
+}
   )
-
 )

@@ -1,790 +1,837 @@
-import { useMemo, useState } from 'react'
-import { useWebsiteStore } from '../store/websiteStore'
+import {
+  useMemo,
+  useState,
+  useCallback,
+  useEffect
+} from 'react'
+
+import {
+  useWebsiteStore
+} from '../store/websiteStore'
+
+import ProductForm
+  from '../components/products/ProductForm'
+
+import ProductsStats
+  from '../components/products/ProductsStats'
+
+import ProductsFilters
+  from '../components/products/ProductsFilters'
+
+import ProductsGrid
+  from '../components/products/ProductsGrid'
+
+import ProductsPagination
+  from '../components/products/ProductsPagination'
+
+import ProductsSkeleton
+  from '../components/products/ProductsSkeleton'
+
+import ProductSearchInfo
+  from '../components/products/ProductSearchInfo'
+
+import ProductsSort
+  from '../components/products/ProductsSort'
+
+import LowStockAlert
+  from '../components/products/LowStockAlert'
+
+import ProductListCard
+  from '../components/products/ProductListCard'
 
 export default function Products() {
 
-  const {
-    products,
-    addProduct,
-    deleteProduct,
-    updateProductStock,
-    toggleProductVisibility
-  } = useWebsiteStore()
+  // ================= STORE =================
 
-  const [name, setName] = useState('')
-  const [price, setPrice] = useState('')
-  const [stock, setStock] = useState('')
-  const [image, setImage] = useState('')
+  const products =
+    useWebsiteStore(
+      (s) => s.products
+    )
 
-  const [search, setSearch] = useState('')
+  const addProduct =
+    useWebsiteStore(
+      (s) => s.addProduct
+    )
 
-  const [filter, setFilter] = useState('all')
+  const deleteProduct =
+    useWebsiteStore(
+      (s) => s.deleteProduct
+    )
 
-  // ================= IMAGE UPLOAD =================
+  const updateProductStock =
+    useWebsiteStore(
+      (s) =>
+        s.updateProductStock
+    )
 
-  const handleImage = (e) => {
+  const toggleProductVisibility =
+    useWebsiteStore(
+      (s) =>
+        s.toggleProductVisibility
+    )
 
-    const file = e.target.files[0]
+  // ================= STATES =================
 
-    if (!file) return
+  const [search, setSearch] =
+    useState('')
 
-    const reader = new FileReader()
+  const [filter, setFilter] =
+    useState('all')
 
-    reader.onloadend = () => {
+  const [sortBy, setSortBy] =
+    useState('newest')
 
-      setImage(reader.result)
+  const [viewMode, setViewMode] =
+    useState('grid')
 
-    }
+  const [currentPage, setCurrentPage] =
+    useState(1)
 
-    reader.readAsDataURL(file)
+  const [loading, setLoading] =
+    useState(true)
 
-  }
+  // ================= LOADING =================
+
+  useEffect(() => {
+
+    const timer =
+      setTimeout(() => {
+
+        setLoading(false)
+
+      }, 1200)
+
+    return () =>
+      clearTimeout(timer)
+
+  }, [])
+
+  // ================= PAGE RESET =================
+
+  useEffect(() => {
+
+    setCurrentPage(1)
+
+  }, [
+
+    search,
+    filter,
+    sortBy,
+    viewMode
+
+  ])
 
   // ================= ADD PRODUCT =================
 
-  const handleAdd = () => {
+  const handleAddProduct =
+    useCallback((product) => {
 
-    if (!name || !price || !image || !stock) {
+      addProduct({
 
-      alert('يرجى إدخال جميع البيانات')
+        ...product,
 
-      return
+        sold: 0,
 
-    }
+        hidden: false,
 
-    addProduct({
+        createdAt:
+          new Date().toISOString()
 
-      name,
-      price,
-      image,
-      stock: Number(stock)
+      })
 
-    })
+    }, [addProduct])
 
-    setName('')
-    setPrice('')
-    setStock('')
-    setImage('')
+  // ================= DELETE =================
 
-    alert('تم إضافة المنتج بنجاح')
+  const handleDelete =
+    useCallback((id) => {
 
-  }
+      const ok =
+        window.confirm(
+          'هل تريد حذف المنتج؟'
+        )
 
-  // ================= DELETE PRODUCT =================
-
-  const handleDelete = (id) => {
-
-    const confirmDelete = confirm(
-      'هل تريد حذف المنتج؟'
-    )
-
-    if (confirmDelete) {
+      if (!ok) return
 
       deleteProduct(id)
 
-    }
+    }, [deleteProduct])
 
-  }
+  // ================= FILTERED PRODUCTS =================
 
-  // ================= FILTER PRODUCTS =================
+  const filteredProducts =
+    useMemo(() => {
 
-  const filteredProducts = useMemo(() => {
+      let result =
+        [...products]
 
-    let result = [...products]
+      // SEARCH
 
-    // SEARCH
+      if (
+        search.trim()
+      ) {
 
-    if (search.trim()) {
+        result =
+          result.filter(
 
-      result = result.filter((product) =>
+            (product) =>
 
-        product.name
-          ?.toLowerCase()
-          .includes(
-            search.toLowerCase()
+              product.name
+                ?.toLowerCase()
+                .includes(
+
+                  search.toLowerCase()
+
+                )
+
           )
 
-      )
+      }
 
-    }
+      // LOW STOCK
 
-    // FILTER
+      if (
+        filter === 'low'
+      ) {
 
-    if (filter === 'low') {
+        result =
+          result.filter(
 
-      result = result.filter(
+            (product) =>
 
-        (product) =>
+              Number(
+                product.stock || 0
+              ) <= 5
 
-          Number(product.stock || 0) <= 5
+          )
 
-      )
+      }
 
-    }
+      // HIDDEN
 
-    if (filter === 'hidden') {
+      if (
+        filter === 'hidden'
+      ) {
 
-      result = result.filter(
+        result =
+          result.filter(
 
-        (product) => product.hidden
+            (product) =>
+              product.hidden
 
-      )
+          )
 
-    }
+      }
 
-    if (filter === 'available') {
+      // AVAILABLE
 
-      result = result.filter(
+      if (
+        filter === 'available'
+      ) {
 
-        (product) =>
+        result =
+          result.filter(
 
-          Number(product.stock || 0) > 0
+            (product) =>
 
-      )
+              Number(
+                product.stock || 0
+              ) > 0
 
-    }
+          )
 
-    // SORT NEWEST
+      }
 
-    result.sort(
+      // ================= SORT =================
 
-      (a, b) =>
+      // NEWEST
 
-        new Date(b.createdAt) -
-        new Date(a.createdAt)
+      if (
+        sortBy === 'newest'
+      ) {
+
+        result.sort(
+
+          (a, b) =>
+
+            new Date(
+              b.createdAt || 0
+            ) -
+
+            new Date(
+              a.createdAt || 0
+            )
+
+        )
+
+      }
+
+      // OLDEST
+
+      if (
+        sortBy === 'oldest'
+      ) {
+
+        result.sort(
+
+          (a, b) =>
+
+            new Date(
+              a.createdAt || 0
+            ) -
+
+            new Date(
+              b.createdAt || 0
+            )
+
+        )
+
+      }
+
+      // PRICE HIGH
+
+      if (
+        sortBy === 'priceHigh'
+      ) {
+
+        result.sort(
+
+          (a, b) =>
+
+            Number(
+              b.price || 0
+            ) -
+
+            Number(
+              a.price || 0
+            )
+
+        )
+
+      }
+
+      // PRICE LOW
+
+      if (
+        sortBy === 'priceLow'
+      ) {
+
+        result.sort(
+
+          (a, b) =>
+
+            Number(
+              a.price || 0
+            ) -
+
+            Number(
+              b.price || 0
+            )
+
+        )
+
+      }
+
+      // STOCK HIGH
+
+      if (
+        sortBy === 'stockHigh'
+      ) {
+
+        result.sort(
+
+          (a, b) =>
+
+            Number(
+              b.stock || 0
+            ) -
+
+            Number(
+              a.stock || 0
+            )
+
+        )
+
+      }
+
+      // STOCK LOW
+
+      if (
+        sortBy === 'stockLow'
+      ) {
+
+        result.sort(
+
+          (a, b) =>
+
+            Number(
+              a.stock || 0
+            ) -
+
+            Number(
+              b.stock || 0
+            )
+
+        )
+
+      }
+
+      return result
+
+    }, [
+
+      products,
+      search,
+      filter,
+      sortBy
+
+    ])
+
+  // ================= PAGINATION =================
+
+  const PRODUCTS_PER_PAGE = 6
+
+  const totalPages =
+    Math.ceil(
+
+      filteredProducts.length /
+
+      PRODUCTS_PER_PAGE
 
     )
 
-    return result
+  const paginatedProducts =
+    filteredProducts.slice(
 
-  }, [products, search, filter])
+      (
+
+        currentPage - 1
+
+      ) *
+
+      PRODUCTS_PER_PAGE,
+
+      currentPage *
+
+      PRODUCTS_PER_PAGE
+
+    )
 
   // ================= TOTALS =================
 
-  const totalStock = products.reduce(
+  const totalStock =
+    useMemo(() => {
 
-    (acc, product) =>
+      return products.reduce(
 
-      acc + Number(product.stock || 0),
+        (acc, product) =>
 
-    0
+          acc +
 
-  )
+          Number(
+            product.stock || 0
+          ),
 
-  const totalSold = products.reduce(
+        0
 
-    (acc, product) =>
+      )
 
-      acc + Number(product.sold || 0),
+    }, [products])
 
-    0
+  const totalSold =
+    useMemo(() => {
 
-  )
+      return products.reduce(
 
-  const hiddenProducts = products.filter(
-    (product) => product.hidden
-  ).length
+        (acc, product) =>
+
+          acc +
+
+          Number(
+            product.sold || 0
+          ),
+
+        0
+
+      )
+
+    }, [products])
+
+  const hiddenProducts =
+    useMemo(() => {
+
+      return products.filter(
+
+        (product) =>
+          product.hidden
+
+      ).length
+
+    }, [products])
+
+  // ================= LOW STOCK =================
+
+  const lowStockProducts =
+    useMemo(() => {
+
+      return products.filter(
+
+        (product) =>
+
+          Number(
+            product.stock || 0
+          ) <= 5
+
+      )
+
+    }, [products])
+
+  // ================= UI =================
 
   return (
 
-    <div className="p-10 bg-black min-h-screen text-white">
+    <div className="
+      p-6
+      lg:p-10
+      bg-black
+      min-h-screen
+      text-white
+    ">
 
-      {/* TITLE */}
+      {/* HEADER */}
 
-      <h1
-        className="
-          text-5xl
-          font-extrabold
-          text-yellow-400
-          mb-10
-        "
-      >
-        إدارة المنتجات والمخزون
-      </h1>
+      <div className="
+        bg-gradient-to-r
+        from-blue-950
+        via-blue-700
+        to-yellow-500
+        rounded-[40px]
+        p-8
+        lg:p-12
+        mb-12
+        shadow-2xl
+      ">
 
-      {/* ANALYTICS */}
+        <h1 className="
+          text-4xl
+          lg:text-6xl
+          font-black
+          mb-4
+        ">
 
-      <div
-        className="
-          grid
-          grid-cols-1
-          md:grid-cols-4
-          gap-8
-          mb-12
-        "
-      >
+          إدارة المنتجات والمخزون
 
-        <div
-          className="
-            bg-blue-700
-            p-8
-            rounded-3xl
-            text-center
-            shadow-2xl
-          "
-        >
+        </h1>
 
-          <h2
-            className="
-              text-3xl
-              font-bold
-              mb-4
-            "
-          >
-            عدد المنتجات
-          </h2>
+        <p className="
+          text-xl
+          lg:text-2xl
+          text-white/90
+        ">
 
-          <p
-            className="
-              text-6xl
-              font-extrabold
-            "
-          >
-            {products.length}
-          </p>
+          إدارة كاملة للمنتجات والمبيعات والمخزون
 
-        </div>
-
-        <div
-          className="
-            bg-green-700
-            p-8
-            rounded-3xl
-            text-center
-            shadow-2xl
-          "
-        >
-
-          <h2
-            className="
-              text-3xl
-              font-bold
-              mb-4
-            "
-          >
-            إجمالي المخزون
-          </h2>
-
-          <p
-            className="
-              text-6xl
-              font-extrabold
-            "
-          >
-            {totalStock}
-          </p>
-
-        </div>
-
-        <div
-          className="
-            bg-yellow-500
-            text-black
-            p-8
-            rounded-3xl
-            text-center
-            shadow-2xl
-          "
-        >
-
-          <h2
-            className="
-              text-3xl
-              font-bold
-              mb-4
-            "
-          >
-            إجمالي المبيعات
-          </h2>
-
-          <p
-            className="
-              text-6xl
-              font-extrabold
-            "
-          >
-            {totalSold}
-          </p>
-
-        </div>
-
-        <div
-          className="
-            bg-red-700
-            p-8
-            rounded-3xl
-            text-center
-            shadow-2xl
-          "
-        >
-
-          <h2
-            className="
-              text-3xl
-              font-bold
-              mb-4
-            "
-          >
-            المنتجات المخفية
-          </h2>
-
-          <p
-            className="
-              text-6xl
-              font-extrabold
-            "
-          >
-            {hiddenProducts}
-          </p>
-
-        </div>
+        </p>
 
       </div>
+
+      {/* STATS */}
+
+      <ProductsStats
+
+        productsCount={
+          products.length
+        }
+
+        totalStock={
+          totalStock
+        }
+
+        totalSold={
+          totalSold
+        }
+
+        hiddenProducts={
+          hiddenProducts
+        }
+
+      />
 
       {/* FORM */}
 
-      <div
-        className="
-          bg-slate-900
-          p-8
-          rounded-3xl
-          mb-12
-          space-y-6
-          border
-          border-yellow-400
-          shadow-2xl
-        "
-      >
+      <ProductForm
+        onAddProduct={
+          handleAddProduct
+        }
+      />
 
-        <input
-          type="text"
-          placeholder="اسم المنتج"
-          value={name}
-          onChange={(e) =>
-            setName(e.target.value)
-          }
-          className="
-            w-full
-            p-5
-            rounded-2xl
-            bg-white
-            text-black
-            text-xl
-          "
-        />
+      {/* LOW STOCK ALERT */}
 
-        <input
-          type="text"
-          placeholder="السعر"
-          value={price}
-          onChange={(e) =>
-            setPrice(e.target.value)
-          }
-          className="
-            w-full
-            p-5
-            rounded-2xl
-            bg-white
-            text-black
-            text-xl
-          "
-        />
+      <LowStockAlert
 
-        <input
-          type="number"
-          placeholder="الكمية داخل المخزن"
-          value={stock}
-          onChange={(e) =>
-            setStock(e.target.value)
-          }
-          className="
-            w-full
-            p-5
-            rounded-2xl
-            bg-white
-            text-black
-            text-xl
-          "
-        />
+        lowStockProducts={
+          lowStockProducts
+        }
 
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleImage}
-          className="
-            w-full
-            p-5
-            rounded-2xl
-            bg-white
-            text-black
-            text-xl
-          "
-        />
+      />
 
-        {image && (
+      {/* FILTERS */}
 
-          <img
-            src={image}
-            alt=""
-            className="
-              w-full
-              h-72
-              object-cover
-              rounded-3xl
-            "
+      <ProductsFilters
+
+        search={search}
+        setSearch={setSearch}
+
+        filter={filter}
+        setFilter={setFilter}
+
+      />
+
+      {/* SEARCH INFO */}
+
+      <ProductSearchInfo
+
+        totalResults={
+          filteredProducts.length
+        }
+
+        search={search}
+
+        filter={filter}
+
+      />
+
+      {/* SORT + VIEW MODE */}
+
+      <div className="
+        flex
+        flex-col
+        xl:flex-row
+        gap-6
+        mb-10
+      ">
+
+        <div className="flex-1">
+
+          <ProductsSort
+
+            sortBy={sortBy}
+
+            setSortBy={setSortBy}
+
           />
 
-        )}
+        </div>
 
-        <button
-          onClick={handleAdd}
-          className="
-            w-full
-            bg-yellow-500
-            hover:bg-yellow-600
-            py-5
-            rounded-3xl
-            text-2xl
-            font-extrabold
-            text-black
-          "
-        >
-          إضافة المنتج
-        </button>
+        {/* VIEW MODE */}
 
-      </div>
-
-      {/* SEARCH + FILTER */}
-
-      <div
-        className="
+        <div className="
           bg-slate-900
-          p-6
+          border
+          border-slate-700
           rounded-3xl
-          mb-12
+          p-6
           flex
-          flex-col
-          md:flex-row
-          gap-5
-        "
-      >
+          items-center
+          gap-4
+          shadow-2xl
+        ">
 
-        <input
-          type="text"
-          placeholder="بحث عن منتج..."
-          value={search}
-          onChange={(e) =>
-            setSearch(e.target.value)
-          }
-          className="
-            flex-1
-            p-5
-            rounded-2xl
-            bg-white
-            text-black
-            text-xl
-          "
-        />
+          <button
 
-        <select
-          value={filter}
-          onChange={(e) =>
-            setFilter(e.target.value)
-          }
-          className="
-            p-5
-            rounded-2xl
-            bg-white
-            text-black
-            text-xl
-          "
-        >
+            type="button"
 
-          <option value="all">
-            جميع المنتجات
-          </option>
+            onClick={() =>
+              setViewMode('grid')
+            }
 
-          <option value="available">
-            المتوفرة
-          </option>
-
-          <option value="low">
-            القريبة من النفاد
-          </option>
-
-          <option value="hidden">
-            المخفية
-          </option>
-
-        </select>
-
-      </div>
-
-      {/* PRODUCTS LIST */}
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-
-        {filteredProducts.map((product) => (
-
-          <div
-            key={product.id}
             className={`
-              bg-slate-900
-              rounded-3xl
-              overflow-hidden
-              shadow-2xl
-              border
-              ${product.hidden
-                ? 'border-red-600 opacity-60'
-                : 'border-yellow-400'
+              px-6
+              py-4
+              rounded-2xl
+              text-xl
+              font-black
+              transition-all
+
+              ${
+
+                viewMode === 'grid'
+
+                  ? `
+                    bg-yellow-500
+                    text-black
+                  `
+
+                  : `
+                    bg-black
+                    text-white
+                    border
+                    border-slate-700
+                  `
+
               }
             `}
           >
 
-            <img
-              src={product.image}
-              alt=""
-              className="
-                w-full
-                h-72
-                object-cover
-              "
-            />
+            ⬜ Grid
 
-            <div className="p-6">
+          </button>
 
-              <div className="flex justify-between items-center mb-4">
+          <button
 
-                <h2
-                  className="
-                    text-3xl
-                    font-bold
-                  "
-                >
-                  {product.name}
-                </h2>
+            type="button"
 
-                {product.hidden && (
+            onClick={() =>
+              setViewMode('list')
+            }
 
-                  <div
-                    className="
-                      bg-red-700
-                      px-4
-                      py-2
-                      rounded-2xl
-                      text-sm
-                      font-bold
-                    "
-                  >
-                    مخفي
-                  </div>
+            className={`
+              px-6
+              py-4
+              rounded-2xl
+              text-xl
+              font-black
+              transition-all
 
-                )}
+              ${
 
-              </div>
+                viewMode === 'list'
 
-              <p
-                className="
-                  text-yellow-400
-                  text-4xl
-                  font-extrabold
-                  mb-4
-                "
-              >
-                {product.price}
-              </p>
+                  ? `
+                    bg-yellow-500
+                    text-black
+                  `
 
-              {/* STOCK */}
-
-              <div className="space-y-4 mb-6">
-
-                <div
-                  className="
+                  : `
                     bg-black
-                    p-4
-                    rounded-2xl
-                    text-xl
-                    border
-                    border-blue-700
-                  "
-                >
-                  📦 المتبقي بالمخزن:
-
-                  <span className="text-blue-400 font-bold mr-2">
-
-                    {product.stock || 0}
-
-                  </span>
-
-                </div>
-
-                <div
-                  className="
-                    bg-black
-                    p-4
-                    rounded-2xl
-                    text-xl
-                    border
-                    border-green-700
-                  "
-                >
-                  🛒 عدد المبيعات:
-
-                  <span className="text-green-400 font-bold mr-2">
-
-                    {product.sold || 0}
-
-                  </span>
-
-                </div>
-
-                {(product.stock || 0) <= 5 &&
-                  (product.stock || 0) > 0 && (
-
-                  <div
-                    className="
-                      bg-red-700
-                      p-4
-                      rounded-2xl
-                      text-center
-                      font-bold
-                      text-xl
-                    "
-                  >
-                    ⚠ المنتج يقترب من النفاد
-                  </div>
-
-                )}
-
-                {(product.stock || 0) === 0 && (
-
-                  <div
-                    className="
-                      bg-red-900
-                      p-4
-                      rounded-2xl
-                      text-center
-                      font-bold
-                      text-2xl
-                    "
-                  >
-                    ❌ المنتج غير متوفر
-                  </div>
-
-                )}
-
-              </div>
-
-              {/* UPDATE STOCK */}
-
-              <input
-                type="number"
-                placeholder="تعديل الكمية"
-                className="
-                  w-full
-                  p-4
-                  rounded-2xl
-                  bg-white
-                  text-black
-                  text-lg
-                  mb-4
-                "
-                onBlur={(e) => {
-
-                  if (e.target.value !== '') {
-
-                    updateProductStock(
-
-                      product.id,
-
-                      Number(e.target.value)
-
-                    )
-
-                    alert('تم تحديث المخزون')
-
-                  }
-
-                }}
-              />
-
-              {/* CREATED DATE */}
-
-              <div
-                className="
-                  text-gray-400
-                  text-sm
-                  mb-5
-                  text-center
-                "
-              >
-                تاريخ الإضافة:
-
-                {' '}
-
-                {new Date(
-                  product.createdAt
-                ).toLocaleDateString()}
-
-              </div>
-
-              {/* ACTIONS */}
-
-              <div className="space-y-4">
-
-                <button
-                  onClick={() =>
-                    toggleProductVisibility(
-                      product.id
-                    )
-                  }
-                  className={`
-                    w-full
-                    px-6
-                    py-4
-                    rounded-2xl
-                    font-bold
-                    text-xl
-                    ${
-                      product.hidden
-                        ? 'bg-green-700 hover:bg-green-800'
-                        : 'bg-gray-700 hover:bg-gray-800'
-                    }
-                  `}
-                >
-                  {product.hidden
-                    ? 'إظهار المنتج'
-                    : 'إخفاء المنتج'}
-                </button>
-
-                <button
-                  onClick={() =>
-                    handleDelete(product.id)
-                  }
-                  className="
-                    w-full
-                    bg-red-600
-                    hover:bg-red-700
-                    px-6
-                    py-4
-                    rounded-2xl
                     text-white
-                    font-bold
-                    text-xl
-                  "
-                >
-                  حذف المنتج
-                </button>
+                    border
+                    border-slate-700
+                  `
 
-              </div>
+              }
+            `}
+          >
 
-            </div>
+            ☰ List
 
-          </div>
+          </button>
 
-        ))}
+        </div>
 
       </div>
+
+      {/* PRODUCTS */}
+
+      {
+
+        loading ? (
+
+          <ProductsSkeleton />
+
+        ) : (
+
+          <>
+
+            {
+
+              viewMode === 'grid' ? (
+
+                <ProductsGrid
+
+                  products={
+                    paginatedProducts
+                  }
+
+                  onDelete={
+                    handleDelete
+                  }
+
+                  onToggleVisibility={
+                    toggleProductVisibility
+                  }
+
+                  onUpdateStock={
+                    updateProductStock
+                  }
+
+                />
+
+              ) : (
+
+                <div className="
+                  space-y-8
+                ">
+
+                  {
+
+                    paginatedProducts.map(
+
+                      (product) => (
+
+                        <ProductListCard
+
+                          key={product.id}
+
+                          product={product}
+
+                          onDelete={
+                            handleDelete
+                          }
+
+                          onToggleVisibility={
+                            toggleProductVisibility
+                          }
+
+                          onUpdateStock={
+                            updateProductStock
+                          }
+
+                        />
+
+                      )
+
+                    )
+
+                  }
+
+                </div>
+
+              )
+
+            }
+
+          </>
+
+        )
+
+      }
+
+      {/* PAGINATION */}
+
+      {
+
+        totalPages > 1 && (
+
+          <ProductsPagination
+
+            currentPage={
+              currentPage
+            }
+
+            totalPages={
+              totalPages
+            }
+
+            onPageChange={
+              setCurrentPage
+            }
+
+          />
+
+        )
+
+      }
 
     </div>
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useWebsiteStore } from '../store/websiteStore'
 import { useNavigate } from 'react-router-dom'
 
@@ -6,428 +6,489 @@ export default function WarehouseAdminPanel() {
 
   const navigate = useNavigate()
 
-  const {
-    users,
-    products,
-    orders,
-    transfers
-  } = useWebsiteStore()
+  // ================= STORE =================
 
-  // ================= FILTER =================
+  const currentUser =
+    useWebsiteStore((s) => s.currentUser)
 
-  const [selectedWarehouse, setSelectedWarehouse] =
-    useState('all')
+  const users =
+    useWebsiteStore((s) => s.users || [])
 
-  // ================= WAREHOUSES =================
+  const setUsers =
+    useWebsiteStore((s) => s.setUsers || (() => {}))
 
-  const warehouses = users.filter(
-    (u) => u.role === 'warehouse'
-  )
+  const products =
+    useWebsiteStore((s) => s.products || [])
 
-  // ================= GLOBAL STATS =================
+  const transfers =
+    useWebsiteStore((s) => s.transfers || [])
 
-  const totalProducts = products.length
+  const transferProductQuantity =
+    useWebsiteStore((s) => s.transferProductQuantity || (() => {}))
 
-  const totalOrders = orders.length
+  const addNotification =
+    useWebsiteStore((s) => s.addNotification || (() => {}))
 
-  const totalSales = orders.reduce(
-    (acc, o) => acc + Number(o.total || 0),
-    0
-  )
+  // ================= SECURITY =================
 
-  // ================= FILTERED TRANSFERS =================
+  const isOwner = currentUser?.role === 'owner'
 
-  const filteredTransfers =
-    selectedWarehouse === 'all'
+  // ================= STATES =================
 
-      ? transfers
+  const [search, setSearch] = useState('')
+  const [unitName, setUnitName] = useState('')
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [role, setRole] = useState('warehouse')
+  const [showPassword, setShowPassword] = useState(false)
 
-      : transfers.filter(
-          (t) =>
-            t.fromWarehouseId === selectedWarehouse ||
-            t.toWarehouseId === selectedWarehouse
-        )
+  const [permissions, setPermissions] = useState([
+    'dashboard',
+    'products',
+    'orders'
+  ])
 
-  // ================= HELPERS =================
+  const [productId, setProductId] = useState('')
+  const [fromWarehouseId, setFromWarehouseId] = useState('')
+  const [toWarehouseId, setToWarehouseId] = useState('')
+  const [quantity, setQuantity] = useState('')
 
-  const getWarehouseName = (warehouseId) => {
+  // ================= FILTER USERS BY OWNER RULE =================
 
-    const warehouse = warehouses.find(
-      (w) => w.warehouseId === warehouseId
+  const units = useMemo(() => {
+
+    const base = users.filter((u) =>
+      ['warehouse', 'branch', 'shop', 'service'].includes(u.role)
     )
 
-    return (
-      warehouse?.warehouseName ||
-      warehouse?.username ||
-      warehouseId
+    // 👑 المالك يرى كل شيء
+    if (isOwner) return base
+
+    // 🔒 غير المالك يرى نفسه فقط
+    return base.filter(
+      (u) => u.warehouseId === currentUser?.warehouseId
     )
+
+  }, [users, currentUser, isOwner])
+
+  // ================= FILTER PRODUCTS =================
+
+  const visibleProducts = useMemo(() => {
+
+    if (isOwner) return products
+
+    return products.filter(
+      (p) => p.warehouseId === currentUser?.warehouseId
+    )
+
+  }, [products, currentUser, isOwner])
+
+  // ================= FILTER TRANSFERS =================
+
+  const visibleTransfers = useMemo(() => {
+
+    if (isOwner) return transfers
+
+    return transfers.filter(
+      (t) =>
+        t.fromWarehouseId === currentUser?.warehouseId ||
+        t.toWarehouseId === currentUser?.warehouseId
+    )
+
+  }, [transfers, currentUser, isOwner])
+
+  // ================= CREATE UNIT (OWNER ONLY) =================
+
+  const createUnit = () => {
+
+    if (!isOwner) {
+      alert('❌ غير مصرح لك')
+      return
+    }
+
+    if (!unitName || !username || !password) {
+      alert('⚠ أكمل البيانات')
+      return
+    }
+
+    const exists = users.find(
+      (u) =>
+        u.username?.toLowerCase() === username.toLowerCase()
+    )
+
+    if (exists) {
+      alert('⚠ اسم المستخدم موجود')
+      return
+    }
+
+    const id = Date.now().toString()
+
+    const newUnit = {
+      id,
+      username,
+      password,
+      role,
+      warehouseId: id,
+      warehouseName: unitName,
+      permissions,
+      active: true,
+      createdAt: new Date().toISOString()
+    }
+
+    setUsers([...users, newUnit])
+
+    addNotification('🏭 وحدة جديدة', `تم إنشاء ${unitName}`)
+
+    setUnitName('')
+    setUsername('')
+    setPassword('')
+    setRole('warehouse')
+
+    alert('✅ تم إنشاء الوحدة')
   }
 
-  // ================= RENDER =================
+  // ================= DELETE UNIT =================
+
+  const deleteUnit = (id) => {
+
+    if (!isOwner) return
+
+    const ok = window.confirm('هل تريد حذف الوحدة؟')
+    if (!ok) return
+
+    setUsers(users.filter((u) => u.id !== id))
+
+    addNotification('🗑 حذف', 'تم حذف وحدة')
+  }
+
+  // ================= TOGGLE ACTIVE =================
+
+  const toggleActive = (id) => {
+
+    if (!isOwner) return
+
+    const updated = users.map((u) =>
+      u.id === id ? { ...u, active: !u.active } : u
+    )
+
+    setUsers(updated)
+  }
+
+  // ================= TRANSFER =================
+
+  const handleTransfer = () => {
+
+    if (!productId || !fromWarehouseId || !toWarehouseId || !quantity) {
+      alert('أكمل البيانات')
+      return
+    }
+
+    const qty = Number(quantity)
+
+    if (qty <= 0) {
+      alert('كمية غير صحيحة')
+      return
+    }
+
+    transferProductQuantity({
+      productId,
+      fromWarehouseId,
+      toWarehouseId,
+      quantity: qty
+    })
+
+    const product = products.find((p) => p.id === productId)
+
+    addNotification(
+      '🚚 تحويل منتج',
+      `${product?.name || ''}`
+    )
+
+    setProductId('')
+    setFromWarehouseId('')
+    setToWarehouseId('')
+    setQuantity('')
+
+    alert('✅ تم التحويل')
+  }
+
+  // ================= UI =================
 
   return (
 
-    <div className="p-10 space-y-10 text-white">
+    <div className="min-h-screen bg-green text-white p-6 space-y-10">
 
-      {/* ================= TOP BAR ================= */}
+      {/* HEADER */}
+      <div>
+        <h1 className="text-4xl font-black text-yellow-400">
+          🏭 إدارة المخازن
+        </h1>
 
-      <div className="flex flex-wrap gap-4 justify-between items-center">
-
-        <div>
-
-          <h1 className="text-5xl font-black text-yellow-400">
-            🏭 إدارة المخازن
-          </h1>
-
-          <p className="text-gray-300 mt-2">
-            متابعة المخازن وحركة المنتجات
-          </p>
-
-        </div>
-
-        <div className="flex gap-4 flex-wrap">
-
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="
-              bg-blue-600
-              hover:bg-blue-700
-              px-6
-              py-3
-              rounded-2xl
-              font-bold
-            "
-          >
-            📊 الداشبورد
-          </button>
-
-          <button
-            onClick={() => navigate('/home')}
-            className="
-              bg-green-600
-              hover:bg-green-700
-              px-6
-              py-3
-              rounded-2xl
-              font-bold
-            "
-          >
-            🏠 الموقع الرئيسي
-          </button>
-
-        </div>
-
+        <p className="text-red-400 mt-2">
+          نظام ERP احترافي متعدد الفروع
+        </p>
       </div>
 
-      {/* ================= GLOBAL STATS ================= */}
+      {/* CREATE UNIT (OWNER ONLY) */}
+      {isOwner && (
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-slate-900 p-6 rounded-2xl space-y-4">
 
-        <div className="bg-blue-700 p-6 rounded-3xl">
-
-          <div className="text-xl mb-3">
-            📦 المنتجات الكلية
-          </div>
-
-          <div className="text-5xl font-black">
-            {totalProducts}
-          </div>
-
-        </div>
-
-        <div className="bg-green-700 p-6 rounded-3xl">
-
-          <div className="text-xl mb-3">
-            🛒 الطلبات الكلية
-          </div>
-
-          <div className="text-5xl font-black">
-            {totalOrders}
-          </div>
-
-        </div>
-
-        <div className="bg-yellow-500 text-black p-6 rounded-3xl">
-
-          <div className="text-xl mb-3">
-            💰 إجمالي المبيعات
-          </div>
-
-          <div className="text-5xl font-black">
-            {totalSales}
-          </div>
-
-        </div>
-
-      </div>
-
-      {/* ================= WAREHOUSES ================= */}
-
-      <div className="space-y-6">
-
-        <h2 className="text-4xl font-black text-yellow-400">
-          🏬 المخازن
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-          {warehouses.map((w) => {
-
-            const warehouseProducts =
-              products.filter(
-                (p) =>
-                  p.warehouseId === w.warehouseId
-              )
-
-            const warehouseOrders =
-              orders.filter(
-                (o) =>
-                  o.warehouseId === w.warehouseId
-              )
-
-            const warehouseSales =
-              warehouseOrders.reduce(
-                (acc, o) =>
-                  acc + Number(o.total || 0),
-                0
-              )
-
-            return (
-
-              <div
-                key={w.id}
-                className="
-                  bg-slate-900
-                  p-6
-                  rounded-3xl
-                  border
-                  border-yellow-500
-                  space-y-4
-                "
-              >
-
-                <div className="flex justify-between items-center">
-
-                  <h3 className="text-3xl font-black text-yellow-400">
-                    🏭 {w.username}
-                  </h3>
-
-                  <span className="
-                    bg-blue-700
-                    px-4
-                    py-2
-                    rounded-xl
-                    text-sm
-                  ">
-                    {w.warehouseName || 'مخزن'}
-                  </span>
-
-                </div>
-
-                <div className="space-y-2 text-lg">
-
-                  <div>
-                    📦 المنتجات:
-                    {' '}
-                    {warehouseProducts.length}
-                  </div>
-
-                  <div>
-                    🛒 الطلبات:
-                    {' '}
-                    {warehouseOrders.length}
-                  </div>
-
-                  <div>
-                    💰 المبيعات:
-                    {' '}
-                    {warehouseSales}
-                  </div>
-
-                </div>
-
-              </div>
-
-            )
-
-          })}
-
-        </div>
-
-      </div>
-
-      {/* ================= TRANSFER FILTER ================= */}
-
-      <div className="bg-slate-900 p-6 rounded-3xl space-y-6">
-
-        <div className="flex flex-wrap justify-between gap-4 items-center">
-
-          <h2 className="text-4xl font-black text-yellow-400">
-            🚚 سجل نقل المنتجات
+          <h2 className="text-2xl font-red text-yellow-400">
+            ➕ إنشاء وحدة جديدة
           </h2>
 
-          <select
-            value={selectedWarehouse}
-            onChange={(e) =>
-              setSelectedWarehouse(e.target.value)
-            }
-            className="
-              text-black
-              px-4
-              py-3
-              rounded-xl
-              min-w-[250px]
-            "
+          <input
+            className="w-full p-3 text-black rounded-xl"
+            placeholder="اسم الوحدة"
+            value={unitName}
+            onChange={(e) => setUnitName(e.target.value)}
+          />
+
+          <input
+            className="w-full p-3 text-black rounded-xl"
+            placeholder="اسم المستخدم"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+
+          <input
+            type={showPassword ? 'text' : 'password'}
+            className="w-full p-3 text-black rounded-xl"
+            placeholder="كلمة المرور"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+
+          <button
+            onClick={createUnit}
+            className="w-full bg-yellow-500 text-black py-3 rounded-xl font-black"
           >
-
-            <option value="all">
-              جميع المخازن
-            </option>
-
-            {warehouses.map((w) => (
-
-              <option
-                key={w.id}
-                value={w.warehouseId}
-              >
-                {w.warehouseName || w.username}
-              </option>
-
-            ))}
-
-          </select>
+            إنشاء
+          </button>
 
         </div>
 
-        {/* ================= TRANSFERS ================= */}
+      )}
 
-        <div className="space-y-4">
+      {/* UNITS LIST */}
+      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
 
-          {filteredTransfers.length === 0 && (
+        {units.map((u) => (
 
-            <div className="
-              bg-slate-800
-              p-6
-              rounded-2xl
-              text-center
-              text-gray-400
-            ">
+          <div key={u.id} className="bg-slate-900 p-5 rounded-2xl">
 
-              لا توجد عمليات نقل
-
+            <div className="text-yellow-400 font-black text-xl">
+              {u.warehouseName}
             </div>
 
-          )}
+            <div>{u.username}</div>
 
-          {filteredTransfers.map((transfer) => (
+            <div className="text-sm text-gray-400">
+              {u.role}
+            </div>
 
-            <div
-              key={transfer.id}
-              className="
-                bg-slate-800
-                rounded-2xl
-                p-5
-                border
-                border-slate-700
-                flex
-                flex-col
-                md:flex-row
-                md:items-center
-                md:justify-between
-                gap-4
-              "
+            {isOwner && (
+              <div className="text-green-400 mt-2">
+                🔑 {u.password}
+              </div>
+            )}
+
+            {isOwner && (
+              <div className="flex gap-2 mt-4">
+
+                <button
+                  onClick={() => toggleActive(u.id)}
+                  className="bg-green-600 px-3 py-2 rounded-xl"
+                >
+                  تفعيل
+                </button>
+
+                <button
+                  onClick={() => deleteUnit(u.id)}
+                  className="bg-red-600 px-3 py-2 rounded-xl"
+                >
+                  حذف
+                </button>
+
+              </div>
+            )}
+
+          </div>
+
+        ))}
+
+      </div>
+
+      {/* SEARCH */}
+<div className="bg-slate-900 p-4 rounded-2xl">
+  <input
+    value={search}
+    onChange={(e) => setSearch(e.target.value)}
+    placeholder="بحث عن وحدة أو مستخدم"
+    className="w-full p-3 text-black rounded-xl"
+  />
+</div>
+
+{/* STATISTICS */}
+<div className="grid md:grid-cols-4 gap-4">
+
+  <div className="bg-slate-900 p-5 rounded-2xl">
+    <div className="text-gray-400">الوحدات</div>
+    <div className="text-3xl font-black text-yellow-400">
+      {units.length}
+    </div>
+  </div>
+
+  <div className="bg-slate-900 p-5 rounded-2xl">
+    <div className="text-gray-400">المنتجات</div>
+    <div className="text-3xl font-black text-cyan-400">
+      {visibleProducts.length}
+    </div>
+  </div>
+
+  <div className="bg-slate-900 p-5 rounded-2xl">
+    <div className="text-gray-400">التحويلات</div>
+    <div className="text-3xl font-black text-green-400">
+      {visibleTransfers.length}
+    </div>
+  </div>
+
+  <div className="bg-slate-900 p-5 rounded-2xl">
+    <div className="text-gray-400">النشطة</div>
+    <div className="text-3xl font-black text-purple-400">
+      {units.filter((u) => u.active).length}
+    </div>
+  </div>
+
+</div>
+
+{/* TRANSFER FORM */}
+<div className="bg-slate-900 p-6 rounded-2xl space-y-4">
+
+  <h2 className="text-2xl font-black text-yellow-400">
+    🚚 تحويل منتج
+  </h2>
+
+  <select
+    value={productId}
+    onChange={(e) => setProductId(e.target.value)}
+    className="w-full p-3 text-black rounded-xl"
+  >
+    <option value="">اختر المنتج</option>
+
+    {visibleProducts.map((p) => (
+      <option key={p.id} value={p.id}>
+        {p.name}
+      </option>
+    ))}
+  </select>
+
+  <select
+    value={fromWarehouseId}
+    onChange={(e) => setFromWarehouseId(e.target.value)}
+    className="w-full p-3 text-black rounded-xl"
+  >
+    <option value="">من مخزن</option>
+
+    {units.map((u) => (
+      <option key={u.id} value={u.warehouseId}>
+        {u.warehouseName}
+      </option>
+    ))}
+  </select>
+
+  <select
+    value={toWarehouseId}
+    onChange={(e) => setToWarehouseId(e.target.value)}
+    className="w-full p-3 text-black rounded-xl"
+  >
+    <option value="">إلى مخزن</option>
+
+    {units.map((u) => (
+      <option key={u.id} value={u.warehouseId}>
+        {u.warehouseName}
+      </option>
+    ))}
+  </select>
+
+  <input
+    type="number"
+    value={quantity}
+    onChange={(e) => setQuantity(e.target.value)}
+    className="w-full p-3 text-black rounded-xl"
+    placeholder="الكمية"
+  />
+
+  <button
+    onClick={handleTransfer}
+    className="w-full bg-cyan-600 py-3 rounded-xl font-black"
+  >
+    تنفيذ تحويل
+  </button>
+
+</div>
+
+{/* TRANSFER HISTORY */}
+<div className="bg-slate-900 p-6 rounded-2xl">
+
+  <h2 className="text-2xl font-black text-yellow-400 mb-4">
+    📋 سجل التحويلات
+  </h2>
+
+  <div className="overflow-auto">
+
+    <table className="w-full">
+
+      <thead>
+        <tr>
+          <th className="text-right p-2">الصنف</th>
+          <th className="text-right p-2">من</th>
+          <th className="text-right p-2">إلى</th>
+          <th className="text-right p-2">الكمية</th>
+        </tr>
+      </thead>
+
+      <tbody>
+
+        {visibleTransfers
+          .slice()
+          .reverse()
+          .map((t) => (
+
+            <tr
+              key={t.id}
+              className="border-t border-slate-700"
             >
 
-              <div className="space-y-2">
+              <td className="p-2">
+                {t.productName || t.productId}
+              </td>
 
-                <div className="text-2xl font-bold text-yellow-400">
+              <td className="p-2">
+                {t.fromWarehouseName || t.fromWarehouseId}
+              </td>
 
-                  🚚 نقل منتج
+              <td className="p-2">
+                {t.toWarehouseName || t.toWarehouseId}
+              </td>
 
-                </div>
+              <td className="p-2">
+                {t.quantity}
+              </td>
 
-                <div>
-
-                  من:
-                  {' '}
-                  <span className="text-blue-400 font-bold">
-                    {getWarehouseName(
-                      transfer.fromWarehouseId
-                    )}
-                  </span>
-
-                </div>
-
-                <div>
-
-                  إلى:
-                  {' '}
-                  <span className="text-green-400 font-bold">
-                    {getWarehouseName(
-                      transfer.toWarehouseId
-                    )}
-                  </span>
-
-                </div>
-
-              </div>
-
-              <div className="space-y-2">
-
-                <div className="text-xl">
-                  📦 الكمية:
-                  {' '}
-                  <span className="font-black text-yellow-400">
-                    {transfer.quantity}
-                  </span>
-                </div>
-
-                <div className="text-gray-400 text-sm">
-
-                  {new Date(
-                    transfer.date
-                  ).toLocaleString()}
-
-                </div>
-
-              </div>
-
-            </div>
+            </tr>
 
           ))}
 
-        </div>
+      </tbody>
 
-      </div>
+    </table>
 
-      {/* ================= ALERTS ================= */}
+  </div>
 
-      <div className="bg-red-700 p-6 rounded-3xl">
-
-        <h2 className="text-3xl font-black mb-6">
-          ⚠ تنبيهات النظام
-        </h2>
-
-        <div className="space-y-3 text-lg">
-
-          <div>
-            🔴 متابعة المنتجات منخفضة المخزون
-          </div>
-
-          <div>
-            🔴 مراجعة عمليات النقل اليومية
-          </div>
-
-          <div>
-            🔴 متابعة الطلبات المتأخرة
-          </div>
-
-        </div>
-
-      </div>
+</div>
 
     </div>
-
   )
-
 }
