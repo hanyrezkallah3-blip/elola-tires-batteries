@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import { AuthEngine } from './authEngine'
+import { useWebsiteStore } from '../store/websiteStore'
 
 export default function حماية_الصفحة({
   children,
@@ -9,9 +10,23 @@ export default function حماية_الصفحة({
   tenantId
 }) {
 
-  // ================= USER =================
+  // ================= HYDRATION GUARD =================
 
-  const user = AuthEngine?.getUser?.() || null
+  const hydrated =
+    useWebsiteStore((s) => s.hydrated) ?? true
+
+  const user =
+    AuthEngine?.getUser?.() || null
+
+  // ================= WAIT UNTIL READY =================
+
+  if (!hydrated) {
+    return (
+      <div className="p-10 text-white text-xl">
+        ⏳ جاري تحميل النظام...
+      </div>
+    )
+  }
 
   // ================= NO USER =================
 
@@ -47,7 +62,6 @@ export default function حماية_الصفحة({
   // ================= ROLE CHECK =================
 
   if (requiredRole) {
-
     const roleOk = AuthEngine?.hasRole?.(user, [requiredRole])
 
     if (!roleOk) {

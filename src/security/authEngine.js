@@ -3,12 +3,16 @@ import { useWebsiteStore } from '../store/websiteStore'
 
 export const AuthEngine = {
 
-  // ================= USER =================
+  // ================= STABLE USER =================
 
-  getUser: () =>
-    useCoreStore?.getState?.().currentUser ||
-    useWebsiteStore?.getState?.().currentUser ||
-    null,
+  getUser: () => {
+
+    const coreUser = useCoreStore?.getState?.()?.currentUser
+    const websiteUser = useWebsiteStore?.getState?.()?.currentUser
+
+    // 🧠 choose FIRST valid user only (no race switching)
+    return coreUser || websiteUser || null
+  },
 
   // ================= ROLE CHECK =================
 
@@ -16,7 +20,6 @@ export const AuthEngine = {
 
     if (!user) return false
 
-    // SAP SUPER ADMIN
     if (user.role === 'owner') return true
 
     return roles.includes(user.role)
@@ -30,25 +33,18 @@ export const AuthEngine = {
 
     if (!user) return false
 
-    // OWNER BYPASS
+    if (user.role === 'owner') return true
 
-    if (user.role === 'owner')
+    const perms = user.permissions || []
+
+    if (perms.includes('all') || perms.includes('*')) {
       return true
+    }
 
-    // ALL PERMISSIONS
-
-    if (user.permissions?.includes('all'))
-      return true
-
-    // WILDCARD
-
-    if (user.permissions?.includes('*'))
-      return true
-
-    return (user.permissions || []).includes(permission)
+    return perms.includes(permission)
   },
 
-  // ================= TENANT ACCESS =================
+  // ================= TENANT =================
 
   canAccessTenant: (tenantId) => {
 
@@ -56,13 +52,9 @@ export const AuthEngine = {
 
     if (!user) return false
 
-    // OWNER BYPASS
+    if (user.role === 'owner') return true
 
-    if (user.role === 'owner')
-      return true
-
-    if (!tenantId)
-      return true
+    if (!tenantId) return true
 
     return user.tenantId === tenantId
   },
@@ -70,49 +62,26 @@ export const AuthEngine = {
   // ================= SYSTEM LOCK =================
 
   isSystemLocked: () => {
-
-    return (
-      useCoreStore?.getState?.().systemLocked ||
-      false
-    )
+    return useCoreStore?.getState?.()?.systemLocked || false
   },
 
-  // ================= FULL ACCESS VALIDATION =================
+  // ================= VALIDATION =================
 
-  validateAccess: ({
-    permission,
-    tenantId
-  }) => {
+  validateAccess: ({ permission, tenantId }) => {
 
-    // SYSTEM LOCK
+    if (AuthEngine.isSystemLocked()) return false
 
-    if (AuthEngine.isSystemLocked())
-      return false
+    const user = AuthEngine.getUser()
 
-    const user =
-      AuthEngine.getUser()
+    if (!user) return false
 
-    if (!user)
-      return false
-
-    // OWNER BYPASS
-
-    if (user.role === 'owner')
-      return true
-
-    // PERMISSION CHECK
+    if (user.role === 'owner') return true
 
     const permissionOk =
-      permission
-        ? AuthEngine.hasPermission(permission)
-        : true
-
-    // TENANT CHECK
+      permission ? AuthEngine.hasPermission(permission) : true
 
     const tenantOk =
-      tenantId
-        ? AuthEngine.canAccessTenant(tenantId)
-        : true
+      tenantId ? AuthEngine.canAccessTenant(tenantId) : true
 
     return permissionOk && tenantOk
   }

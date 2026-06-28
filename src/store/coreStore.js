@@ -11,11 +11,19 @@ export const useCoreStore = create(
       setHydrated: (value) =>
         set({ hydrated: value }),
 
+      // ================= AUTH (FIXED - SINGLE SOURCE OF TRUTH) =================
+
+      currentUser: null,
+
+      setCurrentUser: (user) =>
+        set({ currentUser: user }),
+
+      logoutUser: () =>
+        set({ currentUser: null }),
+
       // ================= SYSTEM KERNEL (SAP CORE) =================
 
       systemMode: 'manual', 
-      // manual | ai | hybrid
-
       setSystemMode: (mode) =>
         set({ systemMode: mode }),
 
@@ -149,15 +157,11 @@ export const useCoreStore = create(
           }
         })),
 
-      // ================= FINANCIAL LEDGER (SAP CORE) =================
+      // ================= FINANCIAL LEDGER =================
 
       ledger: [],
 
-      addLedgerEntry: ({
-        type, // income | expense
-        amount,
-        description
-      }) => {
+      addLedgerEntry: ({ type, amount, description }) => {
 
         const entry = {
           id: Date.now().toString(),
@@ -195,17 +199,19 @@ export const useCoreStore = create(
         }
       },
 
-      // ================= AUDIT LOGS (SAP FEATURE) =================
+      // ================= AUDIT LOGS (FIXED USER SOURCE) =================
 
       systemLogs: [],
 
       addSystemLog: (log) => {
 
+        const user = get().currentUser
+
         const newLog = {
           id: Date.now().toString(),
           action: '',
           message: '',
-          user: get().currentUser?.username,
+          user: user?.username || 'system',
           tenantId: get().currentTenantId,
           createdAt: new Date().toISOString(),
           ...log
@@ -230,6 +236,7 @@ export const useCoreStore = create(
       name: 'sap-core-erp',
 
       partialize: (state) => ({
+        currentUser: state.currentUser,
         systemMode: state.systemMode,
         systemLocked: state.systemLocked,
         currentTenantId: state.currentTenantId,

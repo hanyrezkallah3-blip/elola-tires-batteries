@@ -5,10 +5,8 @@ import { useAnalyticsStore } from '../store/analyticsStore'
 
 // ================= HELPERS =================
 
-function buildERPReport({
-  website,
-  inventory
-}) {
+function buildERPReport({ website, inventory }) {
+
   const orders = website.orders || []
   const stockItems = inventory.stockItems || []
 
@@ -29,10 +27,8 @@ function buildERPReport({
     0
   )
 
-  const estimatedProfit =
-    totalSales * 0.25
-
   return {
+
     generatedAt:
       new Date().toISOString(),
 
@@ -42,42 +38,63 @@ function buildERPReport({
 
     totalSales,
 
-    estimatedProfit,
+    estimatedProfit:
+      totalSales * 0.25
 
-    recommendation:
-      critical.length > 0
-        ? 'إعادة التوريد العاجلة مطلوبة'
-        : lowStock.length > 0
-          ? 'يوجد أصناف تحتاج إعادة تخزين'
-          : 'المخزون مستقر'
   }
+
 }
 
-// ================= AI ERP BRAIN =================
+// ================= ERP BRAIN =================
 
 export function useERPBrain() {
-  const website =
-    useWebsiteStore()
 
-  const inventory =
-    useInventoryStore()
+  const addNotification =
+    useWebsiteStore(
+      s => s.addNotification
+    )
 
-  const analytics =
-    useAnalyticsStore()
+  const setAIInsights =
+    useAnalyticsStore(
+      s => s.setAIInsights
+    )
 
   const lastSignature =
     useRef('')
 
+  const initialized =
+    useRef(false)
+
   useEffect(() => {
+
     const runBrain = () => {
+
+      const orders =
+        useWebsiteStore
+          .getState()
+          .orders || []
+
+      const stockItems =
+        useInventoryStore
+          .getState()
+          .stockItems || []
+
       const report =
         buildERPReport({
-          website,
-          inventory
+
+          website: {
+            orders
+          },
+
+          inventory: {
+            stockItems
+          }
+
         })
 
       const signature =
         JSON.stringify({
+
           low:
             report.lowStock.length,
 
@@ -88,80 +105,96 @@ export function useERPBrain() {
             Math.round(
               report.totalSales
             )
+
         })
 
       if (
-        signature !==
+        signature ===
         lastSignature.current
       ) {
-        lastSignature.current =
-          signature
+        return
+      }
+
+      lastSignature.current =
+        signature
+
+      // ================= FIRST RUN =================
+
+      if (!initialized.current) {
+
+        initialized.current = true
+
+      } else {
 
         if (
           report.lowStock.length > 0
         ) {
-          website.addNotification?.(
+
+          addNotification?.(
+
             '⚠️ AI تنبيه مخزون',
+
             `يوجد ${report.lowStock.length} منتجات تحتاج إعادة تخزين`
+
           )
+
         }
 
         if (
           report.critical.length > 0
         ) {
-          website.addNotification?.(
+
+          addNotification?.(
+
             '🚨 مخزون حرج',
+
             `يوجد ${report.critical.length} منتجات نفدت تماماً`
+
           )
+
         }
 
         if (
           report.totalSales >
           1000000
         ) {
-          website.addNotification?.(
+
+          addNotification?.(
+
             '📈 أداء عالي',
+
             'المبيعات مرتفعة جداً'
+
           )
+
         }
 
-        if (
-          report.estimatedProfit >
+      }
+
+      setAIInsights?.({
+
+        salesTrend:
+
+          report.totalSales >
           500000
-        ) {
-          website.addNotification?.(
-            '💰 أرباح قوية',
-            `الأرباح التقديرية ${Math.round(
-              report.estimatedProfit
-            )}`
-          )
-        }
-      }
 
-      if (
-        analytics &&
-        typeof analytics.setAIInsights === 'function'
-      ) {
-        analytics.setAIInsights({
-          salesTrend:
-            report.totalSales >
-            500000
-              ? 'up'
-              : 'stable',
+            ? 'up'
 
-          stockRisk:
-            report.lowStock.length >
-            0
-              ? 'high'
-              : 'low',
+            : 'stable',
 
-          recommendation:
-            report.recommendation,
+        stockRisk:
 
-          lastRun:
-            report.generatedAt
-        })
-      }
+          report.lowStock.length > 0
+
+            ? 'high'
+
+            : 'low',
+
+        lastRun:
+          report.generatedAt
+
+      })
+
     }
 
     runBrain()
@@ -176,11 +209,13 @@ export function useERPBrain() {
       clearInterval(interval)
 
   }, [])
+
 }
 
 // ================= MANUAL TRIGGER =================
 
 export function triggerERPBrain() {
+
   const website =
     useWebsiteStore.getState()
 
@@ -189,14 +224,31 @@ export function triggerERPBrain() {
 
   const report =
     buildERPReport({
-      website,
-      inventory
+
+      website: {
+
+        orders:
+          website.orders || []
+
+      },
+
+      inventory: {
+
+        stockItems:
+          inventory.stockItems || []
+
+      }
+
     })
 
   website.addNotification?.(
+
     '🧠 AI Brain Report',
+
     `منخفض: ${report.lowStock.length} | حرج: ${report.critical.length} | أرباح: ${Math.round(report.estimatedProfit)}`
+
   )
 
   return report
+
 }

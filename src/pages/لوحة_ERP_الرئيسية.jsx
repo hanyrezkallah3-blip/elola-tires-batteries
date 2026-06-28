@@ -12,19 +12,19 @@ export default function لوحة_ERP_الرئيسية() {
   // ================= STORES =================
 
   const products =
-    useWebsiteStore((s) => s.products)
+    useWebsiteStore((s) => s.products) || []
 
   const orders =
-    useWebsiteStore((s) => s.orders)
+    useWebsiteStore((s) => s.orders) || []
 
   const users =
-    useWebsiteStore((s) => s.users)
+    useWebsiteStore((s) => s.users) || []
 
   const warehouses =
-    useInventoryStore((s) => s.warehouses)
+    useInventoryStore((s) => s.warehouses) || []
 
   const stockItems =
-    useInventoryStore((s) => s.stockItems)
+    useInventoryStore((s) => s.stockItems) || []
 
   const getInventorySummary =
     useInventoryStore((s) => s.getInventorySummary)
@@ -33,14 +33,19 @@ export default function لوحة_ERP_الرئيسية() {
     useAnalyticsStore((s) => s.dashboardStats)
 
   const summary =
-    getInventorySummary()
+    getInventorySummary?.() || {
+      totalItems: 0,
+      totalQuantity: 0,
+      totalValue: 0,
+      lowStock: 0
+    }
 
   // ================= ANALYTICS =================
 
   const التحليل_المركزي = useMemo(() => {
 
     const totalSales =
-      orders.reduce(
+      (orders || []).reduce(
         (a, o) => a + Number(o.total || 0),
         0
       )
@@ -49,23 +54,21 @@ export default function لوحة_ERP_الرئيسية() {
       totalSales * 0.25
 
     const lowStock =
-      summary.lowStockCount
+      summary.lowStock
 
     const criticalStock =
-      stockItems.filter(
+      (stockItems || []).filter(
         (i) => Number(i.quantity || 0) === 0
       ).length
 
     return {
-
       totalSales,
       totalProfit,
       lowStock,
       criticalStock
-
     }
 
-  }, [orders, summary, stockItems])
+  }, [orders, stockItems, summary.lowStock])
 
   // ================= UI =================
 
