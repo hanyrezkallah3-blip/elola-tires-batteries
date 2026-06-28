@@ -621,74 +621,131 @@ export const useWebsiteStore = create(
         }),
 
       addOrder: (order) =>
+  set((state) => {
 
-        set((state) => ({
+    const rate =
+      Number(state.cashbackPercentage || 0) / 100
 
-          orders: [
+    const commission =
+      Number(order.total || 0) * rate
 
-            {
+    const newOrder = {
 
-              id: generateId(),
+      id: generateId(),
 
-              status: 'طلب جديد',
+      status: 'طلب جديد',
 
-              createdAt:
-                new Date().toISOString(),
+      createdAt:
+        new Date().toISOString(),
 
-              ...order
+      ...order
 
-            },
+    }
 
-            ...state.orders
+    let wallets =
+      [...state.wallets]
 
-          ]
+    let index =
+      wallets.findIndex(
+        (wallet) =>
+          wallet.phone === order.phone
+      )
 
-        })),
+    // إنشاء محفظة تلقائياً إذا لم تكن موجودة
 
-      updateOrderStatus: (
-        id,
-        status
-      ) =>
+    if (index === -1) {
 
-        set((state) => ({
+      wallets.unshift({
 
-          orders:
+        id: generateId(),
 
-            state.orders.map(
+        phone: order.phone,
 
-              (order) =>
+        customerName:
+          order.customerName,
 
-                order.id === id
+        balance: 0,
 
-                  ? {
+        totalCashback: 0,
 
-                      ...order,
+        createdAt:
+          new Date().toISOString()
 
-                      status
+      })
 
-                    }
+      index = 0
 
-                  : order
+    }
 
-            )
+    wallets[index] = {
 
-        })),
+      ...wallets[index],
 
-      deleteOrder: (id) =>
+      balance:
 
-        set((state) => ({
+        Number(
+          wallets[index].balance || 0
+        ) +
 
-          orders:
+        commission,
 
-            state.orders.filter(
+      totalCashback:
 
-              (order) =>
+        Number(
+          wallets[index].totalCashback || 0
+        ) +
 
-                order.id !== id
+        commission
 
-            )
+    }
 
-        })),
+    const newTransaction = {
+
+      id: generateId(),
+
+      phone: order.phone,
+
+      customerName:
+        order.customerName,
+
+      amount: commission,
+
+      type: 'cashback',
+
+      reason:
+        'كاش باك من عملية شراء',
+
+      orderId:
+        newOrder.id,
+
+      createdAt:
+        new Date().toISOString()
+
+    }
+
+    return {
+
+      orders: [
+
+        newOrder,
+
+        ...state.orders
+
+      ],
+
+      wallets,
+
+      walletTransactions: [
+
+        newTransaction,
+
+        ...(state.walletTransactions || [])
+
+      ]
+
+    }
+
+  }),
 
       // ================= PRODUCTS =================
 

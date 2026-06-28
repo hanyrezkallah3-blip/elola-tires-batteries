@@ -29,6 +29,7 @@ import Warehouses from './pages/Warehouses'
 import Users from './pages/Users'
 import Transfers from './pages/Transfers'
 import Permissions from './pages/Permissions'
+import WalletSettings from './pages/WalletSettings'
 
 // ================= LOADING =================
 
@@ -311,6 +312,8 @@ export default function App() {
       <Route path="/" element={<Navigate to="/home" replace />} />
 
       <Route path="*" element={<Navigate to="/home" replace />} />
+
+      <Route path="/wallet-settings" element={<WalletSettings />} />
 
     </Routes>
   )

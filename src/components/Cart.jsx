@@ -156,6 +156,7 @@ ${safeCart.map(item => {
       setOpen(false)
     }
   }
+  
 
   return (
     <div
