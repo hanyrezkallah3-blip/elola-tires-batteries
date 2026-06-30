@@ -4,6 +4,57 @@ import { persist } from 'zustand/middleware'
 const generateId = () =>
   Date.now().toString() + Math.random().toString(36).slice(2)
 
+const updateItemQuantity = (
+
+  item,
+
+  quantity,
+
+  operation = 'set'
+
+) => {
+
+  const current =
+
+    Number(item.quantity || 0)
+
+  const value =
+
+    Number(quantity || 0)
+
+  switch (operation) {
+
+    case 'increase':
+
+      item.quantity =
+        current + value
+
+      break
+
+    case 'decrease':
+
+      item.quantity =
+        Math.max(
+
+          0,
+
+          current - value
+
+        )
+
+      break
+
+    default:
+
+      item.quantity = value
+
+  }
+
+  item.updatedAt =
+    new Date().toISOString()
+
+}
+
 // ================= CORE INVENTORY ENGINE =================
 
 export const useInventoryStore = create(
@@ -197,9 +248,15 @@ export const useInventoryStore = create(
 
         if (!item) return
 
-        item.quantity =
-          Number(item.quantity) +
-          Number(quantity)
+        updateItemQuantity(
+
+  item,
+
+  quantity,
+
+  'increase'
+
+)
 
         get().addMovement({
 
@@ -245,11 +302,17 @@ export const useInventoryStore = create(
 
         if (!item) return
 
-        item.quantity = Math.max(
-          0,
-          Number(item.quantity) -
-            Number(quantity)
-        )
+        updateItemQuantity(
+
+  item,
+
+  quantity,
+
+  'decrease'
+
+)
+
+
 
         get().addMovement({
 
@@ -276,6 +339,52 @@ export const useInventoryStore = create(
         set({
           stockItems: items
         })
+
+      },
+
+            setProductQuantity: ({
+
+        productId,
+
+        quantity
+
+      }) => {
+
+        const items = [
+
+          ...get().stockItems
+
+        ]
+
+        const item = items.find(
+
+          (i) =>
+
+            i.productId === productId
+
+        )
+
+        if (!item)
+
+          return false
+
+        updateItemQuantity(
+
+          item,
+
+          quantity,
+
+          'set'
+
+        )
+
+        set({
+
+          stockItems: items
+
+        })
+
+        return true
 
       },
 

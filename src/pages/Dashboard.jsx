@@ -1,102 +1,315 @@
 import { useMemo, useEffect } from 'react'
+
 import { useWebsiteStore } from '../store/websiteStore'
+
 import { useAnalyticsStore } from '../store/analyticsStore'
+
 import ERPController from '../erp/ERPController'
+
 import حماية_الصفحة from '../security/حماية_الصفحة'
+
+import { useInventoryStore } from '../store/inventoryStore'
 
 export default function Dashboard() {
 
   const {
+
     products = [],
+
     offers = [],
+
     videos = [],
+
     services = [],
+
     slides = [],
+
     orders = [],
+
     transfers = [],
+
     notifications = [],
+
     users = [],
-    currentUser
+
+    currentUser,
+
+    wallets = [],
+
+    walletTransactions = []
+
   } = useWebsiteStore()
 
+  const stockItems =
+    useInventoryStore(
+      (s) => s.stockItems || []
+    )
+
+  const warehouses =
+    useInventoryStore(
+      (s) => s.warehouses || []
+    )
+
   const updateDashboardStats =
-    useAnalyticsStore((s) => s.updateDashboardStats)
+    useAnalyticsStore(
+      (s) => s.updateDashboardStats
+    )
 
   const updateERPSummary =
-    useAnalyticsStore((s) => s.updateERPSummary)
+    useAnalyticsStore(
+      (s) => s.updateERPSummary
+    )
+      // ================= ERP LIVE SYNC =================
 
-  // ================= ERP LIVE SYNC =================
-    useEffect(() => {
+  useEffect(() => {
+
     updateDashboardStats({
+
       orders,
+
       products,
-      wallets: [],
-      walletTransactions: []
+
+      stockItems,
+
+      wallets,
+
+      walletTransactions,
+
+      warehouses
+
+    })
+
+    updateERPSummary({
+
+      warehouses,
+
+      products,
+
+      orders,
+
+      users,
+
+      stockItems
+
     })
 
     // ERPController.syncAll()
-  }, [orders, products, updateDashboardStats])
+
+  }, [
+
+    orders,
+
+    products,
+
+    stockItems,
+
+    wallets,
+
+    walletTransactions,
+
+    warehouses,
+
+    users,
+
+    updateDashboardStats,
+
+    updateERPSummary
+
+  ])
 
   // ================= TOTALS =================
 
   const totalSales = useMemo(() => {
-    return products.reduce(
-      (acc, p) => acc + Number(p?.sold || 0),
+
+    return stockItems.reduce(
+
+      (acc, item) =>
+
+        acc +
+
+        Number(item.sold || 0),
+
       0
+
     )
-  }, [products])
+
+  }, [stockItems])
 
   const totalRevenue = useMemo(() => {
+
     return orders.reduce(
-      (acc, o) => acc + Number(o?.total || 0),
+
+      (acc, order) =>
+
+        acc +
+
+        Number(order.total || 0),
+
       0
+
     )
+
   }, [orders])
 
   const totalStock = useMemo(() => {
-    return products.reduce(
-      (acc, p) => acc + Number(p?.stock || 0),
+
+    return stockItems.reduce(
+
+      (acc, item) =>
+
+        acc +
+
+        Number(item.quantity || 0),
+
       0
+
     )
-  }, [products])
+
+  }, [stockItems])
 
   const avgPrice = useMemo(() => {
-    if (!products.length) return 0
+
+    if (!stockItems.length)
+
+      return 0
 
     return (
-      products.reduce(
-        (acc, p) => acc + Number(p?.price || 0),
+
+      stockItems.reduce(
+
+        (acc, item) =>
+
+          acc +
+
+          Number(item.price || 0),
+
         0
-      ) / products.length
+
+      ) /
+
+      stockItems.length
+
     ).toFixed(2)
-  }, [products])
+
+  }, [stockItems])
+    // ================= CARDS =================
 
   const cards = [
-    { title: 'المنتجات', value: products.length, color: 'bg-blue-700' },
-    { title: 'الطلبات', value: orders.length, color: 'bg-green-700' },
-    { title: 'الأرباح', value: totalRevenue, color: 'bg-yellow-500 text-black' },
-    { title: 'المخزون', value: totalStock, color: 'bg-purple-700' },
-    { title: 'المبيعات', value: totalSales, color: 'bg-cyan-700' },
-    { title: 'العروض', value: offers.length, color: 'bg-red-700' },
-    { title: 'الخدمات', value: services.length, color: 'bg-indigo-700' },
-    { title: 'الفيديوهات', value: videos.length, color: 'bg-pink-700' },
-    { title: 'السلايدر', value: slides.length, color: 'bg-orange-500 text-black' },
-    { title: 'متوسط السعر', value: avgPrice, color: 'bg-emerald-700' }
-  ]
 
-  return (
+    {
+
+      title: 'المنتجات',
+
+      value: products.length,
+
+      color: 'bg-blue-700'
+
+    },
+
+    {
+
+      title: 'الطلبات',
+
+      value: orders.length,
+
+      color: 'bg-green-700'
+
+    },
+
+    {
+
+      title: 'الإيرادات',
+
+      value: totalRevenue,
+
+      color: 'bg-yellow-500 text-black'
+
+    },
+
+    {
+
+      title: 'المخزون',
+
+      value: totalStock,
+
+      color: 'bg-purple-700'
+
+    },
+
+    {
+
+      title: 'المبيعات',
+
+      value: totalSales,
+
+      color: 'bg-cyan-700'
+
+    },
+
+    {
+
+      title: 'العروض',
+
+      value: offers.length,
+
+      color: 'bg-red-700'
+
+    },
+
+    {
+
+      title: 'الخدمات',
+
+      value: services.length,
+
+      color: 'bg-indigo-700'
+
+    },
+
+    {
+
+      title: 'الفيديوهات',
+
+      value: videos.length,
+
+      color: 'bg-pink-700'
+
+    },
+
+    {
+
+      title: 'السلايدر',
+
+      value: slides.length,
+
+      color: 'bg-orange-500 text-black'
+
+    },
+
+    {
+
+      title: 'متوسط السعر',
+
+      value: avgPrice,
+
+      color: 'bg-emerald-700'
+
+    }
+
+  ]
+    return (
     <حماية_الصفحة requiredRole="owner" page="dashboard">
 
       <div className="p-6 lg:p-10 bg-black min-h-screen text-white space-y-10">
 
         <h1 className="
-  text-3xl
-  lg:text-5xl
-  font-black
-  text-yellow-400
-  mt-12
-  lg:mt-0
-">
+          text-3xl
+          lg:text-5xl
+          font-black
+          text-yellow-400
+          mt-12
+          lg:mt-0
+        ">
           📊 لوحة التحكم
         </h1>
 
@@ -104,28 +317,28 @@ export default function Dashboard() {
 
           {cards.map((c, i) => (
             <div
-  key={i}
-  className={`
-    ${c.color}
-    rounded-3xl
-    p-6
-    min-h-[140px]
-    flex
-    flex-col
-    justify-center
-    items-center
-    text-center
-    shadow-xl
-  `}
->
-  <div className="text-xl font-bold mb-3">
-    {c.title}
-  </div>
+              key={i}
+              className={`
+                ${c.color}
+                rounded-3xl
+                p-6
+                min-h-[140px]
+                flex
+                flex-col
+                justify-center
+                items-center
+                text-center
+                shadow-xl
+              `}
+            >
+              <div className="text-xl font-bold mb-3">
+                {c.title}
+              </div>
 
-  <div className="text-5xl font-black">
-    {c.value}
-  </div>
-</div>
+              <div className="text-5xl font-black">
+                {c.value}
+              </div>
+            </div>
           ))}
 
         </div>

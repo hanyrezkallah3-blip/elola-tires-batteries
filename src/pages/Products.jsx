@@ -9,6 +9,10 @@ import {
   useWebsiteStore
 } from '../store/websiteStore'
 
+import {
+  useInventoryStore
+} from '../store/inventoryStore'
+
 import ProductForm
   from '../components/products/ProductForm'
 
@@ -58,17 +62,50 @@ export default function Products() {
       (s) => s.deleteProduct
     )
 
-  const updateProductStock =
-    useWebsiteStore(
-      (s) =>
-        s.updateProductStock
-    )
+  const handleUpdateStock = (
+
+  productId,
+
+  quantity
+
+) => {
+
+  updateProduct(
+
+    productId,
+
+    {
+
+      stock: quantity
+
+    }
+
+  )
+
+  setProductQuantity({
+
+    productId,
+
+    quantity
+
+  })
+
+}
 
   const toggleProductVisibility =
     useWebsiteStore(
       (s) =>
         s.toggleProductVisibility
     )
+
+    const stockItems = useInventoryStore(
+  (s) => s.stockItems || []
+)
+
+  const setProductQuantity =
+  useInventoryStore(
+    (s) => s.setProductQuantity
+  )
 
   // ================= STATES =================
 
@@ -419,43 +456,21 @@ export default function Products() {
 
   // ================= TOTALS =================
 
-  const totalStock =
-    useMemo(() => {
+  const totalStock = useMemo(() => {
+  return stockItems.reduce(
+    (acc, item) =>
+      acc + Number(item.quantity || 0),
+    0
+  )
+}, [stockItems])
 
-      return products.reduce(
-
-        (acc, product) =>
-
-          acc +
-
-          Number(
-            product.stock || 0
-          ),
-
-        0
-
-      )
-
-    }, [products])
-
-  const totalSold =
-    useMemo(() => {
-
-      return products.reduce(
-
-        (acc, product) =>
-
-          acc +
-
-          Number(
-            product.sold || 0
-          ),
-
-        0
-
-      )
-
-    }, [products])
+  const totalSold = useMemo(() => {
+  return stockItems.reduce(
+    (acc, item) =>
+      acc + Number(item.sold || 0),
+    0
+  )
+}, [stockItems])
 
   const hiddenProducts =
     useMemo(() => {
@@ -752,7 +767,7 @@ export default function Products() {
                   }
 
                   onUpdateStock={
-                    updateProductStock
+                    handleUpdateStock
                   }
 
                 />
@@ -784,7 +799,7 @@ export default function Products() {
                           }
 
                           onUpdateStock={
-                            updateProductStock
+                            handleUpdateStock
                           }
 
                         />

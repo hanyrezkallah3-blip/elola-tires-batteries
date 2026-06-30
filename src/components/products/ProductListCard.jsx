@@ -331,13 +331,16 @@ export default memo(function ProductListCard({
                 )
               }
               className="
-                flex-1
-                p-4
-                rounded-2xl
-                text-black
-                text-xl
-                font-bold
-              "
+  flex-1
+  p-4
+  rounded-2xl
+  bg-white
+  text-black
+  border-2
+  border-yellow-400
+  text-xl
+  font-bold
+"
             />
 
             <button

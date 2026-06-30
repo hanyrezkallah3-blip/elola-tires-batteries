@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { useInventoryStore } from './inventoryStore'
+
 
 const generateId = () =>
   Date.now().toString() + Math.random().toString(36).slice(2)
@@ -642,6 +644,8 @@ export const useWebsiteStore = create(
 
     }
 
+    
+
     let wallets =
       [...state.wallets]
 
@@ -650,8 +654,6 @@ export const useWebsiteStore = create(
         (wallet) =>
           wallet.phone === order.phone
       )
-
-    // إنشاء محفظة تلقائياً إذا لم تكن موجودة
 
     if (index === -1) {
 
@@ -682,19 +684,11 @@ export const useWebsiteStore = create(
       ...wallets[index],
 
       balance:
-
-        Number(
-          wallets[index].balance || 0
-        ) +
-
+        Number(wallets[index].balance || 0) +
         commission,
 
       totalCashback:
-
-        Number(
-          wallets[index].totalCashback || 0
-        ) +
-
+        Number(wallets[index].totalCashback || 0) +
         commission
 
     }
@@ -726,22 +720,149 @@ export const useWebsiteStore = create(
     return {
 
       orders: [
-
         newOrder,
-
         ...state.orders
-
       ],
 
       wallets,
 
       walletTransactions: [
-
         newTransaction,
-
         ...(state.walletTransactions || [])
-
       ]
+
+    }
+
+  }),
+
+deleteOrder: (orderId) =>
+
+  set((state) => {
+
+    const order =
+      state.orders.find(
+        (o) => o.id === orderId
+      )
+
+    if (!order)
+      return {}
+
+    const inventory =
+      useInventoryStore.getState()
+
+    let wallets =
+      [...state.wallets]
+
+    const walletIndex =
+      wallets.findIndex(
+        (w) =>
+          w.phone === order.phone
+      )
+
+    if (walletIndex !== -1) {
+
+      const cashback =
+        (state.walletTransactions || [])
+          .filter(
+            (t) =>
+              t.orderId === orderId
+          )
+          .reduce(
+            (a, t) =>
+              a + Number(t.amount || 0),
+            0
+          )
+
+      wallets[walletIndex] = {
+
+        ...wallets[walletIndex],
+
+        balance: Math.max(
+          0,
+          Number(
+            wallets[walletIndex].balance || 0
+          ) - cashback
+        ),
+
+        totalCashback: Math.max(
+          0,
+          Number(
+            wallets[walletIndex].totalCashback || 0
+          ) - cashback
+        )
+
+      }
+
+    }
+
+        // ================= RESTORE INVENTORY =================
+
+    ;(order.items || []).forEach((item) => {
+
+      const stockItem =
+        inventory.stockItems.find(
+
+          (s) =>
+
+            String(s.productId) ===
+              String(item.productId) ||
+
+            String(s.productId) ===
+              String(item.id)
+
+        )
+
+      if (!stockItem) return
+
+      inventory.increaseStock({
+
+        itemId: stockItem.id,
+
+        quantity:
+          Number(item.quantity || 1),
+
+        note:
+          `مرتجع - حذف الطلب ${order.id}`
+
+      })
+
+      inventory.updateStockItem(
+
+        stockItem.id,
+
+        {
+
+          sold: Math.max(
+
+            0,
+
+            Number(stockItem.sold || 0) -
+
+            Number(item.quantity || 1)
+
+          )
+
+        }
+
+      )
+
+    })
+
+        return {
+
+      orders:
+        state.orders.filter(
+          (o) => o.id !== orderId
+        ),
+
+      wallets,
+
+      walletTransactions:
+        (state.walletTransactions || [])
+          .filter(
+            (t) =>
+              t.orderId !== orderId
+          )
 
     }
 
@@ -1063,58 +1184,167 @@ export const useWebsiteStore = create(
 
         })),
 
-      // ================= CART =================
+     // ================= CART =================
 
-      cart: [],
+cart: [],
 
-      addToCart: (
-        item
-      ) =>
+addToCart: (item) =>
 
-        set((state) => ({
+  set((state) => {
 
-          cart: [
+    const cart =
+      [...state.cart]
 
-            ...state.cart,
+    const index =
+      cart.findIndex(
 
-            {
+        (i) =>
 
-              ...item,
+          String(i.id) ===
+          String(item.id)
 
-              cartId:
-                generateId()
+      )
 
-            }
+    if (index !== -1) {
 
-          ]
+      cart[index] = {
 
-        })),
+        ...cart[index],
 
-      removeFromCart: (
-        cartId
-      ) =>
+        quantity:
 
-        set((state) => ({
+          Number(
+            cart[index].quantity || 1
+          ) + 1
 
-          cart:
+      }
 
-            state.cart.filter(
+      return { cart }
 
-              (item) =>
+    }
 
-                item.cartId !== cartId
+    return {
 
-            )
+      cart: [
 
-        })),
+        ...cart,
 
-      clearCart: () =>
+        {
 
-        set({
+          ...item,
 
-          cart: []
+          quantity: 1,
 
-        }),
+          cartId:
+            generateId()
+
+        }
+
+      ]
+
+    }
+
+  }),
+
+increaseCartQuantity: (
+  cartId
+) =>
+
+  set((state) => ({
+
+    cart:
+
+      state.cart.map(
+
+        (item) =>
+
+          item.cartId === cartId
+
+            ? {
+
+                ...item,
+
+                quantity:
+
+                  Number(
+                    item.quantity || 1
+                  ) + 1
+
+              }
+
+            : item
+
+      )
+
+  })),
+
+decreaseCartQuantity: (
+  cartId
+) =>
+
+  set((state) => ({
+
+    cart:
+
+      state.cart
+
+        .map(
+
+          (item) =>
+
+            item.cartId === cartId
+
+              ? {
+
+                  ...item,
+
+                  quantity:
+
+                    Number(
+                      item.quantity || 1
+                    ) - 1
+
+                }
+
+              : item
+
+        )
+
+        .filter(
+
+          (item) =>
+
+            item.quantity > 0
+
+        )
+
+  })),
+
+removeFromCart: (
+  cartId
+) =>
+
+  set((state) => ({
+
+    cart:
+
+      state.cart.filter(
+
+        (item) =>
+
+          item.cartId !== cartId
+
+      )
+
+  })),
+
+clearCart: () =>
+
+  set({
+
+    cart: []
+
+  }),
 
       // ================= COMPANY =================
 
