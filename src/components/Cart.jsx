@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useWebsiteStore } from '../store/websiteStore'
 import { useInventoryStore } from '../store/inventoryStore'
+import { StockEngine } from "../core";
 
 export default function Cart({ open, setOpen }) {
 
@@ -122,56 +123,39 @@ export default function Cart({ open, setOpen }) {
 
   const validateStock = () => {
 
-    for (const item of safeCart) {
+  for (const item of safeCart) {
 
-      const stockItem =
-        findStock(item)
+    const stockItem = findStock(item)
 
-      if (!stockItem) {
+    if (!stockItem) {
 
-        alert(
+      alert(`المنتج "${item.name}" غير موجود بالمخزون`)
 
-          `المنتج غير موجود في المخزون: ${item.name}`
-
-        )
-
-        return false
-
-      }
-
-      const available =
-        Number(
-          stockItem.quantity || 0
-        )
-
-      const required =
-        Number(
-          item.quantity || 1
-        )
-
-      if (
-        available < required
-      ) {
-
-        alert(
-
-`${item.name}
-
-الكمية المتاحة: ${available}
-
-الكمية المطلوبة: ${required}`
-
-        )
-
-        return false
-
-      }
+      return false
 
     }
 
-    return true
+    const available = Number(stockItem.quantity || 0)
+
+    const required = Number(item.quantity || 1)
+
+    if (required > available) {
+
+      alert(
+
+        `المنتج "${item.name}"\n\nالكمية المطلوبة: ${required}\nالكمية المتاحة: ${available}`
+
+      )
+
+      return false
+
+    }
 
   }
+
+  return true
+
+}
 
   const validatePhone = () => {
 
@@ -269,7 +253,7 @@ export default function Cart({ open, setOpen }) {
 
       }
 
-      await addOrder(orderData)
+      addOrder(orderData)
             // ================= UPDATE INVENTORY =================
 
       for (const cartItem of safeCart) {

@@ -43,6 +43,8 @@ import LowStockAlert
 import ProductListCard
   from '../components/products/ProductListCard'
 
+import { StockEngine } from '../core'  
+
 export default function Products() {
 
   // ================= STORE =================
@@ -70,19 +72,7 @@ export default function Products() {
 
 ) => {
 
-  updateProduct(
-
-    productId,
-
-    {
-
-      stock: quantity
-
-    }
-
-  )
-
-  setProductQuantity({
+  return StockEngine.setQuantity({
 
     productId,
 
@@ -91,7 +81,6 @@ export default function Products() {
   })
 
 }
-
   const toggleProductVisibility =
     useWebsiteStore(
       (s) =>

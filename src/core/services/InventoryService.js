@@ -47,6 +47,104 @@ class InventoryService extends BaseService {
 
   }
 
+  // ================= SET QUANTITY =================
+
+  setQuantity({
+
+    productId,
+
+    quantity
+
+  }) {
+
+    return this.getState()
+
+      .setProductQuantity({
+
+        productId,
+
+        quantity
+
+      })
+
+  }
+
+  // ================= INCREASE =================
+
+  increase(data) {
+
+    return this.getState()
+
+      .increaseStock(data)
+
+  }
+
+  // ================= DECREASE =================
+
+  decrease(data) {
+
+    return this.getState()
+
+      .decreaseStock(data)
+
+  }
+
+  // ================= TRANSFER =================
+
+  transfer(data) {
+
+    return this.getState()
+
+      .transferStock(data)
+
+  }
+
+  // ================= EXISTS =================
+
+  exists(productId) {
+
+    return !!this.getItemByProduct(
+
+      productId
+
+    )
+
+  }
+
+  // ================= CAN SELL =================
+
+  canSell({
+
+    productId,
+
+    quantity
+
+  }) {
+
+    return (
+
+      this.getQuantity(productId)
+
+      >=
+
+      Number(quantity)
+
+    )
+
+  }
+
+  // ================= HAS STOCK =================
+
+  hasStock(productId) {
+
+    return this.getQuantity(
+
+      productId
+
+    ) > 0
+
+  }
+
 }
 
 export default InventoryService
