@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware'
 import { useInventoryStore } from './inventoryStore'
 import { useWalletStore } from './walletStore'
 
+
 const generateId = () =>
   Date.now().toString() + Math.random().toString(36).slice(2)
 
@@ -626,11 +627,7 @@ export const useWebsiteStore = create(
   set((state) => {
 
     const rate =
-  Number(
-    useWalletStore
-      .getState()
-      .cashbackPercentage || 0
-  ) / 100
+      Number(state.cashbackPercentage || 0) / 100
 
     const commission =
       Number(order.total || 0) * rate
@@ -721,7 +718,16 @@ export const useWebsiteStore = create(
 
     }
 
-    if (commission > 0) {
+    return {
+
+      orders: [
+        newOrder,
+        ...state.orders
+      ],
+
+      // تحديث walletStore بدلاً من websiteStore
+
+if (commission > 0) {
 
   useWalletStore.getState().addWalletBalance({
 
@@ -745,6 +751,8 @@ return {
   ]
 
 }
+
+    }
 
   }),
 

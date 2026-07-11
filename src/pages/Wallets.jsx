@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useWebsiteStore } from '../store/websiteStore'
+import { useWalletStore } from '../store/walletStore'
 
 import WalletStats from '../components/wallet/WalletStats'
 import WalletSearch from '../components/wallet/WalletSearch'
@@ -15,17 +15,18 @@ export default function Wallets() {
 
   // ================= STORE =================
 
-  const wallets = useWebsiteStore((s) => s.wallets || [])
-  const walletTransactions = useWebsiteStore((s) => s.walletTransactions || [])
-  const cashbackPercentage = useWebsiteStore((s) => s.cashbackPercentage || 0)
-  const setCashbackPercentage = useWebsiteStore((s) => s.setCashbackPercentage)
+  const wallets = useWalletStore((s) => s.wallets)
+const walletTransactions = useWalletStore((s) => s.walletTransactions)
 
-  const addWalletBalance = useWebsiteStore((s) => s.addWalletBalance)
-  const deductWalletBalance = useWebsiteStore((s) => s.deductWalletBalance)
-  const deleteWallet = useWebsiteStore((s) => s.deleteWallet)
+const cashbackPercentage = useWalletStore((s) => s.cashbackPercentage)
+const setCashbackPercentage = useWalletStore((s) => s.setCashbackPercentage)
 
-  const walletEnabled = useWebsiteStore((s) => s.walletEnabled ?? true)
-  const setWalletEnabled = useWebsiteStore((s) => s.setWalletEnabled)
+const addWalletBalance = useWalletStore((s) => s.addWalletBalance)
+const deductWalletBalance = useWalletStore((s) => s.deductWalletBalance)
+const deleteWallet = useWalletStore((s) => s.deleteWallet)
+
+const walletEnabled = useWalletStore((s) => s.walletEnabled)
+const setWalletEnabled = useWalletStore((s) => s.setWalletEnabled)
 
   // ================= STATE =================
 
