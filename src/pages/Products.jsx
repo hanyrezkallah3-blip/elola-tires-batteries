@@ -13,6 +13,7 @@ import {
   useInventoryStore
 } from '../store/inventoryStore'
 
+
 import ProductForm
   from '../components/products/ProductForm'
 
@@ -43,454 +44,390 @@ import LowStockAlert
 import ProductListCard
   from '../components/products/ProductListCard'
 
-import { StockEngine } from '../core'  
+
+import {
+  StockEngine
+} from '../core'
+
 
 export default function Products() {
 
-  // ================= STORE =================
 
   const products =
     useWebsiteStore(
-      (s) => s.products
+      state => state.products || []
     )
+
 
   const addProduct =
     useWebsiteStore(
-      (s) => s.addProduct
+      state => state.addProduct
     )
+
 
   const deleteProduct =
     useWebsiteStore(
-      (s) => s.deleteProduct
+      state => state.deleteProduct
     )
 
-  const handleUpdateStock = (
 
-  productId,
-
-  quantity
-
-) => {
-
-  return StockEngine.setQuantity({
-
-    productId,
-
-    quantity
-
-  })
-
-}
   const toggleProductVisibility =
     useWebsiteStore(
-      (s) =>
-        s.toggleProductVisibility
+      state =>
+        state.toggleProductVisibility
     )
 
-    const stockItems = useInventoryStore(
-  (s) => s.stockItems || []
-)
 
-  const setProductQuantity =
-  useInventoryStore(
-    (s) => s.setProductQuantity
-  )
+  const stockItems =
+    useInventoryStore(
+      state =>
+        state.stockItems || []
+    )
 
-  // ================= STATES =================
 
-  const [search, setSearch] =
+
+  const [search,setSearch] =
     useState('')
 
-  const [filter, setFilter] =
+
+  const [filter,setFilter] =
     useState('all')
 
-  const [sortBy, setSortBy] =
+
+  const [sortBy,setSortBy] =
     useState('newest')
 
-  const [viewMode, setViewMode] =
+
+  const [viewMode,setViewMode] =
     useState('grid')
 
-  const [currentPage, setCurrentPage] =
+
+  const [currentPage,setCurrentPage] =
     useState(1)
 
-  const [loading, setLoading] =
+
+  const [loading,setLoading] =
     useState(true)
 
-  // ================= LOADING =================
 
-  useEffect(() => {
+
+  useEffect(()=>{
 
     const timer =
-      setTimeout(() => {
+      setTimeout(
+        ()=>setLoading(false),
+        800
+      )
 
-        setLoading(false)
 
-      }, 1200)
+    return ()=>clearTimeout(timer)
 
-    return () =>
-      clearTimeout(timer)
+  },[])
 
-  }, [])
 
-  // ================= PAGE RESET =================
 
-  useEffect(() => {
+  useEffect(()=>{
 
     setCurrentPage(1)
 
-  }, [
-
+  },[
     search,
     filter,
-    sortBy,
-    viewMode
-
+    sortBy
   ])
 
-  // ================= ADD PRODUCT =================
+
+
 
   const handleAddProduct =
-    useCallback((product) => {
+    useCallback((product)=>{
+
 
       addProduct({
 
         ...product,
 
-        sold: 0,
+        stock:
+          product.quantity || 0,
 
-        hidden: false,
+        sold:0,
 
-        createdAt:
-          new Date().toISOString()
+        hidden:false
 
       })
 
-    }, [addProduct])
 
-  // ================= DELETE =================
+    },[
+      addProduct
+    ])
+
+
+
 
   const handleDelete =
-    useCallback((id) => {
+    useCallback((id)=>{
 
-      const ok =
+
+      if(
         window.confirm(
           'هل تريد حذف المنتج؟'
         )
+      ){
 
-      if (!ok) return
+        deleteProduct(id)
 
-      deleteProduct(id)
+      }
 
-    }, [deleteProduct])
 
-  // ================= FILTERED PRODUCTS =================
+    },[
+      deleteProduct
+    ])
+
+
+
+
+  const handleUpdateStock =
+    useCallback(
+      (
+        productId,
+        quantity
+      )=>{
+
+
+        return StockEngine.setQuantity({
+
+          productId,
+
+          quantity
+
+        })
+
+
+      },
+      []
+    )
+
+
+
 
   const filteredProducts =
-    useMemo(() => {
+    useMemo(()=>{
+
 
       let result =
         [...products]
 
-      // SEARCH
 
-      if (
-        search.trim()
-      ) {
+
+      if(search.trim()){
+
 
         result =
-          result.filter(
+          result.filter(product=>
 
-            (product) =>
-
-              product.name
-                ?.toLowerCase()
-                .includes(
-
-                  search.toLowerCase()
-
-                )
+            product.name
+              ?.toLowerCase()
+              .includes(
+                search.toLowerCase()
+              )
 
           )
 
       }
 
-      // LOW STOCK
 
-      if (
-        filter === 'low'
-      ) {
+
+
+      if(filter==='low'){
 
         result =
-          result.filter(
+          result.filter(product=>
 
-            (product) =>
-
-              Number(
-                product.stock || 0
-              ) <= 5
+            Number(
+              product.stock || 0
+            ) <= 5
 
           )
 
       }
 
-      // HIDDEN
 
-      if (
-        filter === 'hidden'
-      ) {
+
+      if(filter==='available'){
 
         result =
-          result.filter(
+          result.filter(product=>
 
-            (product) =>
-              product.hidden
+            Number(
+              product.stock || 0
+            ) > 0
 
           )
 
       }
 
-      // AVAILABLE
 
-      if (
-        filter === 'available'
-      ) {
+
+      if(filter==='hidden'){
 
         result =
-          result.filter(
+          result.filter(product=>
 
-            (product) =>
-
-              Number(
-                product.stock || 0
-              ) > 0
+            product.hidden
 
           )
 
       }
 
-      // ================= SORT =================
 
-      // NEWEST
 
-      if (
-        sortBy === 'newest'
-      ) {
+
+      const sorters = {
+
+        newest:(a,b)=>
+
+          new Date(
+            b.createdAt || 0
+          )
+          -
+          new Date(
+            a.createdAt || 0
+          ),
+
+
+        oldest:(a,b)=>
+
+          new Date(
+            a.createdAt || 0
+          )
+          -
+          new Date(
+            b.createdAt || 0
+          ),
+
+
+        priceHigh:(a,b)=>
+
+          Number(b.salePrice || b.price || 0)
+          -
+          Number(a.salePrice || a.price || 0),
+
+
+        priceLow:(a,b)=>
+
+          Number(a.salePrice || a.price || 0)
+          -
+          Number(b.salePrice || b.price || 0),
+
+
+        stockHigh:(a,b)=>
+
+          Number(b.stock || 0)
+          -
+          Number(a.stock || 0),
+
+
+        stockLow:(a,b)=>
+
+          Number(a.stock || 0)
+          -
+          Number(b.stock || 0)
+
+      }
+
+
+      if(sorters[sortBy]){
 
         result.sort(
-
-          (a, b) =>
-
-            new Date(
-              b.createdAt || 0
-            ) -
-
-            new Date(
-              a.createdAt || 0
-            )
-
+          sorters[sortBy]
         )
 
       }
 
-      // OLDEST
 
-      if (
-        sortBy === 'oldest'
-      ) {
-
-        result.sort(
-
-          (a, b) =>
-
-            new Date(
-              a.createdAt || 0
-            ) -
-
-            new Date(
-              b.createdAt || 0
-            )
-
-        )
-
-      }
-
-      // PRICE HIGH
-
-      if (
-        sortBy === 'priceHigh'
-      ) {
-
-        result.sort(
-
-          (a, b) =>
-
-            Number(
-              b.price || 0
-            ) -
-
-            Number(
-              a.price || 0
-            )
-
-        )
-
-      }
-
-      // PRICE LOW
-
-      if (
-        sortBy === 'priceLow'
-      ) {
-
-        result.sort(
-
-          (a, b) =>
-
-            Number(
-              a.price || 0
-            ) -
-
-            Number(
-              b.price || 0
-            )
-
-        )
-
-      }
-
-      // STOCK HIGH
-
-      if (
-        sortBy === 'stockHigh'
-      ) {
-
-        result.sort(
-
-          (a, b) =>
-
-            Number(
-              b.stock || 0
-            ) -
-
-            Number(
-              a.stock || 0
-            )
-
-        )
-
-      }
-
-      // STOCK LOW
-
-      if (
-        sortBy === 'stockLow'
-      ) {
-
-        result.sort(
-
-          (a, b) =>
-
-            Number(
-              a.stock || 0
-            ) -
-
-            Number(
-              b.stock || 0
-            )
-
-        )
-
-      }
 
       return result
 
-    }, [
 
+    },[
       products,
       search,
       filter,
       sortBy
-
     ])
 
-  // ================= PAGINATION =================
 
-  const PRODUCTS_PER_PAGE = 6
+
+
+
+  const stats = useMemo(()=>({
+
+
+    totalStock:
+
+      stockItems.reduce(
+        (sum,item)=>
+          sum +
+          Number(item.quantity || 0),
+        0
+      ),
+
+
+    totalSold:
+
+      stockItems.reduce(
+        (sum,item)=>
+          sum +
+          Number(item.sold || 0),
+        0
+      ),
+
+
+    hiddenProducts:
+
+      products.filter(
+        p=>p.hidden
+      ).length,
+
+
+    lowStockProducts:
+
+      products.filter(
+        p=>
+          Number(p.stock || 0)<=5
+      )
+
+
+  }),[
+    products,
+    stockItems
+  ])
+
+
+
+
+  const perPage = 6
+
 
   const totalPages =
     Math.ceil(
-
       filteredProducts.length /
-
-      PRODUCTS_PER_PAGE
-
+      perPage
     )
+
+
 
   const paginatedProducts =
     filteredProducts.slice(
 
-      (
+      (currentPage-1)*perPage,
 
-        currentPage - 1
-
-      ) *
-
-      PRODUCTS_PER_PAGE,
-
-      currentPage *
-
-      PRODUCTS_PER_PAGE
+      currentPage*perPage
 
     )
 
-  // ================= TOTALS =================
 
-  const totalStock = useMemo(() => {
-  return stockItems.reduce(
-    (acc, item) =>
-      acc + Number(item.quantity || 0),
-    0
-  )
-}, [stockItems])
 
-  const totalSold = useMemo(() => {
-  return stockItems.reduce(
-    (acc, item) =>
-      acc + Number(item.sold || 0),
-    0
-  )
-}, [stockItems])
-
-  const hiddenProducts =
-    useMemo(() => {
-
-      return products.filter(
-
-        (product) =>
-          product.hidden
-
-      ).length
-
-    }, [products])
-
-  // ================= LOW STOCK =================
-
-  const lowStockProducts =
-    useMemo(() => {
-
-      return products.filter(
-
-        (product) =>
-
-          Number(
-            product.stock || 0
-          ) <= 5
-
-      )
-
-    }, [products])
-
-  // ================= UI =================
 
   return (
 
@@ -502,7 +439,6 @@ export default function Products() {
       text-white
     ">
 
-      {/* HEADER */}
 
       <div className="
         bg-gradient-to-r
@@ -511,35 +447,21 @@ export default function Products() {
         to-yellow-500
         rounded-[40px]
         p-8
-        lg:p-12
         mb-12
-        shadow-2xl
       ">
 
         <h1 className="
-          text-4xl
-          lg:text-6xl
+          text-5xl
           font-black
-          mb-4
         ">
 
           إدارة المنتجات والمخزون
 
         </h1>
 
-        <p className="
-          text-xl
-          lg:text-2xl
-          text-white/90
-        ">
-
-          إدارة كاملة للمنتجات والمبيعات والمخزون
-
-        </p>
-
       </div>
 
-      {/* STATS */}
+
 
       <ProductsStats
 
@@ -548,50 +470,54 @@ export default function Products() {
         }
 
         totalStock={
-          totalStock
+          stats.totalStock
         }
 
         totalSold={
-          totalSold
+          stats.totalSold
         }
 
         hiddenProducts={
-          hiddenProducts
+          stats.hiddenProducts
         }
 
       />
 
-      {/* FORM */}
+
 
       <ProductForm
+
         onAddProduct={
           handleAddProduct
         }
+
       />
 
-      {/* LOW STOCK ALERT */}
+
 
       <LowStockAlert
 
         lowStockProducts={
-          lowStockProducts
+          stats.lowStockProducts
         }
 
       />
 
-      {/* FILTERS */}
+
 
       <ProductsFilters
 
         search={search}
+
         setSearch={setSearch}
 
         filter={filter}
+
         setFilter={setFilter}
 
       />
 
-      {/* SEARCH INFO */}
+
 
       <ProductSearchInfo
 
@@ -605,237 +531,105 @@ export default function Products() {
 
       />
 
-      {/* SORT + VIEW MODE */}
 
-      <div className="
-        flex
-        flex-col
-        xl:flex-row
-        gap-6
-        mb-10
-      ">
 
-        <div className="flex-1">
+      <ProductsSort
 
-          <ProductsSort
+        sortBy={sortBy}
 
-            sortBy={sortBy}
+        setSortBy={setSortBy}
 
-            setSortBy={setSortBy}
+      />
 
-          />
+
+
+      {
+        loading ?
+
+        <ProductsSkeleton />
+
+        :
+
+        viewMode==='grid' ?
+
+        <ProductsGrid
+
+          products={
+            paginatedProducts
+          }
+
+          onDelete={
+            handleDelete
+          }
+
+          onToggleVisibility={
+            toggleProductVisibility
+          }
+
+          onUpdateStock={
+            handleUpdateStock
+          }
+
+        />
+
+        :
+
+        <div className="space-y-8">
+
+          {
+            paginatedProducts.map(product=>(
+
+              <ProductListCard
+
+                key={product.id}
+
+                product={product}
+
+                onDelete={
+                  handleDelete
+                }
+
+                onToggleVisibility={
+                  toggleProductVisibility
+                }
+
+                onUpdateStock={
+                  handleUpdateStock
+                }
+
+              />
+
+            ))
+          }
 
         </div>
 
-        {/* VIEW MODE */}
+      }
 
-        <div className="
-          bg-slate-900
-          border
-          border-slate-700
-          rounded-3xl
-          p-6
-          flex
-          items-center
-          gap-4
-          shadow-2xl
-        ">
 
-          <button
 
-            type="button"
-
-            onClick={() =>
-              setViewMode('grid')
-            }
-
-            className={`
-              px-6
-              py-4
-              rounded-2xl
-              text-xl
-              font-black
-              transition-all
-
-              ${
-
-                viewMode === 'grid'
-
-                  ? `
-                    bg-yellow-500
-                    text-black
-                  `
-
-                  : `
-                    bg-black
-                    text-white
-                    border
-                    border-slate-700
-                  `
-
-              }
-            `}
-          >
-
-            ⬜ Grid
-
-          </button>
-
-          <button
-
-            type="button"
-
-            onClick={() =>
-              setViewMode('list')
-            }
-
-            className={`
-              px-6
-              py-4
-              rounded-2xl
-              text-xl
-              font-black
-              transition-all
-
-              ${
-
-                viewMode === 'list'
-
-                  ? `
-                    bg-yellow-500
-                    text-black
-                  `
-
-                  : `
-                    bg-black
-                    text-white
-                    border
-                    border-slate-700
-                  `
-
-              }
-            `}
-          >
-
-            ☰ List
-
-          </button>
-
-        </div>
-
-      </div>
-
-      {/* PRODUCTS */}
 
       {
+        totalPages > 1 &&
 
-        loading ? (
+        <ProductsPagination
 
-          <ProductsSkeleton />
+          currentPage={
+            currentPage
+          }
 
-        ) : (
+          totalPages={
+            totalPages
+          }
 
-          <>
+          onPageChange={
+            setCurrentPage
+          }
 
-            {
-
-              viewMode === 'grid' ? (
-
-                <ProductsGrid
-
-                  products={
-                    paginatedProducts
-                  }
-
-                  onDelete={
-                    handleDelete
-                  }
-
-                  onToggleVisibility={
-                    toggleProductVisibility
-                  }
-
-                  onUpdateStock={
-                    handleUpdateStock
-                  }
-
-                />
-
-              ) : (
-
-                <div className="
-                  space-y-8
-                ">
-
-                  {
-
-                    paginatedProducts.map(
-
-                      (product) => (
-
-                        <ProductListCard
-
-                          key={product.id}
-
-                          product={product}
-
-                          onDelete={
-                            handleDelete
-                          }
-
-                          onToggleVisibility={
-                            toggleProductVisibility
-                          }
-
-                          onUpdateStock={
-                            handleUpdateStock
-                          }
-
-                        />
-
-                      )
-
-                    )
-
-                  }
-
-                </div>
-
-              )
-
-            }
-
-          </>
-
-        )
+        />
 
       }
 
-      {/* PAGINATION */}
-
-      {
-
-        totalPages > 1 && (
-
-          <ProductsPagination
-
-            currentPage={
-              currentPage
-            }
-
-            totalPages={
-              totalPages
-            }
-
-            onPageChange={
-              setCurrentPage
-            }
-
-          />
-
-        )
-
-      }
 
     </div>
 
