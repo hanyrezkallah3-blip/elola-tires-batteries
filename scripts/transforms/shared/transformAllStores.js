@@ -4,29 +4,147 @@ import {
 } from '../../core/astSession.js'
 
 import {
-  STORE_MAP
-} from '../../config/storeMap.js'
+  visit
+} from '../../core/ast.js'
 
 import {
-  transformStoreMigration
-} from './transformStoreMigration.js'
+  resolveStoreInfo
+} from '../../config/storeResolver.js'
+
+import {
+  hasImport
+} from '../../core/importScanner.js'
+
+import {
+  createImportManager
+} from '../../core/importManager.js'
 
 export function transformAllStores(file) {
 
-  const session = createASTSession(file)
+  if (!hasImport(file, 'useWebsiteStore')) {
 
-  for (const property of Object.keys(STORE_MAP)) {
+    return {
 
-    transformStoreMigration(
+      changed: false,
 
-      session,
+      code: null
 
-      property
-
-    )
+    }
 
   }
 
-  return finishASTSession(session)
+  const session = createASTSession(file)
+
+  const imports =
+
+    createImportManager(session)
+
+  visit(session.ast, {
+
+    CallExpression(path) {
+
+      const node = path.node
+
+      if (
+
+        node.callee?.type !== 'Identifier' ||
+
+        node.callee.name !== 'useWebsiteStore'
+
+      ) {
+
+        return
+
+      }
+
+      if (
+
+        node.arguments.length !== 1
+
+      ) {
+
+        return
+
+      }
+
+      const selector =
+
+        node.arguments[0]
+
+      if (
+
+        selector.type !==
+
+        'ArrowFunctionExpression'
+
+      ) {
+
+        return
+
+      }
+
+      if (
+
+        selector.body?.type !==
+
+        'MemberExpression'
+
+      ) {
+
+        return
+
+      }
+
+      const property =
+
+        selector.body.property?.name
+
+      if (!property) {
+
+        return
+
+      }
+
+      const info =
+
+        resolveStoreInfo(
+
+          file,
+
+          property
+
+        )
+
+      if (!info) {
+
+        return
+
+      }
+
+      node.callee.name =
+
+        info.hook
+
+      imports.ensureImport(
+
+        info.hook,
+
+        info.importPath
+
+      )
+
+      session.changed = true
+
+    }
+
+  })
+
+  imports.removeWebsiteImportIfUnused()
+
+  return finishASTSession(
+
+    session
+
+  )
 
 }

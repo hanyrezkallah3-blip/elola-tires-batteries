@@ -12,36 +12,42 @@ export function resolveStoreInfo(file, property) {
 
   }
 
-  const currentDir = path.dirname(file)
+  const currentDir = path.dirname(
+    path.resolve(file)
+  )
 
-  const srcIndex = currentDir.lastIndexOf(`${path.sep}src`)
+  const storeFile = path.resolve(
+    'src',
+    'store',
+    config.store
+  )
 
-  if (srcIndex === -1) {
+  let relativePath = path.relative(
 
-    return {
+    currentDir,
 
-      ...config,
+    storeFile
 
-      importPath: `../store/${config.store}`
+  )
 
-    }
+  relativePath = relativePath
+    .replace(/\\/g, '/')
+
+  if (
+
+    !relativePath.startsWith('.')
+
+  ) {
+
+    relativePath = './' + relativePath
 
   }
-
-  const fromDir = currentDir.substring(srcIndex + 5)
-
-  const depth = fromDir
-    .split(path.sep)
-    .filter(Boolean)
-    .length
-
-  const prefix = '../'.repeat(depth)
 
   return {
 
     ...config,
 
-    importPath: `${prefix}store/${config.store}`
+    importPath: relativePath
 
   }
 

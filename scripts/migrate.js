@@ -13,188 +13,168 @@ import {
 } from './migrations/storeMigration.js'
 
 
-const command = process.argv[2]
 
-const argument = process.argv[3]
+async function main() {
 
+  const command = process.argv[2]
 
-const preview =
-  process.argv.includes('--preview')
+  const argument = process.argv[3]
 
-
-console.log('====================================')
-console.log(' Elola Migration Engine')
-console.log('====================================')
-console.log('')
+  const preview =
+    process.argv.includes('--preview')
 
 
 
-if (!command) {
-
-  console.log('Usage:')
-
-  console.log(
-    'node scripts/migrate.js <migration>'
-  )
-
+  console.log('====================================')
+  console.log(' Elola Migration Engine')
+  console.log('====================================')
   console.log('')
 
-  console.log('Commands:')
-
-  console.log(
-    'stores'
-  )
-
-  console.log(
-    'rollback <session-id>'
-  )
-
-  process.exit(0)
-
-}
 
 
+  if (!command) {
 
-// ================= ROLLBACK =================
-
-
-if (command === 'rollback') {
-
-
-  if (!argument) {
+    console.log('Usage:')
 
     console.log(
-      'Missing session id'
+      'node scripts/migrate.js <migration>'
     )
 
-    process.exit(1)
+    console.log('')
+
+    console.log('Commands:')
+
+    console.log('stores')
+
+    console.log(
+      'rollback <session-id>'
+    )
+
+    process.exit(0)
 
   }
 
 
 
-  try {
+  // ================= ROLLBACK =================
 
+  if (command === 'rollback') {
 
-    const restoredFiles =
-      rollbackSession(argument)
-
-
-
-    console.log(
-      'Rollback completed'
-    )
-
-
-    console.log(
-      `Restored: ${restoredFiles.length}`
-    )
-
-
-    restoredFiles.forEach(file => {
+    if (!argument) {
 
       console.log(
-        file
+        'Missing session id'
       )
 
-    })
+      process.exit(1)
 
+    }
 
-  } catch (error) {
+    try {
 
+      const restoredFiles =
+        rollbackSession(argument)
 
-    console.log(
-      'Rollback failed'
-    )
+      console.log(
+        'Rollback completed'
+      )
 
+      console.log(
+        `Restored: ${restoredFiles.length}`
+      )
 
-    console.log(
-      error.message
-    )
+      restoredFiles.forEach(file => {
 
+        console.log(file)
 
-    process.exit(1)
+      })
+
+    } catch (error) {
+
+      console.log(
+        'Rollback failed'
+      )
+
+      console.log(
+        error.message
+      )
+
+      process.exit(1)
+
+    }
+
+    return
 
   }
 
 
 
-  process.exit(0)
+  // ================= MIGRATION =================
 
-}
+  const srcPath =
+    path.resolve('src')
 
-
-
-// ================= MIGRATION =================
-
-
-const srcPath =
-  path.resolve('src')
+  const files =
+    scanDirectory(srcPath)
 
 
-const files =
-  scanDirectory(srcPath)
-
-
-
-console.log(
-  `Migration : ${command}`
-)
-
-
-console.log(
-  `Files Found: ${files.length}`
-)
-
-
-
-if (preview) {
 
   console.log(
-    'Mode      : PREVIEW'
+    `Migration : ${command}`
   )
 
-}
+  console.log(
+    `Files Found: ${files.length}`
+  )
 
 
 
-switch (command) {
-
-
-  case 'stores':
-
-
-  case 'products':
-
-
-  case 'orders':
-
-
-  case 'users':
-
-
-  case 'wallets':
-
-
-    storeMigration(
-
-      files,
-
-      {
-        preview
-      }
-
-    )
-
-    break
-
-
-
-  default:
-
+  if (preview) {
 
     console.log(
-      'Unknown command'
+      'Mode      : PREVIEW'
     )
 
+  }
+
+
+
+  switch (command) {
+
+    case 'stores':
+
+    case 'products':
+
+    case 'orders':
+
+    case 'users':
+
+    case 'wallets':
+
+      await storeMigration(
+
+        files,
+
+        {
+          preview
+        }
+
+      )
+
+      break
+
+
+
+    default:
+
+      console.log(
+        'Unknown command'
+      )
+
+  }
+
 }
+
+
+
+await main()

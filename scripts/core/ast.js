@@ -67,9 +67,15 @@ export function printAST(ast) {
 
     {
 
-      retainLines: true,
+      retainLines: false,
 
-      comments: true
+      comments: true,
+
+      compact: false,
+
+      concise: false,
+
+      decoratorsBeforeExport: true
 
     }
 

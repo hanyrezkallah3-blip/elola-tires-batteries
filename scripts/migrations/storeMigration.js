@@ -1,7 +1,5 @@
 import fs from 'fs'
 
-import { filterFiles } from '../core/fileFilter.js'
-
 import {
   createMigrationSession,
   addChangedFile,
@@ -17,15 +15,38 @@ import {
   transformAllStores
 } from '../transforms/shared/transformAllStores.js'
 
+import {
+  createMigrationReport
+} from '../core/migrationReport.js'
 
-export function storeMigration(
+import {
+  validateFiles
+} from '../core/migrationValidator.js'
+
+import {
+  recoverMigration
+} from '../core/migrationRecovery.js'
+
+import {
+  generateDiff,
+  saveDiffPreview
+} from '../core/diffGenerator.js'
+
+import {
+  detectStores
+} from '../core/storeDetector.js'
+
+import {
+  runWorkerPool
+} from '../core/workerPool.js'
+
+export async function storeMigration(
 
   files,
 
   options = {}
 
 ) {
-
 
   const {
 
@@ -51,78 +72,24 @@ export function storeMigration(
 
 
 
-  const keywords = [
+  const targets = files.filter(file => {
 
-    'useWebsiteStore',
+    try {
 
-    'products',
+      return detectStores(file).length > 0
 
-    'orders',
+    } catch {
 
-    'wallet',
+      return false
 
-    'wallets',
+    }
 
-    'walletTransactions',
-
-    'walletEnabled',
-
-    'cashbackPercentage',
-
-    'users',
-
-    'currentUser',
-
-    'login',
-
-    'logout',
-
-    'register',
-
-    'permissions',
-
-    'setCurrentUser',
-
-    'logoutUser',
-
-    'setUsers',
-
-    'addUser',
-
-    'updateUser',
-
-    'deleteUser',
-
-    'enableUser',
-
-    'disableUser',
-
-    'getUserById',
-
-    'getUserByUsername',
-
-    'searchUsers',
-
-    'getStatistics'
-
-  ]
-
-
-
-  const targets = filterFiles(
-
-    files,
-
-    keywords
-
-  )
+  })
 
 
 
   console.log('')
-
   console.log('====================================')
-
   console.log(
 
     preview
@@ -132,51 +99,28 @@ export function storeMigration(
       : ' Store Migration'
 
   )
-
   console.log('====================================')
-
   console.log('')
 
 
 
   let changed = 0
 
+  const changedFiles = []
 
-
-  for (const file of targets) {
-
-
-    console.log(
-
-      'CHECKING:',
-
-      file
-
-    )
+  const diffReports = []
 
 
 
-    const result = transformAllStores(file)
+  await runWorkerPool(
 
+    targets,
 
+    async file => {
 
-    if (
+      console.log(
 
-      result &&
-
-      result.changed
-
-    ) {
-
-
-
-      changed++
-
-
-
-      addChangedFile(
-
-        session,
+        'CHECKING:',
 
         file
 
@@ -184,84 +128,352 @@ export function storeMigration(
 
 
 
-      if (!preview) {
+      const result = transformAllStores(file)
 
 
-        if (!backupPath) {
 
-          backupPath = createBackupSession(
+      if (
 
-            session.id
+        result &&
+
+        result.changed
+
+      ) {
+
+        changed++
+
+        changedFiles.push(file)
+
+        addChangedFile(
+
+          session,
+
+          file
+
+        )
+
+
+
+        const originalCode =
+
+          fs.readFileSync(
+
+            file,
+
+            'utf8'
+
+          )
+
+
+
+        const diff =
+
+          generateDiff(
+
+            originalCode,
+
+            result.code
+
+          )
+
+
+
+        diffReports.push(
+
+          saveDiffPreview(
+
+            file,
+
+            diff
+
+          )
+
+        )
+
+
+
+        if (!preview) {
+
+          if (!backupPath) {
+
+            backupPath =
+
+              createBackupSession(
+
+                session.id
+
+              )
+
+          }
+
+
+
+          backupFile(
+
+            file,
+
+            backupPath
+
+          )
+
+
+
+          fs.writeFileSync(
+
+            file,
+
+            result.code,
+
+            'utf8'
+
+          )
+
+
+
+          console.log(
+
+            'UPDATED:',
+
+            file
+
+          )
+
+        } else {
+
+          console.log(
+
+            'WOULD UPDATE:',
+
+            file
 
           )
 
         }
 
-
-
-        backupFile(
-
-          file,
-
-          backupPath
-
-        )
-
-
-
-        fs.writeFileSync(
-
-          file,
-
-          result.code,
-
-          'utf8'
-
-        )
-
-
-        console.log(
-
-          'UPDATED:',
-
-          file
-
-        )
-
-
-
-      } else {
-
-
-        console.log(
-
-          'WOULD UPDATE:',
-
-          file
-
-        )
-
-
       }
 
-
-
     }
-
-
-  }
-
-
-
-  const logFile = finishMigrationSession(
-
-    session
 
   )
 
 
 
+  let validationResults = []
+
+
+
+  if (
+
+    !preview &&
+
+    changedFiles.length
+
+  ) {
+
+    validationResults = validateFiles(
+
+      changedFiles
+
+    )
+
+
+
+    const failedValidation =
+
+      validationResults.filter(
+
+        item => !item.valid
+
+      )
+
+
+
+    if (
+
+      failedValidation.length
+
+    ) {
+
+      console.log('')
+      console.log('====================================')
+      console.log(' VALIDATION FAILED - RECOVERY START')
+      console.log('====================================')
+
+
+
+      failedValidation.forEach(item => {
+
+        console.log(item.file)
+
+        console.log(item.error)
+
+      })
+
+
+
+      console.log('')
+
+
+
+      const recovery = recoverMigration(
+
+        session.id,
+
+        validationResults
+
+      )
+
+
+
+      if (
+
+        recovery.recovered
+
+      ) {
+
+        console.log(
+
+          'Recovery completed'
+
+        )
+
+
+
+        console.log(
+
+          `Restored: ${recovery.restoredFiles.length}`
+
+        )
+
+      }
+
+
+
+      console.log('')
+
+
+
+      throw new Error(
+
+        'Migration aborted after validation failure'
+
+      )
+
+    }
+
+  }
+
+
+
+  if (
+
+    preview &&
+
+    diffReports.length
+
+  ) {
+
+    console.log('')
+
+    console.log(
+      '===================================='
+    )
+
+    console.log(
+      ' DIFF PREVIEW'
+    )
+
+    console.log(
+      '===================================='
+    )
+
+
+
+    diffReports.forEach(report => {
+
+      console.log('')
+
+      console.log(
+
+        report.file
+
+      )
+
+
+
+      console.log(
+
+        `Changes: ${report.changes}`
+
+      )
+
+
+
+      report.diff
+
+        .slice(0, 5)
+
+        .forEach(change => {
+
+          console.log(
+
+            `Line ${change.line}`
+
+          )
+
+
+
+          console.log(
+
+            '-',
+
+            change.before
+
+          )
+
+
+
+          console.log(
+
+            '+',
+
+            change.after
+
+          )
+
+
+
+        })
+
+    })
+
+  }
+
+
+
+  const logFile =
+
+    finishMigrationSession(
+
+      session
+
+    )
+
+
+
+  const reportFile =
+
+    createMigrationReport(
+
+      session
+
+    )
+
+
+
   console.log('')
+
+
 
   console.log(
 
@@ -274,6 +486,7 @@ export function storeMigration(
   )
 
 
+
   console.log(
 
     'Log:',
@@ -284,8 +497,17 @@ export function storeMigration(
 
 
 
-  if (backupPath) {
+  console.log(
 
+    'Report:',
+
+    reportFile
+
+  )
+
+
+
+  if (backupPath) {
 
     console.log(
 
@@ -295,12 +517,10 @@ export function storeMigration(
 
     )
 
-
   }
 
 
 
   console.log('')
-
 
 }

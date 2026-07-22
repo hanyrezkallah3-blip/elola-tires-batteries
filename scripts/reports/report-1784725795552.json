@@ -1,0 +1,11 @@
+{
+  "migration": "stores",
+  "sessionId": 1784725795552,
+  "mode": "preview",
+  "status": "completed",
+  "startedAt": "2026-07-22T13:09:55.552Z",
+  "finishedAt": "2026-07-22T13:09:56.067Z",
+  "durationMs": 515,
+  "changedFiles": 0,
+  "files": []
+}

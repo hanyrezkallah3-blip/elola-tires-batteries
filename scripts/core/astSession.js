@@ -3,23 +3,36 @@ import {
   printAST
 } from './ast.js'
 
+
+const astCache = new Map()
+
+
+
 export function createASTSession(file) {
 
-  const {
+  let cached = astCache.get(file)
 
-    ast,
+  if (!cached) {
 
-    source
+    cached = parseFile(file)
 
-  } = parseFile(file)
+    astCache.set(
+
+      file,
+
+      cached
+
+    )
+
+  }
 
   return {
 
     file,
 
-    ast,
+    ast: cached.ast,
 
-    source,
+    source: cached.source,
 
     changed: false
 
@@ -27,7 +40,15 @@ export function createASTSession(file) {
 
 }
 
+
+
 export function finishASTSession(session) {
+
+  if (session.changed) {
+
+    astCache.delete(session.file)
+
+  }
 
   return {
 
@@ -40,5 +61,29 @@ export function finishASTSession(session) {
       : session.source
 
   }
+
+}
+
+
+
+export function clearASTCache() {
+
+  astCache.clear()
+
+}
+
+
+
+export function invalidateAST(file) {
+
+  astCache.delete(file)
+
+}
+
+
+
+export function getCachedAST(file) {
+
+  return astCache.get(file)
 
 }

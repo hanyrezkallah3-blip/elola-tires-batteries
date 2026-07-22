@@ -1,0 +1,13 @@
+{
+  "migration": "stores",
+  "sessionId": 1784727479409,
+  "mode": "preview",
+  "status": "completed",
+  "startedAt": "2026-07-22T13:37:59.409Z",
+  "finishedAt": "2026-07-22T13:38:00.191Z",
+  "durationMs": 782,
+  "changedFiles": 1,
+  "files": [
+    "C:\\Users\\EAA\\Desktop\\elola\\elola\\src\\TestMigration2.jsx"
+  ]
+}
