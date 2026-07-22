@@ -12,9 +12,14 @@ import {
   storeMigration
 } from './migrations/storeMigration.js'
 
+import {
+  authMigration
+} from './migrations/authMigration.js'
+
 
 
 async function main() {
+
 
   const command = process.argv[2]
 
@@ -26,13 +31,17 @@ async function main() {
 
 
   console.log('====================================')
+
   console.log(' Elola Migration Engine')
+
   console.log('====================================')
+
   console.log('')
 
 
 
   if (!command) {
+
 
     console.log('Usage:')
 
@@ -46,6 +55,8 @@ async function main() {
 
     console.log('stores')
 
+    console.log('auth')
+
     console.log(
       'rollback <session-id>'
     )
@@ -56,124 +67,213 @@ async function main() {
 
 
 
+
   // ================= ROLLBACK =================
+
 
   if (command === 'rollback') {
 
+
     if (!argument) {
+
 
       console.log(
         'Missing session id'
       )
 
+
       process.exit(1)
 
     }
 
+
+
     try {
 
+
       const restoredFiles =
+
         rollbackSession(argument)
+
+
 
       console.log(
         'Rollback completed'
       )
 
+
       console.log(
         `Restored: ${restoredFiles.length}`
       )
 
+
+
       restoredFiles.forEach(file => {
+
 
         console.log(file)
 
+
       })
 
+
     } catch (error) {
+
 
       console.log(
         'Rollback failed'
       )
 
+
       console.log(
         error.message
       )
 
+
       process.exit(1)
+
 
     }
 
+
     return
+
 
   }
 
 
 
+
+
   // ================= MIGRATION =================
 
+
+
   const srcPath =
+
     path.resolve('src')
 
+
+
   const files =
+
     scanDirectory(srcPath)
 
 
 
   console.log(
+
     `Migration : ${command}`
+
   )
 
+
   console.log(
+
     `Files Found: ${files.length}`
+
   )
 
 
 
   if (preview) {
 
+
     console.log(
+
       'Mode      : PREVIEW'
+
     )
 
+
   }
+
 
 
 
   switch (command) {
 
+
+
     case 'stores':
+
 
     case 'products':
 
+
     case 'orders':
+
 
     case 'users':
 
+
     case 'wallets':
+
+
 
       await storeMigration(
 
+
         files,
 
+
         {
+
           preview
+
         }
 
+
       )
+
 
       break
 
 
 
+
+    case 'auth':
+
+
+
+      await authMigration(
+
+
+        files,
+
+
+        {
+
+          preview
+
+        }
+
+
+      )
+
+
+      break
+
+
+
+
+
     default:
 
+
+
       console.log(
+
         'Unknown command'
+
       )
+
 
   }
 
+
 }
+
 
 
 

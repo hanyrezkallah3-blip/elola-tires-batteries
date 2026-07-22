@@ -16,9 +16,13 @@ import {
   contains
 } from './helpers'
 
+
 export const useUserStore = create(
+
   persist(
+
     (set, get) => ({
+
 
       // ==================================================
       // STATE
@@ -26,24 +30,102 @@ export const useUserStore = create(
 
       users: [DEFAULT_OWNER],
 
+      currentUser: null,
+
+
+      // ==================================================
+      // AUTH
+      // ==================================================
+
+      setCurrentUser: (user) =>
+
+        set({
+
+          currentUser: user
+
+        }),
+
+
+      login: (username, password) => {
+
+        const user = get().users.find(
+
+          u =>
+
+            u.username === username &&
+
+            u.password === password &&
+
+            u.active !== false
+
+        )
+
+
+        if (!user) {
+
+          return false
+
+        }
+
+
+        set({
+
+          currentUser: user
+
+        })
+
+
+        return true
+
+      },
+
+
+      logout: () =>
+
+        set({
+
+          currentUser: null
+
+        }),
+
+
+
       // ==================================================
       // GETTERS
       // ==================================================
 
       getUserById: (id) =>
-        get().users.find(user => user.id === id) || null,
+
+        get().users.find(
+
+          user => user.id === id
+
+        ) || null,
+
 
       getUserByUsername: (username) =>
-        get().users.find(user => user.username === username) || null,
+
+        get().users.find(
+
+          user => user.username === username
+
+        ) || null,
+
+
 
       // ==================================================
       // SETTERS
       // ==================================================
 
       setUsers: (users) =>
+
         set({
+
           users: ensureArray(users)
+
         }),
+
+
 
       // ==================================================
       // CREATE
@@ -53,9 +135,13 @@ export const useUserStore = create(
 
         const users = get().users
 
+
         const exists = users.some(
+
           u => u.username === user.username
+
         )
+
 
         if (exists) {
 
@@ -68,6 +154,7 @@ export const useUserStore = create(
           }
 
         }
+
 
         const newUser = {
 
@@ -92,6 +179,7 @@ export const useUserStore = create(
           walletAccess: false,
 
           permissions:
+
             ROLE_PERMISSIONS[user.role] || [],
 
           createdAt: now(),
@@ -99,6 +187,7 @@ export const useUserStore = create(
           ...user
 
         }
+
 
         set(state => ({
 
@@ -112,6 +201,7 @@ export const useUserStore = create(
 
         }))
 
+
         return {
 
           success: true,
@@ -121,6 +211,8 @@ export const useUserStore = create(
         }
 
       },
+
+
 
       // ==================================================
       // UPDATE
@@ -132,8 +224,11 @@ export const useUserStore = create(
 
           users: state.users.map(user => {
 
+
             if (user.id !== id)
+
               return user
+
 
             return {
 
@@ -154,6 +249,8 @@ export const useUserStore = create(
           })
 
         })),
+
+
 
       // ==================================================
       // DELETE
@@ -176,6 +273,8 @@ export const useUserStore = create(
             )
 
         })),
+
+
 
       // ==================================================
       // ENABLE
@@ -205,6 +304,8 @@ export const useUserStore = create(
 
         })),
 
+
+
       // ==================================================
       // DISABLE
       // ==================================================
@@ -233,6 +334,8 @@ export const useUserStore = create(
 
         })),
 
+
+
       // ==================================================
       // SEARCH
       // ==================================================
@@ -242,6 +345,7 @@ export const useUserStore = create(
         if (!keyword)
 
           return get().users
+
 
         return get().users.filter(user =>
 
@@ -253,6 +357,8 @@ export const useUserStore = create(
 
       },
 
+
+
       // ==================================================
       // STATISTICS
       // ==================================================
@@ -261,31 +367,46 @@ export const useUserStore = create(
 
         const users = get().users
 
+
         return {
 
           totalUsers: users.length,
 
           activeUsers:
 
-            users.filter(u => u.active).length,
+            users.filter(
+
+              u => u.active
+
+            ).length,
+
 
           inactiveUsers:
 
-            users.filter(u => !u.active).length
+            users.filter(
+
+              u => !u.active
+
+            ).length
 
         }
 
       }
 
+
     }),
+
 
     {
 
       name: STORAGE_KEYS.USERS,
 
+
       partialize: state => ({
 
-        users: state.users
+        users: state.users,
+
+        currentUser: state.currentUser
 
       })
 
