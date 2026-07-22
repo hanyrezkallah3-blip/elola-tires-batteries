@@ -43,34 +43,6 @@ const rolePermissions = {
   ]
 }
 
-// ================= OWNER =================
-
-const defaultOwner = {
-
-  id: 'owner',
-
-  username: 'owner',
-
-  password: 'owner123',
-
-  role: 'owner',
-
-  warehouseId: 'all',
-
-  warehouseName: 'الإدارة الرئيسية',
-
-  active: true,
-
-  permissions: ['all'],
-
-  financeAccess: true,
-
-  walletAccess: true,
-
-  createdAt: new Date().toISOString()
-
-}
-
 export const useWebsiteStore = create(
 
   persist(
@@ -94,47 +66,6 @@ export const useWebsiteStore = create(
         }),
 
       rolePermissions,
-
-      // ================= AUTH =================
-
-      currentUser: defaultOwner,
-
-      setCurrentUser: (user) =>
-        set({
-          currentUser: user
-        }),
-
-      login: (username, password) => {
-
-        const user =
-          get().users.find(
-
-            (u) =>
-
-              u.username === username &&
-
-              u.password === password &&
-
-              u.active !== false
-
-          )
-
-        if (!user)
-          return false
-
-        set({
-          currentUser: user
-        })
-
-        return true
-
-      },
-
-      logout: () =>
-
-        set({
-          currentUser: null
-        }),
 
       // ================= SYSTEM =================
 
@@ -251,8 +182,7 @@ export const useWebsiteStore = create(
             )
 
         })),
-
-      // ================= PERMISSIONS =================
+              // ================= PERMISSIONS =================
 
       permissions: [],
 
@@ -308,7 +238,8 @@ export const useWebsiteStore = create(
           ]
 
         })),
-              // ================= WALLET SETTINGS =================
+
+      // ================= WALLET SETTINGS =================
 
       walletEnabled: true,
 
@@ -536,13 +467,12 @@ export const useWebsiteStore = create(
             Boolean(value)
 
         }),
-
-      // ================= USERS =================
+              // ================= USERS =================
 
       users: [
 
-        defaultOwner
-
+        // Temporary during migration.
+        // Remove after all pages use useUserStore.
       ],
 
       setUsers: (users) =>
@@ -607,7 +537,8 @@ export const useWebsiteStore = create(
           ]
 
         })),
-              // ================= ORDERS =================
+
+      // ================= ORDERS =================
 
       orders: [],
 
@@ -623,263 +554,152 @@ export const useWebsiteStore = create(
         }),
 
       addOrder: (order) =>
-  set((state) => {
 
-    const rate =
-  Number(
-    useWalletStore
-      .getState()
-      .cashbackPercentage || 0
-  ) / 100
+        set((state) => {
 
-    const commission =
-      Number(order.total || 0) * rate
+          const rate =
 
-    const newOrder = {
+            Number(
 
-      id: generateId(),
+              useWalletStore
+                .getState()
+                .cashbackPercentage || 0
 
-      status: 'طلب جديد',
+            ) / 100
 
-      createdAt:
-        new Date().toISOString(),
+          const commission =
 
-      ...order
+            Number(order.total || 0) * rate
 
-    }
+          const newOrder = {
 
-    
+            id: generateId(),
 
-    let wallets =
-      [...state.wallets]
+            status: 'طلب جديد',
 
-    let index =
-      wallets.findIndex(
-        (wallet) =>
-          wallet.phone === order.phone
-      )
+            createdAt:
+              new Date().toISOString(),
 
-    if (index === -1) {
+            ...order
 
-      wallets.unshift({
+          }
 
-        id: generateId(),
+          if (commission > 0) {
 
-        phone: order.phone,
+            useWalletStore
+              .getState()
+              .addWalletBalance({
 
-        customerName:
-          order.customerName,
+                phone: order.phone,
 
-        balance: 0,
+                customerName:
+                  order.customerName,
 
-        totalCashback: 0,
+                amount: commission,
 
-        createdAt:
-          new Date().toISOString()
+                reason:
+                  'كاش باك من عملية شراء'
 
-      })
+              })
 
-      index = 0
+          }
 
-    }
+          return {
 
-    wallets[index] = {
+            orders: [
 
-      ...wallets[index],
+              newOrder,
 
-      balance:
-        Number(wallets[index].balance || 0) +
-        commission,
+              ...state.orders
 
-      totalCashback:
-        Number(wallets[index].totalCashback || 0) +
-        commission
+            ]
 
-    }
+          }
 
-    const newTransaction = {
+        }),
 
-      id: generateId(),
+      deleteOrder: (orderId) =>
 
-      phone: order.phone,
+        set((state) => {
 
-      customerName:
-        order.customerName,
+          const order =
 
-      amount: commission,
+            state.orders.find(
 
-      type: 'cashback',
+              (o) =>
 
-      reason:
-        'كاش باك من عملية شراء',
+                o.id === orderId
 
-      orderId:
-        newOrder.id,
+            )
 
-      createdAt:
-        new Date().toISOString()
+          if (!order)
 
-    }
+            return {}
+          const inventory =
+            useInventoryStore.getState()
 
-    if (commission > 0) {
+          ;(order.items || []).forEach((item) => {
 
-  useWalletStore.getState().addWalletBalance({
+            const stockItem =
+              inventory.stockItems.find(
 
-    phone: order.phone,
+                (s) =>
 
-    customerName: order.customerName,
+                  String(s.productId) ===
+                    String(item.productId) ||
 
-    amount: commission,
+                  String(s.productId) ===
+                    String(item.id)
 
-    reason: 'كاش باك من عملية شراء'
+              )
 
-  })
+            if (!stockItem)
+              return
 
-}
+            inventory.increaseStock({
 
-return {
+              itemId: stockItem.id,
 
-  orders: [
-    newOrder,
-    ...state.orders
-  ]
+              quantity:
+                Number(item.quantity || 1),
 
-}
+              note:
+                `مرتجع - حذف الطلب ${order.id}`
 
-  }),
+            })
 
-deleteOrder: (orderId) =>
+            inventory.updateStockItem(
 
-  set((state) => {
+              stockItem.id,
 
-    const order =
-      state.orders.find(
-        (o) => o.id === orderId
-      )
+              {
 
-    if (!order)
-      return {}
+                sold: Math.max(
 
-    const inventory =
-      useInventoryStore.getState()
+                  0,
 
-    let wallets =
-      [...state.wallets]
+                  Number(stockItem.sold || 0) -
 
-    const walletIndex =
-      wallets.findIndex(
-        (w) =>
-          w.phone === order.phone
-      )
+                  Number(item.quantity || 1)
 
-    if (walletIndex !== -1) {
+                )
 
-      const cashback =
-        (state.walletTransactions || [])
-          .filter(
-            (t) =>
-              t.orderId === orderId
-          )
-          .reduce(
-            (a, t) =>
-              a + Number(t.amount || 0),
-            0
-          )
+              }
 
-      wallets[walletIndex] = {
+            )
 
-        ...wallets[walletIndex],
+          })
 
-        balance: Math.max(
-          0,
-          Number(
-            wallets[walletIndex].balance || 0
-          ) - cashback
-        ),
+          return {
 
-        totalCashback: Math.max(
-          0,
-          Number(
-            wallets[walletIndex].totalCashback || 0
-          ) - cashback
-        )
+            orders:
+              state.orders.filter(
+                (o) => o.id !== orderId
+              )
 
-      }
+          }
 
-    }
-
-        // ================= RESTORE INVENTORY =================
-
-    ;(order.items || []).forEach((item) => {
-
-      const stockItem =
-        inventory.stockItems.find(
-
-          (s) =>
-
-            String(s.productId) ===
-              String(item.productId) ||
-
-            String(s.productId) ===
-              String(item.id)
-
-        )
-
-      if (!stockItem) return
-
-      inventory.increaseStock({
-
-        itemId: stockItem.id,
-
-        quantity:
-          Number(item.quantity || 1),
-
-        note:
-          `مرتجع - حذف الطلب ${order.id}`
-
-      })
-
-      inventory.updateStockItem(
-
-        stockItem.id,
-
-        {
-
-          sold: Math.max(
-
-            0,
-
-            Number(stockItem.sold || 0) -
-
-            Number(item.quantity || 1)
-
-          )
-
-        }
-
-      )
-
-    })
-
-        return {
-
-      orders:
-        state.orders.filter(
-          (o) => o.id !== orderId
-        ),
-
-      wallets,
-
-      walletTransactions:
-        (state.walletTransactions || [])
-          .filter(
-            (t) =>
-              t.orderId !== orderId
-          )
-
-    }
-
-  }),
+        }),
 
       // ================= PRODUCTS =================
 
@@ -968,9 +788,7 @@ deleteOrder: (orderId) =>
 
       transfers: [],
 
-      setTransfers: (
-        transfers
-      ) =>
+      setTransfers: (transfers) =>
 
         set({
 
@@ -981,9 +799,7 @@ deleteOrder: (orderId) =>
 
         }),
 
-      addTransfer: (
-        transfer
-      ) =>
+      addTransfer: (transfer) =>
 
         set((state) => ({
 
@@ -1006,9 +822,7 @@ deleteOrder: (orderId) =>
 
         })),
 
-      deleteTransfer: (
-        id
-      ) =>
+      deleteTransfer: (id) =>
 
         set((state) => ({
 
@@ -1023,14 +837,11 @@ deleteOrder: (orderId) =>
             )
 
         })),
-
-      // ================= SLIDES =================
+              // ================= SLIDES =================
 
       slides: [],
 
-      setSlides: (
-        slides
-      ) =>
+      setSlides: (slides) =>
 
         set({
 
@@ -1041,9 +852,7 @@ deleteOrder: (orderId) =>
 
         }),
 
-      addSlide: (
-        slide
-      ) =>
+      addSlide: (slide) =>
 
         set((state) => ({
 
@@ -1066,10 +875,7 @@ deleteOrder: (orderId) =>
 
         })),
 
-      updateSlide: (
-        id,
-        data
-      ) =>
+      updateSlide: (id, data) =>
 
         set((state) => ({
 
@@ -1095,9 +901,7 @@ deleteOrder: (orderId) =>
 
         })),
 
-      deleteSlide: (
-        id
-      ) =>
+      deleteSlide: (id) =>
 
         set((state) => ({
 
@@ -1112,7 +916,8 @@ deleteOrder: (orderId) =>
             )
 
         })),
-              // ================= OFFERS =================
+
+      // ================= OFFERS =================
 
       offers: [],
 
@@ -1150,10 +955,7 @@ deleteOrder: (orderId) =>
 
         })),
 
-      updateOffer: (
-        id,
-        data
-      ) =>
+      updateOffer: (id, data) =>
 
         set((state) => ({
 
@@ -1179,9 +981,7 @@ deleteOrder: (orderId) =>
 
         })),
 
-      deleteOffer: (
-        id
-      ) =>
+      deleteOffer: (id) =>
 
         set((state) => ({
 
@@ -1197,169 +997,159 @@ deleteOrder: (orderId) =>
 
         })),
 
-     // ================= CART =================
+      // ================= CART =================
 
-cart: [],
+      cart: [],
 
-addToCart: (item) =>
+      addToCart: (item) =>
 
-  set((state) => {
+        set((state) => {
 
-    const cart =
-      [...state.cart]
+          const cart = [...state.cart]
 
-    const index =
-      cart.findIndex(
+          const index = cart.findIndex(
 
-        (i) =>
+            (i) =>
 
-          String(i.id) ===
-          String(item.id)
+              String(i.id) ===
+              String(item.id)
 
-      )
+          )
 
-    if (index !== -1) {
+          if (index !== -1) {
 
-      cart[index] = {
+            cart[index] = {
 
-        ...cart[index],
+              ...cart[index],
 
-        quantity:
+              quantity:
 
-          Number(
-            cart[index].quantity || 1
-          ) + 1
+                Number(
+                  cart[index].quantity || 1
+                ) + 1
 
-      }
+            }
 
-      return { cart }
+            return { cart }
 
-    }
+          }
 
-    return {
+          return {
 
-      cart: [
+            cart: [
 
-        ...cart,
+              ...cart,
 
-        {
-
-          ...item,
-
-          quantity: 1,
-
-          cartId:
-            generateId()
-
-        }
-
-      ]
-
-    }
-
-  }),
-
-increaseCartQuantity: (
-  cartId
-) =>
-
-  set((state) => ({
-
-    cart:
-
-      state.cart.map(
-
-        (item) =>
-
-          item.cartId === cartId
-
-            ? {
+              {
 
                 ...item,
 
-                quantity:
+                quantity: 1,
 
-                  Number(
-                    item.quantity || 1
-                  ) + 1
+                cartId: generateId()
 
               }
 
-            : item
+            ]
 
-      )
+          }
 
-  })),
+        }),
 
-decreaseCartQuantity: (
-  cartId
-) =>
+      increaseCartQuantity: (cartId) =>
 
-  set((state) => ({
+        set((state) => ({
 
-    cart:
+          cart:
 
-      state.cart
+            state.cart.map(
 
-        .map(
+              (item) =>
 
-          (item) =>
+                item.cartId === cartId
 
-            item.cartId === cartId
+                  ? {
 
-              ? {
+                      ...item,
 
-                  ...item,
+                      quantity:
 
-                  quantity:
+                        Number(
+                          item.quantity || 1
+                        ) + 1
 
-                    Number(
-                      item.quantity || 1
-                    ) - 1
+                    }
 
-                }
+                  : item
 
-              : item
+            )
 
-        )
+        })),
 
-        .filter(
+      decreaseCartQuantity: (cartId) =>
 
-          (item) =>
+        set((state) => ({
 
-            item.quantity > 0
+          cart:
 
-        )
+            state.cart
 
-  })),
+              .map(
 
-removeFromCart: (
-  cartId
-) =>
+                (item) =>
 
-  set((state) => ({
+                  item.cartId === cartId
 
-    cart:
+                    ? {
 
-      state.cart.filter(
+                        ...item,
 
-        (item) =>
+                        quantity:
 
-          item.cartId !== cartId
+                          Number(
+                            item.quantity || 1
+                          ) - 1
 
-      )
+                      }
 
-  })),
+                    : item
 
-clearCart: () =>
+              )
 
-  set({
+              .filter(
 
-    cart: []
+                (item) =>
 
-  }),
+                  item.quantity > 0
 
-      // ================= COMPANY =================
+              )
+
+        })),
+
+      removeFromCart: (cartId) =>
+
+        set((state) => ({
+
+          cart:
+
+            state.cart.filter(
+
+              (item) =>
+
+                item.cartId !== cartId
+
+            )
+
+        })),
+
+      clearCart: () =>
+
+        set({
+
+          cart: []
+
+        }),
+              // ================= COMPANY =================
 
       companyName:
         'شركة العلا للإطارات والبطاريات',
@@ -1501,7 +1291,8 @@ clearCart: () =>
           ]
 
         })),
-              // ================= WALLET SYSTEM =================
+
+      // ================= WALLET SYSTEM =================
 
       walletEnabled: true,
 
@@ -1718,12 +1509,10 @@ clearCart: () =>
             }),
 
     {
+
       name: 'elola-store-v4-clean',
 
       partialize: (state) => ({
-
-        currentUser:
-          state.currentUser,
 
         users:
           state.users,
@@ -1802,9 +1591,7 @@ clearCart: () =>
 
           if (state) {
 
-            state.setHydrated(
-              true
-            )
+            state.setHydrated(true)
 
           }
 
