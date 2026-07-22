@@ -1,131 +1,131 @@
-import { useMemo } from 'react'
-import { useWebsiteStore } from '../store/websiteStore'
-import ProtectedRoute from '../security/ProtectedRoute'
+import { useUserStore } from "../store/userStore";import { useWalletStore } from "../store/walletStore";import { useOrderStore } from "../store/orderStore";import { useProductStore } from "../store/productStore";import { useMemo } from 'react';
+import { useWebsiteStore } from '../store/websiteStore';
+import ProtectedRoute from '../security/ProtectedRoute';
 
 export default function SAPUltimateERP() {
 
   // ================= GLOBAL DATA =================
 
-  const orders = useWebsiteStore((s) => s.orders || [])
-  const products = useWebsiteStore((s) => s.products || [])
-  const wallets = useWebsiteStore((s) => s.wallets || [])
-  const transfers = useWebsiteStore((s) => s.transfers || [])
-  const users = useWebsiteStore((s) => s.users || [])
+  const orders = useOrderStore((s) => s.orders || []);
+  const products = useProductStore((s) => s.products || []);
+  const wallets = useWalletStore((s) => s.wallets || []);
+  const transfers = useWebsiteStore((s) => s.transfers || []);
+  const users = useUserStore((s) => s.users || []);
 
   // ================= CORE ENGINE =================
 
   const sales = useMemo(
     () => orders.reduce((a, o) => a + Number(o.total || 0), 0),
     [orders]
-  )
+  );
 
   const profit = useMemo(() => {
     const walletCost = wallets.reduce(
       (a, w) => a + Number(w.balance || 0),
       0
-    )
-    return sales - walletCost
-  }, [sales, wallets])
+    );
+    return sales - walletCost;
+  }, [sales, wallets]);
 
   const stockValue = useMemo(
     () => products.reduce(
       (a, p) =>
-        a +
-        Number(p.stock || 0) *
-        Number(p.price || 0),
+      a +
+      Number(p.stock || 0) *
+      Number(p.price || 0),
       0
     ),
     [products]
-  )
+  );
 
   const systemLoad =
-    orders.length +
-    transfers.length +
-    products.length
+  orders.length +
+  transfers.length +
+  products.length;
 
   // ================= AI CORE BRAIN =================
 
   const aiScore = useMemo(() => {
 
-    let score = 60
+    let score = 60;
 
-    if (sales > 500000) score += 20
-    else if (sales > 200000) score += 10
+    if (sales > 500000) score += 20;else
+    if (sales > 200000) score += 10;
 
-    if (profit > 100000) score += 15
-    else if (profit > 50000) score += 8
+    if (profit > 100000) score += 15;else
+    if (profit > 50000) score += 8;
 
-    if (systemLoad > 500) score += 10
+    if (systemLoad > 500) score += 10;
 
     if (wallets.length > 0 && profit > 0)
-      score += 5
+    score += 5;
 
     return Math.max(
       0,
       Math.min(100, score)
-    )
+    );
 
   }, [
-    sales,
-    profit,
-    systemLoad,
-    wallets.length
-  ])
+  sales,
+  profit,
+  systemLoad,
+  wallets.length]
+  );
 
   // ================= AI ENGINE =================
 
   const aiInsight = useMemo(() => {
 
     if (profit < 0)
-      return '🚨 خطر: الشركة تخسر مال'
+    return '🚨 خطر: الشركة تخسر مال';
 
     if (
-      sales > 300000 &&
-      profit > 100000
-    )
-      return '🔥 أداء ممتاز - نمو قوي'
+    sales > 300000 &&
+    profit > 100000)
+
+    return '🔥 أداء ممتاز - نمو قوي';
 
     if (
-      wallets.length > 0 &&
-      profit < sales * 0.3
-    )
-      return '⚠️ المحافظ تؤثر على الأرباح'
+    wallets.length > 0 &&
+    profit < sales * 0.3)
 
-    return '✅ النظام مستقر'
+    return '⚠️ المحافظ تؤثر على الأرباح';
+
+    return '✅ النظام مستقر';
 
   }, [
-    profit,
-    sales,
-    wallets.length
-  ])
+  profit,
+  sales,
+  wallets.length]
+  );
 
   const predictionNextMonth = useMemo(
     () => sales * 1.15,
     [sales]
-  )
+  );
 
   const warehouseEfficiency = useMemo(() => {
 
     if (transfers.length === 0)
-      return 50
+    return 50;
 
     return Math.min(
       100,
-      (products.length / transfers.length) * 10
-    )
+      products.length / transfers.length * 10
+    );
 
   }, [
-    products.length,
-    transfers.length
-  ])
+  products.length,
+  transfers.length]
+  );
 
   return (
 
     <ProtectedRoute
       permission="sap_admin"
       role="owner"
-      page="sap_ultimate"
-    >
+      page="sap_ultimate">
+      
 
       <div className="min-h-screen bg-black text-white p-6 lg:p-10 space-y-10">
 
@@ -255,9 +255,9 @@ export default function SAPUltimateERP() {
 
       </div>
 
-    </ProtectedRoute>
+    </ProtectedRoute>);
 
-  )
+
 }
 
 function Card({ title, value }) {
@@ -273,7 +273,7 @@ function Card({ title, value }) {
         {Number(value).toLocaleString()}
       </div>
 
-    </div>
-  )
+    </div>);
+
 
 }

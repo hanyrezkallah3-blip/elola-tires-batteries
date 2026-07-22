@@ -1,110 +1,110 @@
-import { useMemo, useState } from 'react'
+import { useProductStore } from "../store/productStore";import { useMemo, useState } from 'react';
 
-import { useWebsiteStore } from '../../store/websiteStore'
 
-import { vehicleDatabase } from '../../data/vehicleDatabase'
 
-import VehicleEngine from '../../engines/VehicleEngine'
+import { vehicleDatabase } from '../../data/vehicleDatabase';
+
+import VehicleEngine from '../../engines/VehicleEngine';
 
 export default function VehicleFinder() {
 
   const products =
-    useWebsiteStore(
-      s => s.products || []
-    )
+  useProductStore(
+    (s) => s.products || []
+  );
 
   const [make, setMake] =
-    useState('')
+  useState('');
 
   const [model, setModel] =
-    useState('')
+  useState('');
 
   const [year, setYear] =
-    useState('')
+  useState('');
 
   const makes = useMemo(() => {
 
     return [
 
-      ...new Set(
+    ...new Set(
 
-        vehicleDatabase.map(
+      vehicleDatabase.map(
 
-          vehicle => vehicle.make
-
-        )
+        (vehicle) => vehicle.make
 
       )
 
-    ]
+    )];
 
-  }, [])
+
+
+  }, []);
 
   const models = useMemo(() => {
 
-    return vehicleDatabase
+    return vehicleDatabase.
 
-      .filter(
+    filter(
 
-        vehicle =>
+      (vehicle) =>
 
-          !make ||
+      !make ||
 
-          vehicle.make === make
+      vehicle.make === make
 
-      )
+    ).
 
-      .map(
+    map(
 
-        vehicle => vehicle.model
+      (vehicle) => vehicle.model
 
-      )
+    ).
 
-      .filter(
+    filter(
 
-        (value, index, array) =>
+      (value, index, array) =>
 
-          array.indexOf(value) === index
+      array.indexOf(value) === index
 
-      )
+    );
 
-  }, [make])
+  }, [make]);
 
   const years = useMemo(() => {
 
-    const values = []
+    const values = [];
 
     for (
 
-      let y = 2026;
+    let y = 2026;
 
-      y >= 1990;
+    y >= 1990;
 
-      y--
+    y--)
 
-    ) {
+    {
 
-      values.push(y)
+      values.push(y);
 
     }
 
-    return values
+    return values;
 
-  }, [])
+  }, []);
 
   const result = useMemo(() => {
 
     if (
 
-      !make ||
+    !make ||
 
-      !model ||
+    !model ||
 
-      !year
+    !year)
 
-    )
 
-      return null
+
+    return null;
 
     return VehicleEngine.search({
 
@@ -116,19 +116,19 @@ export default function VehicleFinder() {
 
       products
 
-    })
+    });
 
   }, [
 
-    make,
+  make,
 
-    model,
+  model,
 
-    year,
+  year,
 
-    products
+  products]
 
-  ])
+  );
 
   return (
 
@@ -141,11 +141,22 @@ export default function VehicleFinder() {
       border-yellow-500
     ">
 
+
+
+
+
+
+      
+
       <h2 className="
         text-4xl
         font-black
         mb-3
       ">
+
+
+
+        
 
         🚗 اعرف المنتجات المناسبة لسيارتك
 
@@ -155,6 +166,9 @@ export default function VehicleFinder() {
         text-gray-400
         mb-8
       ">
+
+
+        
 
         اختر بيانات السيارة وسيعرض النظام المنتجات المناسبة والمتوفرة.
 
@@ -166,15 +180,19 @@ export default function VehicleFinder() {
         gap-5
       ">
 
+
+
+        
+
         <select
 
           value={make}
 
-          onChange={e => {
+          onChange={(e) => {
 
-            setMake(e.target.value)
+            setMake(e.target.value);
 
-            setModel('')
+            setModel('');
 
           }}
 
@@ -182,9 +200,13 @@ export default function VehicleFinder() {
             p-4
             rounded-2xl
             text-black
-          "
+          ">
 
-        >
+
+
+
+
+          
 
           <option value="">
 
@@ -194,21 +216,21 @@ export default function VehicleFinder() {
 
           {
 
-            makes.map(item => (
+          makes.map((item) =>
 
-              <option
+          <option
 
-                key={item}
+            key={item}
 
-                value={item}
+            value={item}>
 
-              >
+            
 
                 {item}
 
               </option>
 
-            ))
+          )
 
           }
 
@@ -218,13 +240,13 @@ export default function VehicleFinder() {
 
           value={model}
 
-          onChange={e =>
+          onChange={(e) =>
 
-            setModel(
+          setModel(
 
-              e.target.value
+            e.target.value
 
-            )
+          )
 
           }
 
@@ -232,9 +254,13 @@ export default function VehicleFinder() {
             p-4
             rounded-2xl
             text-black
-          "
+          ">
 
-        >
+
+
+
+
+          
 
           <option value="">
 
@@ -244,21 +270,21 @@ export default function VehicleFinder() {
 
           {
 
-            models.map(item => (
+          models.map((item) =>
 
-              <option
+          <option
 
-                key={item}
+            key={item}
 
-                value={item}
+            value={item}>
 
-              >
+            
 
                 {item}
 
               </option>
 
-            ))
+          )
 
           }
 
@@ -268,13 +294,13 @@ export default function VehicleFinder() {
 
           value={year}
 
-          onChange={e =>
+          onChange={(e) =>
 
-            setYear(
+          setYear(
 
-              e.target.value
+            e.target.value
 
-            )
+          )
 
           }
 
@@ -282,9 +308,13 @@ export default function VehicleFinder() {
             p-4
             rounded-2xl
             text-black
-          "
+          ">
 
-        >
+
+
+
+
+          
 
           <option value="">
 
@@ -294,21 +324,21 @@ export default function VehicleFinder() {
 
           {
 
-            years.map(item => (
+          years.map((item) =>
 
-              <option
+          <option
 
-                key={item}
+            key={item}
 
-                value={item}
+            value={item}>
 
-              >
+            
 
                 {item}
 
               </option>
 
-            ))
+          )
 
           }
 
@@ -318,43 +348,43 @@ export default function VehicleFinder() {
 
       {
 
-        result && (
+      result &&
 
-          <div className="mt-10 space-y-8">
-
-            <ResultSection
-
-              title="الإطارات المناسبة"
-
-              products={result.tires}
-
-            />
+      <div className="mt-10 space-y-8">
 
             <ResultSection
 
-              title="البطاريات المناسبة"
+          title="الإطارات المناسبة"
 
-              products={result.batteries}
+          products={result.tires} />
 
-            />
+        
 
             <ResultSection
 
-              title="الزيوت المناسبة"
+          title="البطاريات المناسبة"
 
-              products={result.oils}
+          products={result.batteries} />
 
-            />
+        
+
+            <ResultSection
+
+          title="الزيوت المناسبة"
+
+          products={result.oils} />
+
+        
 
           </div>
 
-        )
+
 
       }
 
-    </section>
+    </section>);
 
-  )
+
 
 }
 
@@ -377,80 +407,110 @@ function ResultSection({
         text-yellow-400
       ">
 
+
+
+
+        
+
         {title}
 
       </h3>
 
       {
 
-        products.length === 0 ? (
+      products.length === 0 ?
 
-          <div className="
+      <div className="
             bg-slate-800
             rounded-2xl
             p-5
           ">
 
+
+
+        
+
             لا توجد منتجات مطابقة.
 
-          </div>
+          </div> :
 
-        ) : (
 
-          <div className="
+
+      <div className="
             grid
             md:grid-cols-2
             xl:grid-cols-3
             gap-5
           ">
 
+
+
+
+        
+
             {
 
-              products.map(product => (
+        products.map((product) =>
 
-                <div
+        <div
 
-                  key={product.id}
+          key={product.id}
 
-                  className="
+          className="
                     bg-slate-800
                     rounded-2xl
                     p-5
                     border
                     border-slate-700
-                  "
+                  ">
 
-                >
+
+
+
+
+
+
+          
 
                   {
 
-                    product.image && (
+          product.image &&
 
-                      <img
+          <img
 
-                        src={product.image}
+            src={product.image}
 
-                        alt={product.name}
+            alt={product.name}
 
-                        className="
+            className="
                           w-full
                           h-44
                           object-cover
                           rounded-xl
                           mb-4
-                        "
+                        " />
 
-                      />
 
-                    )
 
-                  }
+
+
+
+
+
+
+
+
+          }
 
                   <div className="
                     text-xl
                     font-black
                     mb-2
                   ">
+
+
+
+            
 
                     {product.name}
 
@@ -462,13 +522,13 @@ function ResultSection({
 
                     {
 
-                      product.salePrice ??
+            product.salePrice ??
 
-                      product.price ??
+            product.price ??
 
-                      0
+            0
 
-                    }
+            }
 
                     ج.م
 
@@ -476,9 +536,9 @@ function ResultSection({
 
                   {
 
-                    product.productionDate && (
+          product.productionDate &&
 
-                      <div>
+          <div>
 
                         تاريخ الإنتاج:
 
@@ -486,24 +546,24 @@ function ResultSection({
 
                       </div>
 
-                    )
 
-                  }
+
+          }
 
                 </div>
 
-              ))
+        )
 
-            }
+        }
 
           </div>
 
-        )
+
 
       }
 
-    </div>
+    </div>);
 
-  )
+
 
 }

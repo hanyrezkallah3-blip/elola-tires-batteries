@@ -1,113 +1,113 @@
-import { useMemo } from 'react'
+import { useUserStore } from "../store/userStore";import { useWalletStore } from "../store/walletStore";import { useOrderStore } from "../store/orderStore";import { useProductStore } from "../store/productStore";import { useMemo } from 'react';
 
-import PredictiveERP
-  from '../ai/PredictiveERP'
+import PredictiveERP from
+'../ai/PredictiveERP';
 
-import BusinessIntelligenceEngine
-  from '../ai/BusinessIntelligenceEngine'
+import BusinessIntelligenceEngine from
+'../ai/BusinessIntelligenceEngine';
 
-import SAPSupervisor
-  from '../ai/SAPSupervisor'
+import SAPSupervisor from
+'../ai/SAPSupervisor';
 
-import { useWebsiteStore }
-  from '../store/websiteStore'
 
-import { useInventoryStore }
-  from '../store/inventoryStore'
+
+
+import { useInventoryStore } from
+'../store/inventoryStore';
 
 export default function SAPExecutiveCenter() {
 
   const products =
-    useWebsiteStore(
-      (s) => s.products || []
-    )
+  useProductStore(
+    (s) => s.products || []
+  );
 
   const orders =
-    useWebsiteStore(
-      (s) => s.orders || []
-    )
+  useOrderStore(
+    (s) => s.orders || []
+  );
 
   const wallets =
-    useWebsiteStore(
-      (s) => s.wallets || []
-    )
+  useWalletStore(
+    (s) => s.wallets || []
+  );
 
   const users =
-    useWebsiteStore(
-      (s) => s.users || []
-    )
+  useUserStore(
+    (s) => s.users || []
+  );
 
   const warehouses =
-    useInventoryStore(
-      (s) => s.warehouses || []
-    )
+  useInventoryStore(
+    (s) => s.warehouses || []
+  );
 
   const stockItems =
-    useInventoryStore(
-      (s) => s.stockItems || []
-    )
+  useInventoryStore(
+    (s) => s.stockItems || []
+  );
 
   const predictive =
-    useMemo(() => {
+  useMemo(() => {
 
-      return PredictiveERP
-        .generatePredictiveReport()
+    return PredictiveERP.
+    generatePredictiveReport();
 
-    }, [])
+  }, []);
 
   const business =
-    useMemo(() => {
+  useMemo(() => {
 
-      return BusinessIntelligenceEngine
-        .generateReport()
+    return BusinessIntelligenceEngine.
+    generateReport();
 
-    }, [])
+  }, []);
 
   const supervisor =
-    useMemo(() => {
+  useMemo(() => {
 
-      return SAPSupervisor.run()
+    return SAPSupervisor.run();
 
-    }, [])
+  }, []);
 
   const totalSales =
-    orders.reduce(
+  orders.reduce(
 
-      (acc, order) =>
+    (acc, order) =>
 
-        acc +
-        Number(order.total || 0),
+    acc +
+    Number(order.total || 0),
 
-      0
+    0
 
-    )
+  );
 
   const totalStockValue =
-    stockItems.reduce(
+  stockItems.reduce(
 
-      (acc, item) =>
+    (acc, item) =>
 
-        acc +
+    acc +
 
-        Number(item.quantity || 0) *
+    Number(item.quantity || 0) *
 
-        Number(item.price || 0),
+    Number(item.price || 0),
 
-      0
+    0
 
-    )
+  );
 
   const totalWallets =
-    wallets.reduce(
+  wallets.reduce(
 
-      (acc, wallet) =>
+    (acc, wallet) =>
 
-        acc +
-        Number(wallet.balance || 0),
+    acc +
+    Number(wallet.balance || 0),
 
-      0
+    0
 
-    )
+  );
 
   return (
 
@@ -119,6 +119,34 @@ export default function SAPExecutiveCenter() {
       lg:p-10
       space-y-10
     ">
+
+
+
+
+
+
+      
+
+
+
+
+
+
+      
+
+
+
+
+
+
+      
+
+
+
+
+
+
+      
 
       {/* HEADER */}
 
@@ -132,10 +160,54 @@ export default function SAPExecutiveCenter() {
         shadow-2xl
       ">
 
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+
         <h1 className="
           text-5xl
           font-black
         ">
+
+
+          
+
+
+          
+
+
+          
+
+
+          
 
           👑 SAP Executive Center
 
@@ -146,6 +218,22 @@ export default function SAPExecutiveCenter() {
           text-xl
           text-white/90
         ">
+
+
+
+          
+
+
+
+          
+
+
+
+          
+
+
+
+          
 
           مركز الإدارة العليا والذكاء التنفيذي
 
@@ -162,11 +250,47 @@ export default function SAPExecutiveCenter() {
         gap-6
       ">
 
+
+
+
+        
+
+
+
+
+        
+
+
+
+
+        
+
+
+
+
+        
+
         <div className="
           bg-green-700
           p-8
           rounded-3xl
         ">
+
+
+
+          
+
+
+
+          
+
+
+
+          
+
+
+
+          
 
           <div>إجمالي المبيعات</div>
 
@@ -175,6 +299,22 @@ export default function SAPExecutiveCenter() {
             font-black
             mt-4
           ">
+
+
+
+            
+
+
+
+            
+
+
+
+            
+
+
+
+            
 
             {totalSales}
 
@@ -188,6 +328,22 @@ export default function SAPExecutiveCenter() {
           rounded-3xl
         ">
 
+
+
+          
+
+
+
+          
+
+
+
+          
+
+
+
+          
+
           <div>قيمة المخزون</div>
 
           <div className="
@@ -195,6 +351,22 @@ export default function SAPExecutiveCenter() {
             font-black
             mt-4
           ">
+
+
+
+            
+
+
+
+            
+
+
+
+            
+
+
+
+            
 
             {Math.round(
               totalStockValue
@@ -210,6 +382,22 @@ export default function SAPExecutiveCenter() {
           rounded-3xl
         ">
 
+
+
+          
+
+
+
+          
+
+
+
+          
+
+
+
+          
+
           <div>المحافظ</div>
 
           <div className="
@@ -217,6 +405,22 @@ export default function SAPExecutiveCenter() {
             font-black
             mt-4
           ">
+
+
+
+            
+
+
+
+            
+
+
+
+            
+
+
+
+            
 
             {Math.round(
               totalWallets
@@ -233,6 +437,26 @@ export default function SAPExecutiveCenter() {
           rounded-3xl
         ">
 
+
+
+
+          
+
+
+
+
+          
+
+
+
+
+          
+
+
+
+
+          
+
           <div>المستخدمون</div>
 
           <div className="
@@ -240,6 +464,22 @@ export default function SAPExecutiveCenter() {
             font-black
             mt-4
           ">
+
+
+
+            
+
+
+
+            
+
+
+
+            
+
+
+
+            
 
             {users.length}
 
@@ -257,12 +497,48 @@ export default function SAPExecutiveCenter() {
         p-8
       ">
 
+
+
+        
+
+
+
+        
+
+
+
+        
+
+
+
+        
+
         <h2 className="
           text-3xl
           font-black
           text-cyan-400
           mb-8
         ">
+
+
+
+
+          
+
+
+
+
+          
+
+
+
+
+          
+
+
+
+
+          
 
           🧠 SAP Supervisor
 
@@ -272,6 +548,18 @@ export default function SAPExecutiveCenter() {
           whitespace-pre-wrap
           text-green-400
         ">
+
+
+          
+
+
+          
+
+
+          
+
+
+          
 
           {JSON.stringify(
             supervisor,
@@ -291,12 +579,48 @@ export default function SAPExecutiveCenter() {
         p-8
       ">
 
+
+
+        
+
+
+
+        
+
+
+
+        
+
+
+
+        
+
         <h2 className="
           text-3xl
           font-black
           text-yellow-400
           mb-8
         ">
+
+
+
+
+          
+
+
+
+
+          
+
+
+
+
+          
+
+
+
+
+          
 
           🔮 Predictive ERP
 
@@ -308,16 +632,60 @@ export default function SAPExecutiveCenter() {
           gap-8
         ">
 
+
+
+          
+
+
+
+          
+
+
+
+          
+
+
+
+          
+
           <div className="
             bg-slate-800
             rounded-3xl
             p-6
           ">
 
+
+
+            
+
+
+
+            
+
+
+
+            
+
+
+
+            
+
             <div className="
               text-xl
               font-bold
             ">
+
+
+              
+
+
+              
+
+
+              
+
+
+              
 
               الإيراد المتوقع
 
@@ -329,6 +697,26 @@ export default function SAPExecutiveCenter() {
               mt-4
               text-green-400
             ">
+
+
+
+
+              
+
+
+
+
+              
+
+
+
+
+              
+
+
+
+
+              
 
               {predictive.monthlyRevenue}
 
@@ -342,10 +730,38 @@ export default function SAPExecutiveCenter() {
             p-6
           ">
 
+
+
+            
+
+
+
+            
+
+
+
+            
+
+
+
+            
+
             <div className="
               text-xl
               font-bold
             ">
+
+
+              
+
+
+              
+
+
+              
+
+
+              
 
               المنتجات المتوقع نفادها
 
@@ -358,15 +774,35 @@ export default function SAPExecutiveCenter() {
               text-red-400
             ">
 
+
+
+
+              
+
+
+
+
+              
+
+
+
+
+              
+
+
+
+
+              
+
               {
 
-                predictive
-                  .stockOutForecast
-                  ?.filter(
-                    item =>
-                      item.daysRemaining <= 30
-                  )
-                  .length
+              predictive.
+              stockOutForecast?.
+              filter(
+                (item) =>
+                item.daysRemaining <= 30
+              ).
+              length
 
               }
 
@@ -386,12 +822,48 @@ export default function SAPExecutiveCenter() {
         p-8
       ">
 
+
+
+        
+
+
+
+        
+
+
+
+        
+
+
+
+        
+
         <h2 className="
           text-3xl
           font-black
           text-green-400
           mb-8
         ">
+
+
+
+
+          
+
+
+
+
+          
+
+
+
+
+          
+
+
+
+
+          
 
           📈 Business Intelligence
 
@@ -403,11 +875,43 @@ export default function SAPExecutiveCenter() {
           gap-6
         ">
 
+
+
+          
+
+
+
+          
+
+
+
+          
+
+
+
+          
+
           <div className="
             bg-slate-800
             p-6
             rounded-3xl
           ">
+
+
+
+            
+
+
+
+            
+
+
+
+            
+
+
+
+            
 
             <div>
 
@@ -421,11 +925,27 @@ export default function SAPExecutiveCenter() {
               mt-4
             ">
 
+
+
+              
+
+
+
+              
+
+
+
+              
+
+
+
+              
+
               {
 
-                business
-                  .topProducts
-                  ?.length || 0
+              business.
+              topProducts?.
+              length || 0
 
               }
 
@@ -438,6 +958,22 @@ export default function SAPExecutiveCenter() {
             p-6
             rounded-3xl
           ">
+
+
+
+            
+
+
+
+            
+
+
+
+            
+
+
+
+            
 
             <div>
 
@@ -451,11 +987,27 @@ export default function SAPExecutiveCenter() {
               mt-4
             ">
 
+
+
+              
+
+
+
+              
+
+
+
+              
+
+
+
+              
+
               {
 
-                business
-                  .purchaseSuggestions
-                  ?.length || 0
+              business.
+              purchaseSuggestions?.
+              length || 0
 
               }
 
@@ -469,6 +1021,22 @@ export default function SAPExecutiveCenter() {
             rounded-3xl
           ">
 
+
+
+            
+
+
+
+            
+
+
+
+            
+
+
+
+            
+
             <div>
 
               مخاطر المخزون
@@ -481,11 +1049,27 @@ export default function SAPExecutiveCenter() {
               mt-4
             ">
 
+
+
+              
+
+
+
+              
+
+
+
+              
+
+
+
+              
+
               {
 
-                business
-                  .stockRisk
-                  ?.length || 0
+              business.
+              stockRisk?.
+              length || 0
 
               }
 
@@ -506,11 +1090,47 @@ export default function SAPExecutiveCenter() {
         gap-6
       ">
 
+
+
+
+        
+
+
+
+
+        
+
+
+
+
+        
+
+
+
+
+        
+
         <div className="
           bg-slate-900
           p-6
           rounded-3xl
         ">
+
+
+
+          
+
+
+
+          
+
+
+
+          
+
+
+
+          
 
           🏭 المخازن
 
@@ -519,6 +1139,22 @@ export default function SAPExecutiveCenter() {
             font-black
             mt-4
           ">
+
+
+
+            
+
+
+
+            
+
+
+
+            
+
+
+
+            
 
             {warehouses.length}
 
@@ -532,6 +1168,22 @@ export default function SAPExecutiveCenter() {
           rounded-3xl
         ">
 
+
+
+          
+
+
+
+          
+
+
+
+          
+
+
+
+          
+
           📦 الأصناف
 
           <div className="
@@ -539,6 +1191,22 @@ export default function SAPExecutiveCenter() {
             font-black
             mt-4
           ">
+
+
+
+            
+
+
+
+            
+
+
+
+            
+
+
+
+            
 
             {products.length}
 
@@ -552,6 +1220,22 @@ export default function SAPExecutiveCenter() {
           rounded-3xl
         ">
 
+
+
+          
+
+
+
+          
+
+
+
+          
+
+
+
+          
+
           🛒 الطلبات
 
           <div className="
@@ -559,6 +1243,22 @@ export default function SAPExecutiveCenter() {
             font-black
             mt-4
           ">
+
+
+
+            
+
+
+
+            
+
+
+
+            
+
+
+
+            
 
             {orders.length}
 
@@ -572,6 +1272,22 @@ export default function SAPExecutiveCenter() {
           rounded-3xl
         ">
 
+
+
+          
+
+
+
+          
+
+
+
+          
+
+
+
+          
+
           📋 المخزون
 
           <div className="
@@ -579,6 +1295,22 @@ export default function SAPExecutiveCenter() {
             font-black
             mt-4
           ">
+
+
+
+            
+
+
+
+            
+
+
+
+            
+
+
+
+            
 
             {stockItems.length}
 
@@ -588,8 +1320,8 @@ export default function SAPExecutiveCenter() {
 
       </div>
 
-    </div>
+    </div>);
 
-  )
+
 
 }

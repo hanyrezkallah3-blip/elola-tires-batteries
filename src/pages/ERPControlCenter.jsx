@@ -1,105 +1,105 @@
-import { useMemo } from 'react'
+import { useUserStore } from "../store/userStore";import { useOrderStore } from "../store/orderStore";import { useProductStore } from "../store/productStore";import { useMemo } from 'react';
 
-import AICommandCenter
-  from '../ai/AICommandCenter'
+import AICommandCenter from
+'../ai/AICommandCenter';
 
-import { useWebsiteStore }
-  from '../store/websiteStore'
+import { useWebsiteStore } from
+'../store/websiteStore';
 
-import { useInventoryStore }
-  from '../store/inventoryStore'
+import { useInventoryStore } from
+'../store/inventoryStore';
 
-import { useAnalyticsStore }
-  from '../store/analyticsStore'
+import { useAnalyticsStore } from
+'../store/analyticsStore';
 
 export default function ERPControlCenter() {
 
   const products =
-    useWebsiteStore(
-      s => s.products || []
-    )
+  useProductStore(
+    (s) => s.products || []
+  );
 
   const orders =
-    useWebsiteStore(
-      s => s.orders || []
-    )
+  useOrderStore(
+    (s) => s.orders || []
+  );
 
   const notifications =
-    useWebsiteStore(
-      s => s.notifications || []
-    )
+  useWebsiteStore(
+    (s) => s.notifications || []
+  );
 
   const users =
-    useWebsiteStore(
-      s => s.users || []
-    )
+  useUserStore(
+    (s) => s.users || []
+  );
 
   const warehouses =
-    useInventoryStore(
-      s => s.warehouses || []
-    )
+  useInventoryStore(
+    (s) => s.warehouses || []
+  );
 
   const stockItems =
-    useInventoryStore(
-      s => s.stockItems || []
-    )
+  useInventoryStore(
+    (s) => s.stockItems || []
+  );
 
   const stockMovements =
-    useInventoryStore(
-      s => s.stockMovements || []
-    )
+  useInventoryStore(
+    (s) => s.stockMovements || []
+  );
 
   const erpSummary =
-    useAnalyticsStore(
-      s => s.erpSummary || {}
-    )
+  useAnalyticsStore(
+    (s) => s.erpSummary || {}
+  );
 
   const status =
-    useMemo(() => {
+  useMemo(() => {
 
-      return AICommandCenter.getStatus()
+    return AICommandCenter.getStatus();
 
-    }, [])
+  }, []);
 
   const cards = [
 
-    {
-      title: 'المخازن',
-      value: warehouses.length,
-      color: 'bg-blue-700'
-    },
+  {
+    title: 'المخازن',
+    value: warehouses.length,
+    color: 'bg-blue-700'
+  },
 
-    {
-      title: 'المنتجات',
-      value: products.length,
-      color: 'bg-green-700'
-    },
+  {
+    title: 'المنتجات',
+    value: products.length,
+    color: 'bg-green-700'
+  },
 
-    {
-      title: 'الطلبات',
-      value: orders.length,
-      color: 'bg-yellow-500 text-black'
-    },
+  {
+    title: 'الطلبات',
+    value: orders.length,
+    color: 'bg-yellow-500 text-black'
+  },
 
-    {
-      title: 'المستخدمون',
-      value: users.length,
-      color: 'bg-purple-700'
-    },
+  {
+    title: 'المستخدمون',
+    value: users.length,
+    color: 'bg-purple-700'
+  },
 
-    {
-      title: 'الحركات المخزنية',
-      value: stockMovements.length,
-      color: 'bg-cyan-700'
-    },
+  {
+    title: 'الحركات المخزنية',
+    value: stockMovements.length,
+    color: 'bg-cyan-700'
+  },
 
-    {
-      title: 'الإشعارات',
-      value: notifications.length,
-      color: 'bg-red-700'
-    }
+  {
+    title: 'الإشعارات',
+    value: notifications.length,
+    color: 'bg-red-700'
+  }];
 
-  ]
+
 
   return (
 
@@ -112,6 +112,27 @@ export default function ERPControlCenter() {
       space-y-8
     ">
 
+
+
+
+
+
+      
+
+
+
+
+
+
+      
+
+
+
+
+
+
+      
+
       <div className="
         bg-gradient-to-r
         from-slate-950
@@ -122,11 +143,47 @@ export default function ERPControlCenter() {
         shadow-2xl
       ">
 
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+
         <h1 className="
           text-5xl
           font-black
           text-white
         ">
+
+
+
+          
+
+
+
+          
+
+
+
+          
 
           SAP ERP Control Center
 
@@ -137,6 +194,18 @@ export default function ERPControlCenter() {
           text-xl
           text-white/80
         ">
+
+
+
+          
+
+
+
+          
+
+
+
+          
 
           مركز التحكم الذكي للنظام
 
@@ -154,6 +223,24 @@ export default function ERPControlCenter() {
         gap-6
       ">
 
+
+
+
+
+        
+
+
+
+
+
+        
+
+
+
+
+
+        
+
         <div className="
           bg-slate-900
           p-6
@@ -161,6 +248,24 @@ export default function ERPControlCenter() {
           border
           border-slate-700
         ">
+
+
+
+
+
+          
+
+
+
+
+
+          
+
+
+
+
+
+          
 
           <div className="text-xl font-black">
 
@@ -175,9 +280,24 @@ export default function ERPControlCenter() {
             text-green-400
           ">
 
-            {status.running
-              ? 'RUNNING'
-              : 'STOPPED'}
+
+
+
+            
+
+
+
+
+            
+
+
+
+
+            
+
+            {status.running ?
+            'RUNNING' :
+            'STOPPED'}
 
           </div>
 
@@ -190,6 +310,24 @@ export default function ERPControlCenter() {
           border
           border-slate-700
         ">
+
+
+
+
+
+          
+
+
+
+
+
+          
+
+
+
+
+
+          
 
           <div className="text-xl font-black">
 
@@ -204,9 +342,24 @@ export default function ERPControlCenter() {
             text-cyan-400
           ">
 
-            {status.bridge
-              ? 'ACTIVE'
-              : 'OFF'}
+
+
+
+            
+
+
+
+
+            
+
+
+
+
+            
+
+            {status.bridge ?
+            'ACTIVE' :
+            'OFF'}
 
           </div>
 
@@ -219,6 +372,24 @@ export default function ERPControlCenter() {
           border
           border-slate-700
         ">
+
+
+
+
+
+          
+
+
+
+
+
+          
+
+
+
+
+
+          
 
           <div className="text-xl font-black">
 
@@ -233,9 +404,24 @@ export default function ERPControlCenter() {
             text-yellow-400
           ">
 
-            {status.autoPilot
-              ? 'ACTIVE'
-              : 'OFF'}
+
+
+
+            
+
+
+
+
+            
+
+
+
+
+            
+
+            {status.autoPilot ?
+            'ACTIVE' :
+            'OFF'}
 
           </div>
 
@@ -248,6 +434,24 @@ export default function ERPControlCenter() {
           border
           border-slate-700
         ">
+
+
+
+
+
+          
+
+
+
+
+
+          
+
+
+
+
+
+          
 
           <div className="text-xl font-black">
 
@@ -262,9 +466,24 @@ export default function ERPControlCenter() {
             text-purple-400
           ">
 
-            {status.warehouseAI
-              ? 'ACTIVE'
-              : 'OFF'}
+
+
+
+            
+
+
+
+
+            
+
+
+
+
+            
+
+            {status.warehouseAI ?
+            'ACTIVE' :
+            'OFF'}
 
           </div>
 
@@ -282,23 +501,53 @@ export default function ERPControlCenter() {
         gap-6
       ">
 
-        {cards.map((card, index) => (
 
-          <div
-            key={index}
-            className={`
+
+
+
+        
+
+
+
+
+
+        
+
+
+
+
+
+        
+
+        {cards.map((card, index) =>
+
+        <div
+          key={index}
+          className={`
               ${card.color}
               p-8
               rounded-3xl
               shadow-2xl
-            `}
-          >
+            `}>
+          
 
             <div className="
               text-2xl
               font-green
               mb-4
             ">
+
+
+
+            
+
+
+
+            
+
+
+
+            
 
               {card.title}
 
@@ -309,13 +558,22 @@ export default function ERPControlCenter() {
               font-black
             ">
 
+
+            
+
+
+            
+
+
+            
+
               {card.value}
 
             </div>
 
           </div>
 
-        ))}
+        )}
 
       </div>
 
@@ -329,12 +587,45 @@ export default function ERPControlCenter() {
         border-slate-700
       ">
 
+
+
+
+
+        
+
+
+
+
+
+        
+
+
+
+
+
+        
+
         <h2 className="
           text-3xl
           font-black
           mb-8
           text-yellow-400
         ">
+
+
+
+
+          
+
+
+
+
+          
+
+
+
+
+          
 
           ERP Summary
 
@@ -346,6 +637,21 @@ export default function ERPControlCenter() {
           lg:grid-cols-4
           gap-6
         ">
+
+
+
+
+          
+
+
+
+
+          
+
+
+
+
+          
 
           <div>
             <div>إجمالي المبيعات</div>
@@ -389,11 +695,41 @@ export default function ERPControlCenter() {
         border-slate-700
       ">
 
+
+
+
+
+        
+
+
+
+
+
+        
+
+
+
+
+
+        
+
         <h2 className="
           text-3xl
           font-black
           mb-8
         ">
+
+
+
+          
+
+
+
+          
+
+
+
+          
 
           Inventory Overview
 
@@ -404,12 +740,30 @@ export default function ERPControlCenter() {
           font-bold
         ">
 
+
+          
+
+
+          
+
+
+          
+
           عدد الأصناف المخزنية:
 
           <span className="
             text-yellow-400
             mr-3
           ">
+
+
+            
+
+
+            
+
+
+            
 
             {stockItems.length}
 
@@ -419,8 +773,8 @@ export default function ERPControlCenter() {
 
       </div>
 
-    </div>
+    </div>);
 
-  )
+
 
 }

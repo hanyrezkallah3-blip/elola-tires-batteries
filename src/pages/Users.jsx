@@ -1,72 +1,72 @@
-import { useMemo, useState } from 'react'
-import { useWebsiteStore } from '../store/websiteStore'
+import { useUserStore } from "../store/userStore";import { useMemo, useState } from 'react';
+
 
 const DEFAULT_ROLES = [
-  'owner',
-  'warehouse',
-  'branch',
-  'shop',
-  'service',
-  'cashier'
-]
+'owner',
+'warehouse',
+'branch',
+'shop',
+'service',
+'cashier'];
+
 
 export default function Users() {
 
   const users =
-    useWebsiteStore((s) => s.users || [])
+  useUserStore((s) => s.users || []);
 
   const setUsers =
-    useWebsiteStore((s) => s.setUsers)
+  useUserStore((s) => s.setUsers);
 
   const currentUser =
-    useWebsiteStore((s) => s.currentUser)
+  useUserStore((s) => s.currentUser);
 
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState('');
 
   const [newUser, setNewUser] = useState({
     username: '',
     password: '',
     role: 'warehouse',
     warehouseName: ''
-  })
+  });
 
   // ================= SECURITY =================
 
-  const isOwner = currentUser?.role === 'owner'
+  const isOwner = currentUser?.role === 'owner';
 
   // ================= FILTER USERS =================
 
   const filteredUsers = useMemo(() => {
 
-    const q = search.toLowerCase()
+    const q = search.toLowerCase();
 
     return (users || []).filter((user) => {
       return (
         (user.username || '').toLowerCase().includes(q) ||
         (user.role || '').toLowerCase().includes(q) ||
-        (user.warehouseName || '').toLowerCase().includes(q)
-      )
-    })
+        (user.warehouseName || '').toLowerCase().includes(q));
 
-  }, [users, search])
+    });
+
+  }, [users, search]);
 
   // ================= ADD USER =================
 
   const addUser = () => {
 
-    if (!isOwner) return
+    if (!isOwner) return;
 
-    if (!newUser.username.trim()) return
-    if (!newUser.password.trim()) return
+    if (!newUser.username.trim()) return;
+    if (!newUser.password.trim()) return;
 
     const exists = users.some(
       (u) =>
-        u.username?.toLowerCase() === newUser.username.toLowerCase()
-    )
+      u.username?.toLowerCase() === newUser.username.toLowerCase()
+    );
 
     if (exists) {
-      alert('المستخدم موجود بالفعل')
-      return
+      alert('المستخدم موجود بالفعل');
+      return;
     }
 
     const user = {
@@ -76,29 +76,29 @@ export default function Users() {
       role: newUser.role,
       warehouseName: newUser.warehouseName,
       permissions: []
-    }
+    };
 
-    setUsers([...users, user])
+    setUsers([...users, user]);
 
     setNewUser({
       username: '',
       password: '',
       role: 'warehouse',
       warehouseName: ''
-    })
-  }
+    });
+  };
 
   // ================= DELETE USER =================
 
   const deleteUser = (id) => {
 
-    if (!isOwner) return
+    if (!isOwner) return;
 
-    const ok = window.confirm('هل تريد حذف المستخدم؟')
-    if (!ok) return
+    const ok = window.confirm('هل تريد حذف المستخدم؟');
+    if (!ok) return;
 
-    setUsers(users.filter((u) => u.id !== id))
-  }
+    setUsers(users.filter((u) => u.id !== id));
+  };
 
   // ================= ACCESS CONTROL =================
 
@@ -108,8 +108,8 @@ export default function Users() {
         <div className="bg-red-900/30 border border-red-500 text-red-300 p-4 rounded-xl">
           لا تملك صلاحية الوصول
         </div>
-      </div>
-    )
+      </div>);
+
   }
 
   // ================= UI =================
@@ -140,12 +140,12 @@ export default function Users() {
           placeholder="اسم المستخدم"
           value={newUser.username}
           onChange={(e) =>
-            setNewUser({
-              ...newUser,
-              username: e.target.value
-            })
-          }
-        />
+          setNewUser({
+            ...newUser,
+            username: e.target.value
+          })
+          } />
+        
 
         <input
           className="w-full p-3 rounded-xl bg-black border border-slate-700 text-white"
@@ -153,28 +153,28 @@ export default function Users() {
           type="password"
           value={newUser.password}
           onChange={(e) =>
-            setNewUser({
-              ...newUser,
-              password: e.target.value
-            })
-          }
-        />
+          setNewUser({
+            ...newUser,
+            password: e.target.value
+          })
+          } />
+        
 
         <select
           className="w-full p-3 rounded-xl bg-black border border-slate-700 text-white"
           value={newUser.role}
           onChange={(e) =>
-            setNewUser({
-              ...newUser,
-              role: e.target.value
-            })
-          }
-        >
-          {DEFAULT_ROLES.map((role) => (
-            <option key={role} value={role}>
+          setNewUser({
+            ...newUser,
+            role: e.target.value
+          })
+          }>
+          
+          {DEFAULT_ROLES.map((role) =>
+          <option key={role} value={role}>
               {role}
             </option>
-          ))}
+          )}
         </select>
 
         <input
@@ -182,17 +182,17 @@ export default function Users() {
           placeholder="المخزن / الفرع"
           value={newUser.warehouseName}
           onChange={(e) =>
-            setNewUser({
-              ...newUser,
-              warehouseName: e.target.value
-            })
-          }
-        />
+          setNewUser({
+            ...newUser,
+            warehouseName: e.target.value
+          })
+          } />
+        
 
         <button
           onClick={addUser}
-          className="w-full bg-yellow-500 text-black font-black py-3 rounded-xl"
-        >
+          className="w-full bg-yellow-500 text-black font-black py-3 rounded-xl">
+          
           إضافة مستخدم
         </button>
       </div>
@@ -203,8 +203,8 @@ export default function Users() {
           className="w-full p-3 rounded-xl bg-black border border-slate-700 text-white"
           placeholder="بحث..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+          onChange={(e) => setSearch(e.target.value)} />
+        
       </div>
 
       {/* TABLE */}
@@ -223,8 +223,8 @@ export default function Users() {
 
           <tbody>
 
-            {filteredUsers.map((user) => (
-              <tr key={user.id} className="border-b border-slate-800">
+            {filteredUsers.map((user) =>
+            <tr key={user.id} className="border-b border-slate-800">
 
                 <td className="p-3">{user.username}</td>
                 <td className="p-3 text-cyan-400">{user.role}</td>
@@ -232,15 +232,15 @@ export default function Users() {
 
                 <td className="p-3">
                   <button
-                    onClick={() => deleteUser(user.id)}
-                    className="bg-red-600 px-3 py-2 rounded-lg font-bold"
-                  >
+                  onClick={() => deleteUser(user.id)}
+                  className="bg-red-600 px-3 py-2 rounded-lg font-bold">
+                  
                     حذف
                   </button>
                 </td>
 
               </tr>
-            ))}
+            )}
 
           </tbody>
 
@@ -248,6 +248,6 @@ export default function Users() {
 
       </div>
 
-    </div>
-  )
+    </div>);
+
 }

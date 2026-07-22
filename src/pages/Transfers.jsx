@@ -1,117 +1,117 @@
-import { useMemo, useState } from 'react'
-import { useInventoryStore } from '../store/inventoryStore'
-import { useWebsiteStore } from '../store/websiteStore'
+import { useUserStore } from "../store/userStore";import { useMemo, useState } from 'react';
+import { useInventoryStore } from '../store/inventoryStore';
+import { useWebsiteStore } from '../store/websiteStore';
 
 export default function Transfers() {
   const currentUser =
-    useWebsiteStore((s) => s.currentUser)
+  useUserStore((s) => s.currentUser);
 
   const warehouses =
-    useInventoryStore((s) => s.warehouses || [])
+  useInventoryStore((s) => s.warehouses || []);
 
   const stockItems =
-    useInventoryStore((s) => s.stockItems || [])
+  useInventoryStore((s) => s.stockItems || []);
 
   const transfers =
-    useInventoryStore((s) => s.transfers || [])
+  useInventoryStore((s) => s.transfers || []);
 
   const transferStock =
-    useInventoryStore((s) => s.transferStock)
+  useInventoryStore((s) => s.transferStock);
 
   const addNotification =
-    useWebsiteStore((s) => s.addNotification)
+  useWebsiteStore((s) => s.addNotification);
 
   const [form, setForm] = useState({
     itemId: '',
     toWarehouseId: '',
     quantity: 1
-  })
+  });
 
   const isOwner =
-    currentUser?.role === 'owner'
+  currentUser?.role === 'owner';
 
   const selectedItem = useMemo(() => {
     return stockItems.find(
       (i) =>
-        String(i.id) ===
-        String(form.itemId)
-    )
-  }, [stockItems, form.itemId])
+      String(i.id) ===
+      String(form.itemId)
+    );
+  }, [stockItems, form.itemId]);
 
   const sourceWarehouse = useMemo(() => {
     return warehouses.find(
       (w) =>
-        w.id ===
-        selectedItem?.warehouseId
-    )
-  }, [warehouses, selectedItem])
+      w.id ===
+      selectedItem?.warehouseId
+    );
+  }, [warehouses, selectedItem]);
 
   const availableWarehouses =
-    useMemo(() => {
-      if (!selectedItem) return []
+  useMemo(() => {
+    if (!selectedItem) return [];
 
-      return warehouses.filter(
-        (w) =>
-          w.id !==
-          selectedItem.warehouseId
-      )
-    }, [warehouses, selectedItem])
+    return warehouses.filter(
+      (w) =>
+      w.id !==
+      selectedItem.warehouseId
+    );
+  }, [warehouses, selectedItem]);
 
   const submitTransfer = () => {
     if (!isOwner) {
-      alert('هذه العملية للمالك فقط')
-      return
+      alert('هذه العملية للمالك فقط');
+      return;
     }
 
     if (!form.itemId) {
-      alert('اختر الصنف')
-      return
+      alert('اختر الصنف');
+      return;
     }
 
     if (!form.toWarehouseId) {
-      alert('اختر الجهة المحول إليها')
-      return
+      alert('اختر الجهة المحول إليها');
+      return;
     }
 
     if (
-      Number(form.quantity) <= 0
-    ) {
-      alert('أدخل كمية صحيحة')
-      return
+    Number(form.quantity) <= 0)
+    {
+      alert('أدخل كمية صحيحة');
+      return;
     }
 
     const result =
-      transferStock({
-        itemId: form.itemId,
-        toWarehouseId:
-          form.toWarehouseId,
-        quantity: Number(
-          form.quantity
-        )
-      })
+    transferStock({
+      itemId: form.itemId,
+      toWarehouseId:
+      form.toWarehouseId,
+      quantity: Number(
+        form.quantity
+      )
+    });
 
     if (!result) {
       alert(
         'فشل التحويل أو الكمية غير متاحة'
-      )
-      return
+      );
+      return;
     }
 
     if (addNotification) {
       addNotification(
         'تحويل مخزني',
         `تم تحويل ${form.quantity} من ${selectedItem?.productName}`
-      )
+      );
     }
 
     setForm({
       itemId: '',
       toWarehouseId: '',
       quantity: 1
-    })
+    });
 
-    alert('تم التحويل بنجاح')
-  }
+    alert('تم التحويل بنجاح');
+  };
 
   return (
     <div className="p-6 space-y-6 text-white">
@@ -135,23 +135,23 @@ export default function Transfers() {
         <select
           value={form.itemId}
           onChange={(e) =>
-            setForm({
-              ...form,
-              itemId:
-                e.target.value
-            })
+          setForm({
+            ...form,
+            itemId:
+            e.target.value
+          })
           }
-          className="w-full p-3 rounded-xl bg-black border border-slate-700 text-white"
-        >
+          className="w-full p-3 rounded-xl bg-black border border-slate-700 text-white">
+          
           <option value="">
             اختر المنتج
           </option>
 
-          {stockItems.map((item) => (
-            <option
-              key={item.id}
-              value={item.id}
-            >
+          {stockItems.map((item) =>
+          <option
+            key={item.id}
+            value={item.id}>
+            
               {item.productName}
               {' - '}
               {item.warehouseName}
@@ -160,11 +160,11 @@ export default function Transfers() {
               {' '}
               {item.quantity}
             </option>
-          ))}
+          )}
         </select>
 
-        {selectedItem && (
-          <div className="bg-black border border-slate-700 rounded-xl p-4">
+        {selectedItem &&
+        <div className="bg-black border border-slate-700 rounded-xl p-4">
 
             <div>
               الصنف:
@@ -182,60 +182,60 @@ export default function Transfers() {
               المصدر:
               {' '}
               {
-                selectedItem.warehouseName
-              }
+            selectedItem.warehouseName
+            }
             </div>
 
             <div>
               نوع الجهة:
               {' '}
               {
-                sourceWarehouse?.type ||
-                'warehouse'
-              }
+            sourceWarehouse?.type ||
+            'warehouse'
+            }
             </div>
 
           </div>
-        )}
+        }
 
         <select
           value={form.toWarehouseId}
           onChange={(e) =>
-            setForm({
-              ...form,
-              toWarehouseId:
-                e.target.value
-            })
+          setForm({
+            ...form,
+            toWarehouseId:
+            e.target.value
+          })
           }
-          className="w-full p-3 rounded-xl bg-black border border-slate-700 text-white"
-        >
+          className="w-full p-3 rounded-xl bg-black border border-slate-700 text-white">
+          
           <option value="">
             اختر الجهة المحول إليها
           </option>
 
           {availableWarehouses.map(
-            (warehouse) => (
-              <option
-                key={warehouse.id}
-                value={warehouse.id}
-              >
+            (warehouse) =>
+            <option
+              key={warehouse.id}
+              value={warehouse.id}>
+              
                 {warehouse.name}
                 {' - '}
                 {warehouse.type ===
-                'warehouse'
-                  ? 'مخزن'
-                  : warehouse.type ===
-                    'branch'
-                  ? 'فرع'
-                  : warehouse.type ===
-                    'shop'
-                  ? 'معرض'
-                  : warehouse.type ===
-                    'distributor'
-                  ? 'موزع معتمد'
-                  : warehouse.type}
+              'warehouse' ?
+              'مخزن' :
+              warehouse.type ===
+              'branch' ?
+              'فرع' :
+              warehouse.type ===
+              'shop' ?
+              'معرض' :
+              warehouse.type ===
+              'distributor' ?
+              'موزع معتمد' :
+              warehouse.type}
               </option>
-            )
+
           )}
         </select>
 
@@ -244,20 +244,20 @@ export default function Transfers() {
           min="1"
           value={form.quantity}
           onChange={(e) =>
-            setForm({
-              ...form,
-              quantity:
-                e.target.value
-            })
+          setForm({
+            ...form,
+            quantity:
+            e.target.value
+          })
           }
           className="w-full p-3 rounded-xl bg-black border border-slate-700 text-white"
-          placeholder="الكمية"
-        />
+          placeholder="الكمية" />
+        
 
         <button
           onClick={submitTransfer}
-          className="w-full bg-yellow-500 text-black font-black py-3 rounded-xl"
-        >
+          className="w-full bg-yellow-500 text-black font-black py-3 rounded-xl">
+          
           تنفيذ التحويل
         </button>
 
@@ -298,42 +298,42 @@ export default function Transfers() {
           <tbody>
 
             {(transfers || []).map(
-              (transfer) => (
-                <tr
-                  key={transfer.id}
-                  className="border-b border-slate-800"
-                >
+              (transfer) =>
+              <tr
+                key={transfer.id}
+                className="border-b border-slate-800">
+                
                   <td className="p-3">
                     {
-                      transfer.productName
-                    }
+                  transfer.productName
+                  }
                   </td>
 
                   <td className="p-3 text-cyan-400">
                     {
-                      transfer.fromWarehouseName
-                    }
+                  transfer.fromWarehouseName
+                  }
                   </td>
 
                   <td className="p-3 text-green-400">
                     {
-                      transfer.toWarehouseName
-                    }
+                  transfer.toWarehouseName
+                  }
                   </td>
 
                   <td className="p-3">
                     {
-                      transfer.quantity
-                    }
+                  transfer.quantity
+                  }
                   </td>
 
                   <td className="p-3 text-gray-500">
                     {
-                      transfer.createdAt
-                    }
+                  transfer.createdAt
+                  }
                   </td>
                 </tr>
-              )
+
             )}
 
           </tbody>
@@ -342,6 +342,6 @@ export default function Transfers() {
 
       </div>
 
-    </div>
-  )
+    </div>);
+
 }

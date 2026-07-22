@@ -1,44 +1,44 @@
-import { useMemo } from 'react'
-import { useWebsiteStore } from '../../store/websiteStore'
+import { useWalletStore } from "../store/walletStore";import { useOrderStore } from "../store/orderStore";import { useMemo } from 'react';
+import { useWebsiteStore } from '../../store/websiteStore';
 
 export default function FinanceCoreModule() {
 
   // ================= STORE =================
 
-  const orders = useWebsiteStore(s => s.orders || [])
-  const wallets = useWebsiteStore(s => s.wallets || [])
-  const transfers = useWebsiteStore(s => s.transfers || [])
-  const ledger = useWebsiteStore(s => s.ledger || [])
-  const walletTransactions = useWebsiteStore(s => s.walletTransactions || [])
+  const orders = useOrderStore((s) => s.orders || []);
+  const wallets = useWalletStore((s) => s.wallets || []);
+  const transfers = useWebsiteStore((s) => s.transfers || []);
+  const ledger = useWebsiteStore((s) => s.ledger || []);
+  const walletTransactions = useWalletStore((s) => s.walletTransactions || []);
 
-  const addLedgerEntry = useWebsiteStore(s => s.addLedgerEntry)
-  const applyCashback = useWebsiteStore(s => s.applyCashback)
+  const addLedgerEntry = useWebsiteStore((s) => s.addLedgerEntry);
+  const applyCashback = useWebsiteStore((s) => s.applyCashback);
 
   // ================= FINANCIAL CORE =================
 
   const totalSales = useMemo(
     () => orders.reduce((a, o) => a + Number(o.total || 0), 0),
     [orders]
-  )
+  );
 
   const walletBalance = useMemo(
     () => wallets.reduce((a, w) => a + Number(w.balance || 0), 0),
     [wallets]
-  )
+  );
 
   const totalCashback = useMemo(
     () => wallets.reduce((a, w) => a + Number(w.totalCashback || 0), 0),
     [wallets]
-  )
+  );
 
-  const totalTransfers = transfers.length
-  const totalTransactions = walletTransactions.length
+  const totalTransfers = transfers.length;
+  const totalTransactions = walletTransactions.length;
 
   // ================= ERP FINANCIAL ENGINE =================
 
-  const profit = totalSales - totalCashback
-  const liabilities = walletBalance
-  const cashFlow = profit - liabilities
+  const profit = totalSales - totalCashback;
+  const liabilities = walletBalance;
+  const cashFlow = profit - liabilities;
 
   // ================= CREATE FINANCIAL ENTRY =================
 
@@ -48,10 +48,10 @@ export default function FinanceCoreModule() {
       type: 'income',
       amount: totalSales,
       description: 'إجمالي المبيعات'
-    })
+    });
 
-    alert('💰 تم تسجيل الإيراد')
-  }
+    alert('💰 تم تسجيل الإيراد');
+  };
 
   const createExpense = () => {
 
@@ -59,30 +59,30 @@ export default function FinanceCoreModule() {
       type: 'expense',
       amount: totalCashback,
       description: 'الكاش باك والمدفوعات'
-    })
+    });
 
-    alert('💸 تم تسجيل المصروف')
-  }
+    alert('💸 تم تسجيل المصروف');
+  };
 
   // ================= APPLY CASHBACK SYSTEM =================
 
   const runCashbackEngine = () => {
 
-    orders.forEach(order => {
+    orders.forEach((order) => {
 
       if (order.customerPhone) {
 
         applyCashback(
           order.customerPhone,
           order.total
-        )
+        );
 
       }
 
-    })
+    });
 
-    alert('🎁 تم تطبيق نظام الكاش باك')
-  }
+    alert('🎁 تم تطبيق نظام الكاش باك');
+  };
 
   // ================= UI =================
 
@@ -120,22 +120,22 @@ export default function FinanceCoreModule() {
 
           <button
             onClick={createIncome}
-            className="bg-green-600 py-4 rounded-2xl font-black"
-          >
+            className="bg-green-600 py-4 rounded-2xl font-black">
+            
             💰 تسجيل الإيرادات
           </button>
 
           <button
             onClick={createExpense}
-            className="bg-red-600 py-4 rounded-2xl font-black"
-          >
+            className="bg-red-600 py-4 rounded-2xl font-black">
+            
             💸 تسجيل المصروفات
           </button>
 
           <button
             onClick={runCashbackEngine}
-            className="bg-yellow-500 text-black py-4 rounded-2xl font-black"
-          >
+            className="bg-yellow-500 text-black py-4 rounded-2xl font-black">
+            
             🎁 تشغيل الكاش باك
           </button>
 
@@ -150,16 +150,16 @@ export default function FinanceCoreModule() {
           📒 دفتر القيود المالية (Ledger)
         </h2>
 
-        {ledger.length === 0 && (
-          <div className="text-gray-500">
+        {ledger.length === 0 &&
+        <div className="text-gray-500">
             لا توجد قيود مالية
           </div>
-        )}
+        }
 
         <div className="space-y-4">
 
-          {ledger.map(entry => (
-            <div key={entry.id} className="bg-black p-4 rounded-xl border border-slate-700">
+          {ledger.map((entry) =>
+          <div key={entry.id} className="bg-black p-4 rounded-xl border border-slate-700">
 
               <div className="flex justify-between">
 
@@ -178,7 +178,7 @@ export default function FinanceCoreModule() {
               </div>
 
             </div>
-          ))}
+          )}
 
         </div>
 
@@ -201,8 +201,8 @@ export default function FinanceCoreModule() {
 
       </div>
 
-    </div>
-  )
+    </div>);
+
 }
 
 // ================= CARD =================
@@ -214,7 +214,7 @@ function Card({ title, value, color }) {
     emerald: 'border-emerald-500 text-emerald-400',
     yellow: 'border-yellow-500 text-yellow-400',
     purple: 'border-purple-500 text-purple-400'
-  }
+  };
 
   return (
     <div className={`bg-slate-900 p-6 rounded-2xl border ${colors[color]}`}>
@@ -222,6 +222,6 @@ function Card({ title, value, color }) {
       <div className="text-3xl font-black mt-3">
         {Number(value).toLocaleString()}
       </div>
-    </div>
-  )
+    </div>);
+
 }

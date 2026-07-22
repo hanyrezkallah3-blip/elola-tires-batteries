@@ -1,61 +1,61 @@
-import { useMemo, useState } from 'react'
+import { useProductStore } from "../store/productStore";import { useMemo, useState } from 'react';
 
-import { useWebsiteStore } from '../../store/websiteStore'
 
-import { vehicleDatabase } from '../../data/vehicleDatabase'
 
-import VehicleEngine from '../../engines/VehicleEngine'
+import { vehicleDatabase } from '../../data/vehicleDatabase';
+
+import VehicleEngine from '../../engines/VehicleEngine';
 
 export default function VehicleAISearch() {
 
   const products =
-    useWebsiteStore(
-      s => s.products || []
-    )
+  useProductStore(
+    (s) => s.products || []
+  );
 
   const [text, setText] =
-    useState('')
+  useState('');
 
   const result = useMemo(() => {
 
     if (!text.trim())
-      return null
+    return null;
 
     const lower =
-      text.toLowerCase()
+    text.toLowerCase();
 
-    const vehicle = vehicleDatabase.find(item => {
+    const vehicle = vehicleDatabase.find((item) => {
 
       return (
 
         lower.includes(
           item.make.toLowerCase()
-        )
+        ) &&
 
-        &&
+
 
         lower.includes(
           item.model.toLowerCase()
-        )
+        ) &&
 
-        &&
+
 
         lower.includes(
           String(item.yearFrom)
-        )
+        ) ||
 
-        ||
+
 
         lower.includes(
           String(item.yearTo)
-        )
+        ));
 
-      )
 
-    })
+
+    });
 
     if (!vehicle)
-      return null
+    return null;
 
     return VehicleEngine.search({
 
@@ -67,15 +67,15 @@ export default function VehicleAISearch() {
 
       products
 
-    })
+    });
 
   }, [
 
-    text,
+  text,
 
-    products
+  products]
 
-  ])
+  );
 
   return (
 
@@ -88,11 +88,22 @@ export default function VehicleAISearch() {
       p-8
     ">
 
+
+
+
+
+
+      
+
       <h2 className="
         text-3xl
         font-black
         mb-3
       ">
+
+
+
+        
 
         🤖 اسأل الذكاء الاصطناعي
 
@@ -102,6 +113,9 @@ export default function VehicleAISearch() {
         text-gray-400
         mb-6
       ">
+
+
+        
 
         مثال:
 
@@ -117,13 +131,13 @@ export default function VehicleAISearch() {
 
         value={text}
 
-        onChange={e =>
+        onChange={(e) =>
 
-          setText(
+        setText(
 
-            e.target.value
+          e.target.value
 
-          )
+        )
 
         }
 
@@ -137,15 +151,21 @@ export default function VehicleAISearch() {
           p-5
           text-black
           font-bold
-        "
+        " />
 
-      />
+
+
+
+
+
+
+      
 
       {
 
-        result && (
+      result &&
 
-          <div className="
+      <div className="
 
             mt-8
 
@@ -153,39 +173,45 @@ export default function VehicleAISearch() {
 
           ">
 
-            <Products
 
-              title="الإطارات"
 
-              products={result.tires}
 
-            />
+
+        
 
             <Products
 
-              title="البطاريات"
+          title="الإطارات"
 
-              products={result.batteries}
+          products={result.tires} />
 
-            />
+        
 
             <Products
 
-              title="الزيوت"
+          title="البطاريات"
 
-              products={result.oils}
+          products={result.batteries} />
 
-            />
+        
+
+            <Products
+
+          title="الزيوت"
+
+          products={result.oils} />
+
+        
 
           </div>
 
-        )
+
 
       }
 
-    </section>
+    </section>);
 
-  )
+
 
 }
 
@@ -208,57 +234,78 @@ function Products({
         mb-5
       ">
 
+
+
+
+        
+
         {title}
 
       </h3>
 
       {
 
-        products.length === 0
+      products.length === 0 ?
 
-        ? (
 
-          <div className="
+
+      <div className="
             bg-slate-800
             rounded-2xl
             p-5
           ">
 
+
+
+        
+
             لا توجد نتائج.
 
-          </div>
+          </div> :
 
-        )
 
-        : (
 
-          <div className="
+
+
+      <div className="
             grid
             md:grid-cols-2
             xl:grid-cols-3
             gap-5
           ">
 
+
+
+
+        
+
             {
 
-              products.map(product => (
+        products.map((product) =>
 
-                <div
+        <div
 
-                  key={product.id}
+          key={product.id}
 
-                  className="
+          className="
                     bg-slate-800
                     rounded-2xl
                     p-5
-                  "
+                  ">
 
-                >
+
+
+
+
+          
 
                   <div className="
                     text-xl
                     font-black
                   ">
+
+
+            
 
                     {product.name}
 
@@ -270,11 +317,11 @@ function Products({
 
                     {
 
-                      product.salePrice ??
+            product.salePrice ??
 
-                      product.price
+            product.price
 
-                    }
+            }
 
                     ج.م
 
@@ -282,18 +329,18 @@ function Products({
 
                 </div>
 
-              ))
+        )
 
-            }
+        }
 
           </div>
 
-        )
+
 
       }
 
-    </div>
+    </div>);
 
-  )
+
 
 }

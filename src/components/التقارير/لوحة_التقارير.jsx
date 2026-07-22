@@ -1,29 +1,29 @@
-import { useEffect } from 'react'
-import { useWebsiteStore } from '../../store/websiteStore'
-import { useReportsStore } from '../../store/التقارير_العربية'
+import { useOrderStore } from "../store/orderStore";import { useProductStore } from "../store/productStore";import { useEffect } from 'react';
+import { useWebsiteStore } from '../../store/websiteStore';
+import { useReportsStore } from '../../store/التقارير_العربية';
 import {
   تصدير_الى_PDF,
-  تصدير_الى_Excel
-} from '../../utils/تصدير_التقارير'
+  تصدير_الى_Excel } from
+'../../utils/تصدير_التقارير';
 
 export default function لوحة_التقارير() {
 
   const طلبات =
-    useWebsiteStore((s) => s.orders)
+  useOrderStore((s) => s.orders);
 
   const منتجات =
-    useWebsiteStore((s) => s.products)
+  useProductStore((s) => s.products);
 
   const مخزون =
-    useWebsiteStore((s) => s.stockItems || [])
+  useWebsiteStore((s) => s.stockItems || []);
 
   const التقارير =
-    useReportsStore((s) => s.التقارير)
+  useReportsStore((s) => s.التقارير);
 
   const توليد =
-    useReportsStore(
-      (s) => s.توليد_التقارير
-    )
+  useReportsStore(
+    (s) => s.توليد_التقارير
+  );
 
   // ================= INIT =================
 
@@ -33,9 +33,9 @@ export default function لوحة_التقارير() {
       طلبات,
       منتجات,
       مخزون
-    })
+    });
 
-  }, [طلبات, منتجات, مخزون])
+  }, [طلبات, منتجات, مخزون]);
 
   // ================= UI =================
 
@@ -59,25 +59,25 @@ export default function لوحة_التقارير() {
 
         <button
           onClick={() =>
-            تصدير_الى_PDF(
-              'تقرير_المبيعات',
-              التقارير
-            )
+          تصدير_الى_PDF(
+            'تقرير_المبيعات',
+            التقارير
+          )
           }
-          className="bg-red-600 px-6 py-4 rounded-2xl font-black"
-        >
+          className="bg-red-600 px-6 py-4 rounded-2xl font-black">
+          
           📄 PDF
         </button>
 
         <button
           onClick={() =>
-            تصدير_الى_Excel(
-              'تقرير_المبيعات',
-              التقارير
-            )
+          تصدير_الى_Excel(
+            'تقرير_المبيعات',
+            التقارير
+          )
           }
-          className="bg-green-600 px-6 py-4 rounded-2xl font-black"
-        >
+          className="bg-green-600 px-6 py-4 rounded-2xl font-black">
+          
           📊 Excel
         </button>
 
@@ -92,11 +92,11 @@ export default function لوحة_التقارير() {
             📈 أفضل المنتجات
           </h2>
 
-          {التقارير.منتجات_الأكثر_مبيعاً?.map((p, i) => (
-            <div key={i} className="mt-3">
+          {التقارير.منتجات_الأكثر_مبيعاً?.map((p, i) =>
+          <div key={i} className="mt-3">
               {p.name} - {p.sold}
             </div>
-          ))}
+          )}
         </div>
 
         <div className="bg-slate-900 p-6 rounded-3xl">
@@ -104,17 +104,17 @@ export default function لوحة_التقارير() {
             📉 أقل المنتجات
           </h2>
 
-          {التقارير.منتجات_الأقل_مبيعاً?.map((p, i) => (
-            <div key={i} className="mt-3">
+          {التقارير.منتجات_الأقل_مبيعاً?.map((p, i) =>
+          <div key={i} className="mt-3">
               {p.name} - {p.sold}
             </div>
-          ))}
+          )}
         </div>
 
       </div>
 
-    </div>
+    </div>);
 
-  )
+
 
 }

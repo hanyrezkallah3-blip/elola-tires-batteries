@@ -1,95 +1,95 @@
-import { useMemo } from 'react'
-import { useWebsiteStore } from '../store/websiteStore'
+import { useUserStore } from "../store/userStore";import { useWalletStore } from "../store/walletStore";import { useOrderStore } from "../store/orderStore";import { useProductStore } from "../store/productStore";import { useMemo } from 'react';
+import { useWebsiteStore } from '../store/websiteStore';
 
 export default function GlobalERPDashboard() {
 
   // ================= GLOBAL STORE =================
 
-  const orders = useWebsiteStore((s) => s.orders || [])
-  const products = useWebsiteStore((s) => s.products || [])
-  const wallets = useWebsiteStore((s) => s.wallets || [])
-  const transfers = useWebsiteStore((s) => s.transfers || [])
-  const users = useWebsiteStore((s) => s.users || [])
+  const orders = useOrderStore((s) => s.orders || []);
+  const products = useProductStore((s) => s.products || []);
+  const wallets = useWalletStore((s) => s.wallets || []);
+  const transfers = useWebsiteStore((s) => s.transfers || []);
+  const users = useUserStore((s) => s.users || []);
 
   // ================= CORE KPIs =================
 
   const totalSales = useMemo(
     () => orders.reduce((a, o) => a + Number(o.total || 0), 0),
     [orders]
-  )
+  );
 
-  const totalProducts = products.length
-  const totalOrders = orders.length
-  const totalUsers = users.length
-  const totalTransfers = transfers.length
+  const totalProducts = products.length;
+  const totalOrders = orders.length;
+  const totalUsers = users.length;
+  const totalTransfers = transfers.length;
 
   const walletBalance = useMemo(
     () => wallets.reduce((a, w) => a + Number(w.balance || 0), 0),
     [wallets]
-  )
+  );
 
-  const profit = totalSales - walletBalance
+  const profit = totalSales - walletBalance;
 
   // ================= ERP HEALTH ENGINE =================
 
   const erpHealth = useMemo(() => {
 
-    let score = 50
+    let score = 50;
 
     // Sales strength
-    if (totalSales > 1000000) score += 25
-    else if (totalSales > 300000) score += 15
-    else score += 5
+    if (totalSales > 1000000) score += 25;else
+    if (totalSales > 300000) score += 15;else
+    score += 5;
 
     // System activity
-    if (totalOrders > 100) score += 10
-    if (totalTransfers > 50) score += 10
+    if (totalOrders > 100) score += 10;
+    if (totalTransfers > 50) score += 10;
 
     // Profit health
-    if (profit > 100000) score += 20
-    else if (profit > 50000) score += 10
-    else score -= 10
+    if (profit > 100000) score += 20;else
+    if (profit > 50000) score += 10;else
+    score -= 10;
 
-    return Math.max(0, Math.min(100, score))
+    return Math.max(0, Math.min(100, score));
 
-  }, [totalSales, totalOrders, totalTransfers, profit])
+  }, [totalSales, totalOrders, totalTransfers, profit]);
 
   const status = useMemo(() => {
 
-    if (erpHealth >= 80) return '🔥 نظام قوي جدًا'
-    if (erpHealth >= 60) return '📈 نظام جيد'
-    if (erpHealth >= 40) return '⚠️ يحتاج تحسين'
-    return '❌ خطر في النظام'
+    if (erpHealth >= 80) return '🔥 نظام قوي جدًا';
+    if (erpHealth >= 60) return '📈 نظام جيد';
+    if (erpHealth >= 40) return '⚠️ يحتاج تحسين';
+    return '❌ خطر في النظام';
 
-  }, [erpHealth])
+  }, [erpHealth]);
 
   // ================= AI INSIGHTS ENGINE =================
 
   const insights = useMemo(() => {
 
-    const list = []
+    const list = [];
 
     if (totalSales > 500000)
-      list.push('📈 الشركة في نمو قوي')
+    list.push('📈 الشركة في نمو قوي');
 
     if (walletBalance > profit)
-      list.push('⚠️ المحافظ تستهلك الأرباح')
+    list.push('⚠️ المحافظ تستهلك الأرباح');
 
     if (totalOrders > 200)
-      list.push('🔥 نشاط مبيعات عالي')
+    list.push('🔥 نشاط مبيعات عالي');
 
     if (totalTransfers > 50)
-      list.push('🚚 حركة مخزون نشطة')
+    list.push('🚚 حركة مخزون نشطة');
 
     if (products.length < 20)
-      list.push('📦 المخزون يحتاج توسيع')
+    list.push('📦 المخزون يحتاج توسيع');
 
     if (list.length === 0)
-      list.push('✅ النظام مستقر')
+    list.push('✅ النظام مستقر');
 
-    return list
+    return list;
 
-  }, [totalSales, walletBalance, profit, totalOrders, totalTransfers, products.length])
+  }, [totalSales, walletBalance, profit, totalOrders, totalTransfers, products.length]);
 
   // ================= UI =================
 
@@ -149,9 +149,9 @@ export default function GlobalERPDashboard() {
 
           <ul className="space-y-3 text-lg">
 
-            {insights.map((i, index) => (
-              <li key={index}>• {i}</li>
-            ))}
+            {insights.map((i, index) =>
+            <li key={index}>• {i}</li>
+            )}
 
           </ul>
 
@@ -177,8 +177,8 @@ export default function GlobalERPDashboard() {
 
       </div>
 
-    </div>
-  )
+    </div>);
+
 }
 
 // ================= CARD =================
@@ -190,6 +190,6 @@ function Card({ title, value }) {
       <div className="text-3xl font-black mt-3 text-white">
         {Number(value).toLocaleString()}
       </div>
-    </div>
-  )
+    </div>);
+
 }

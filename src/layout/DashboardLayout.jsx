@@ -1,132 +1,132 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useUserStore } from "../store/userStore";import { useOrderStore } from "../store/orderStore";import { useProductStore } from "../store/productStore";import { useMemo, useState, useEffect } from 'react';
 
 import {
   NavLink,
   useLocation,
-  useNavigate
-} from 'react-router-dom'
+  useNavigate } from
+'react-router-dom';
 
-import { useWebsiteStore } from '../store/websiteStore'
+import { useWebsiteStore } from '../store/websiteStore';
 
-import { useERPBrain } from '../ai/ERPBrain'
+import { useERPBrain } from '../ai/ERPBrain';
 
 export default function DashboardLayout({ children }) {
 
-  useERPBrain()
+  useERPBrain();
 
-  const navigate = useNavigate()
-  const location = useLocation()
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // ================= STORE =================
 
   const currentUser =
-    useWebsiteStore((s) => s.currentUser)
+  useUserStore((s) => s.currentUser);
 
   const logout =
-    useWebsiteStore((s) => s.logout)
+  useUserStore((s) => s.logout);
 
   const notifications =
-    useWebsiteStore((s) => s.notifications || [])
+  useWebsiteStore((s) => s.notifications || []);
 
   const products =
-    useWebsiteStore((s) => s.products || [])
+  useProductStore((s) => s.products || []);
 
   const orders =
-    useWebsiteStore((s) => s.orders || [])
+  useOrderStore((s) => s.orders || []);
 
   const transfers =
-    useWebsiteStore((s) => s.transfers || [])
+  useWebsiteStore((s) => s.transfers || []);
 
   // ================= SIDEBAR =================
 
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false);
 
   // ================= USER =================
 
   const isOwner =
-    currentUser?.role === 'owner'
+  currentUser?.role === 'owner';
 
   const isWarehouse =
-    currentUser?.role === 'warehouse'
+  currentUser?.role === 'warehouse';
 
   const isBranch =
-    currentUser?.role === 'branch'
+  currentUser?.role === 'branch';
 
   const isShop =
-    currentUser?.role === 'shop'
+  currentUser?.role === 'shop';
 
   const username =
-    currentUser?.username || 'مستخدم'
+  currentUser?.username || 'مستخدم';
 
   const warehouseName =
-    currentUser?.warehouseName || ''
+  currentUser?.warehouseName || '';
 
   const permissions = [
-  'all'
-]
+  'all'];
+
 
   // ================= ERP AI STATUS =================
 
   const aiStatus = useMemo(() => {
 
     const totalSales =
-      orders.reduce(
-        (acc, o) =>
-          acc + Number(o.total || 0),
-        0
-      )
+    orders.reduce(
+      (acc, o) =>
+      acc + Number(o.total || 0),
+      0
+    );
 
     if (totalSales > 1000000)
-      return {
-        text: 'نشط بقوة',
-        color: 'text-green-400'
-      }
+    return {
+      text: 'نشط بقوة',
+      color: 'text-green-400'
+    };
 
     if (totalSales > 200000)
-      return {
-        text: 'مستقر',
-        color: 'text-yellow-400'
-      }
+    return {
+      text: 'مستقر',
+      color: 'text-yellow-400'
+    };
 
     return {
       text: 'يحتاج تحسين',
       color: 'text-red-400'
-    }
+    };
 
-  }, [orders])
+  }, [orders]);
 
   // ================= ROLE NAME =================
 
   const getRoleName = () => {
 
     if (isOwner)
-      return '👑 مالك النظام'
+    return '👑 مالك النظام';
 
     if (isWarehouse)
-      return '🏭 إدارة مخزن'
+    return '🏭 إدارة مخزن';
 
     if (isBranch)
-      return '🏢 إدارة فرع'
+    return '🏢 إدارة فرع';
 
     if (isShop)
-      return '🏪 إدارة معرض'
+    return '🏪 إدارة معرض';
 
-    return 'مستخدم'
+    return 'مستخدم';
 
-  }
+  };
 
   // ================= PERMISSIONS =================
 
   const hasPermission = (permission) => {
 
-    if (isOwner) return true
+    if (isOwner) return true;
 
     if (permissions.includes('all'))
-      return true
+    return true;
 
-    return permissions.includes(permission)
+    return permissions.includes(permission);
 
-  }
+  };
 
   // ================= ROUTE PROTECTION =================
 
@@ -134,53 +134,53 @@ export default function DashboardLayout({ children }) {
 
     return [
 
-      '/dashboard',
+    '/dashboard',
 
-      ...(hasPermission('bi')
-        ? ['/bi']
-        : []),
+    ...(hasPermission('bi') ?
+    ['/bi'] :
+    []),
 
-      ...(hasPermission('ai')
-        ? ['/ai']
-        : []),
+    ...(hasPermission('ai') ?
+    ['/ai'] :
+    []),
 
-      ...(hasPermission('products')
-        ? ['/products']
-        : []),
+    ...(hasPermission('products') ?
+    ['/products'] :
+    []),
 
-      ...(hasPermission('orders')
-        ? ['/orders']
-        : []),
+    ...(hasPermission('orders') ?
+    ['/orders'] :
+    []),
 
-      ...(hasPermission('offers')
-        ? ['/offers']
-        : []),
+    ...(hasPermission('offers') ?
+    ['/offers'] :
+    []),
 
-      ...(hasPermission('services')
-        ? ['/services']
-        : []),
+    ...(hasPermission('services') ?
+    ['/services'] :
+    []),
 
-      ...(hasPermission('videos')
-        ? ['/videos']
-        : []),
+    ...(hasPermission('videos') ?
+    ['/videos'] :
+    []),
 
-      ...(isOwner
-  ? [
-      '/slides',
-      '/warehouses',
-      '/transfers',
-      '/users',
-      '/permissions',
-      '/finance',
-      '/wallets',
-      '/company',
-      '/home'
-    ]
-  : [])
+    ...(isOwner ?
+    [
+    '/slides',
+    '/warehouses',
+    '/transfers',
+    '/users',
+    '/permissions',
+    '/finance',
+    '/wallets',
+    '/company',
+    '/home'] :
 
-    ]
+    [])];
 
-  }, [currentUser])
+
+
+  }, [currentUser]);
 
   // ================= AUTO BLOCK =================
 
@@ -188,155 +188,155 @@ export default function DashboardLayout({ children }) {
 
     if (!currentUser) {
 
-      navigate('/login')
+      navigate('/login');
 
-      return
+      return;
     }
 
     const currentPath =
-      location.pathname
+    location.pathname;
 
     const allowed =
-      allowedRoutes.includes(currentPath)
+    allowedRoutes.includes(currentPath);
 
     if (!allowed) {
 
-      navigate('/dashboard')
+      navigate('/dashboard');
     }
 
   }, [
-    currentUser,
-    location.pathname,
-    allowedRoutes
-  ])
+  currentUser,
+  location.pathname,
+  allowedRoutes]
+  );
 
   // ================= LINKS =================
 
   const links = useMemo(() => [
 
-    {
-      path: '/dashboard',
-      title: '📊 لوحة التحكم',
-      visible: true
-    },
+  {
+    path: '/dashboard',
+    title: '📊 لوحة التحكم',
+    visible: true
+  },
 
-    {
-      path: '/bi',
-      title: '📈 التحليلات الذكية',
-      visible: hasPermission('bi')
-    },
+  {
+    path: '/bi',
+    title: '📈 التحليلات الذكية',
+    visible: hasPermission('bi')
+  },
 
-    {
-      path: '/ai',
-      title: '🤖 الذكاء الاصطناعي',
-      visible: hasPermission('ai')
-    },
+  {
+    path: '/ai',
+    title: '🤖 الذكاء الاصطناعي',
+    visible: hasPermission('ai')
+  },
 
-    {
-      path: '/finance',
-      title: '💰 الإدارة المالية',
-      visible: isOwner
-    },
-    
-    {
-      path: '/wallets',
-      title: '💳 المحافظ',
-      visible: isOwner
-    },
+  {
+    path: '/finance',
+    title: '💰 الإدارة المالية',
+    visible: isOwner
+  },
 
-    {
-      path: '/products',
-      title: '📦 إدارة المنتجات',
-      visible: hasPermission('products')
-    },
+  {
+    path: '/wallets',
+    title: '💳 المحافظ',
+    visible: isOwner
+  },
 
-    {
-      path: '/orders',
-      title: '🛒 إدارة الطلبات',
-      visible: hasPermission('orders')
-    },
+  {
+    path: '/products',
+    title: '📦 إدارة المنتجات',
+    visible: hasPermission('products')
+  },
 
-    {
-      path: '/offers',
-      title: '🏷 إدارة العروض',
-      visible: hasPermission('offers')
-    },
+  {
+    path: '/orders',
+    title: '🛒 إدارة الطلبات',
+    visible: hasPermission('orders')
+  },
 
-    {
-      path: '/services',
-      title: '🛠 إدارة الخدمات',
-      visible: hasPermission('services')
-    },
+  {
+    path: '/offers',
+    title: '🏷 إدارة العروض',
+    visible: hasPermission('offers')
+  },
 
-    {
-      path: '/videos',
-      title: '🎬 إدارة الفيديوهات',
-      visible: hasPermission('videos')
-    },
+  {
+    path: '/services',
+    title: '🛠 إدارة الخدمات',
+    visible: hasPermission('services')
+  },
 
-    {
-      path: '/slides',
-      title: '🖼 إدارة السلايدر',
-      visible: isOwner
-    },
+  {
+    path: '/videos',
+    title: '🎬 إدارة الفيديوهات',
+    visible: hasPermission('videos')
+  },
 
-    {
-      path: '/warehouses',
-      title: '🏭 إدارة المخازن',
-      visible: isOwner
-    },
+  {
+    path: '/slides',
+    title: '🖼 إدارة السلايدر',
+    visible: isOwner
+  },
 
-    {
-      path: '/transfers',
-      title: '🚚 التحويلات',
-      visible: isOwner
-    },
+  {
+    path: '/warehouses',
+    title: '🏭 إدارة المخازن',
+    visible: isOwner
+  },
 
-    {
-  path: '/users',
-  title: '👥 المستخدمون',
-  visible: isOwner
-},
+  {
+    path: '/transfers',
+    title: '🚚 التحويلات',
+    visible: isOwner
+  },
 
-{
-  path: '/permissions',
-  title: '🔐 الصلاحيات',
-  visible: isOwner
-},
+  {
+    path: '/users',
+    title: '👥 المستخدمون',
+    visible: isOwner
+  },
 
-    {
-      path: '/company',
-      title: '🏢 بيانات الشركة',
-      visible: isOwner
-    },
+  {
+    path: '/permissions',
+    title: '🔐 الصلاحيات',
+    visible: isOwner
+  },
 
-    {
-      path: '/home',
-      title: '🌍 الموقع الإلكتروني',
-      visible: true
-    }
+  {
+    path: '/company',
+    title: '🏢 بيانات الشركة',
+    visible: isOwner
+  },
 
-  ], [currentUser])
+  {
+    path: '/home',
+    title: '🌍 الموقع الإلكتروني',
+    visible: true
+  }],
 
-  const filteredLinks = links
-    
+  [currentUser]);
+
+  const filteredLinks = links;
+
 
   // ================= LOGOUT =================
 
   const handleLogout = () => {
 
     const ok =
-      window.confirm(
-        'هل تريد تسجيل الخروج؟'
-      )
+    window.confirm(
+      'هل تريد تسجيل الخروج؟'
+    );
 
-    if (!ok) return
+    if (!ok) return;
 
-    logout()
+    logout();
 
-    navigate('/login')
+    navigate('/login');
 
-  }
+  };
 
   // ================= LINK STYLE =================
 
@@ -352,30 +352,30 @@ export default function DashboardLayout({ children }) {
     duration-300
 
     ${
-      isActive
+  isActive ?
 
-        ? 'bg-yellow-500 text-black scale-[1.02] shadow-2xl'
+  'bg-yellow-500 text-black scale-[1.02] shadow-2xl' :
 
-        : `
+  `
           bg-slate-900
           hover:bg-yellow-500
           hover:text-black
           hover:translate-x-1
-        `
-    }
+        `}
 
-  `
+  `;
+
 
   // ================= TOTALS =================
 
   const totalProducts =
-    products.length
+  products.length;
 
   const totalOrders =
-    orders.length
+  orders.length;
 
   const totalTransfers =
-    transfers.length
+  transfers.length;
 
   // ================= UI =================
 
@@ -389,22 +389,58 @@ export default function DashboardLayout({ children }) {
       overflow-hidden
     ">
 
+
+
+
+
+      
+
+
+
+
+
+      
+
+
+
+
+
+      
+
       {/* MOBILE OVERLAY */}
 
-      {open && (
+      {open &&
 
-        <div
-          onClick={() => setOpen(false)}
-          className="
+      <div
+        onClick={() => setOpen(false)}
+        className="
             lg:hidden
             fixed
             inset-0
             bg-black/80
             z-40
-          "
-        />
+          " />
 
-      )}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      }
 
       {/* MOBILE BUTTON */}
 
@@ -424,8 +460,50 @@ export default function DashboardLayout({ children }) {
           text-2xl
           font-black
           shadow-2xl
-        "
-      >
+        ">
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
 
         ☰
 
@@ -457,12 +535,12 @@ export default function DashboardLayout({ children }) {
         duration-300
 
         ${
-          open
-            ? 'translate-x-0'
-            : 'translate-x-full lg:translate-x-0'
-        }
+      open ?
+      'translate-x-0' :
+      'translate-x-full lg:translate-x-0'}
 
-      `}>
+      `
+      }>
 
         {/* HEADER */}
 
@@ -473,6 +551,21 @@ export default function DashboardLayout({ children }) {
           space-y-5
         ">
 
+
+
+
+          
+
+
+
+
+          
+
+
+
+
+          
+
           <div className="text-center">
 
             <h1 className="
@@ -480,6 +573,18 @@ export default function DashboardLayout({ children }) {
               font-black
               text-yellow-400
             ">
+
+
+
+              
+
+
+
+              
+
+
+
+              
 
               نظام ERP
 
@@ -490,6 +595,18 @@ export default function DashboardLayout({ children }) {
               mt-2
               text-sm
             ">
+
+
+
+              
+
+
+
+              
+
+
+
+              
 
               شركة العلا للإطارات والبطاريات
 
@@ -508,11 +625,44 @@ export default function DashboardLayout({ children }) {
             space-y-3
           ">
 
+
+
+
+
+
+            
+
+
+
+
+
+
+            
+
+
+
+
+
+
+            
+
             <div className="
               text-2xl
               font-black
               text-yellow-400
             ">
+
+
+
+              
+
+
+
+              
+
+
+
+              
 
               {username}
 
@@ -524,18 +674,27 @@ export default function DashboardLayout({ children }) {
 
             </div>
 
-            {!!warehouseName && (
+            {!!warehouseName &&
 
-              <div className="
+            <div className="
                 text-cyan-400
                 font-bold
               ">
+
+
+              
+
+
+              
+
+
+              
 
                 📍 {warehouseName}
 
               </div>
 
-            )}
+            }
 
           </div>
 
@@ -550,10 +709,40 @@ export default function DashboardLayout({ children }) {
             space-y-3
           ">
 
+
+
+
+
+
+            
+
+
+
+
+
+
+            
+
+
+
+
+
+
+            
+
             <div className="
               text-lg
               font-black
             ">
+
+
+              
+
+
+              
+
+
+              
 
               🤖 حالة الذكاء الاصطناعي
 
@@ -579,12 +768,39 @@ export default function DashboardLayout({ children }) {
             gap-3
           ">
 
+
+
+            
+
+
+
+            
+
+
+
+            
+
             <div className="
               bg-blue-700
               p-3
               rounded-2xl
               text-center
             ">
+
+
+
+
+              
+
+
+
+
+              
+
+
+
+
+              
 
               <div className="text-xs">
                 منتجات
@@ -594,6 +810,15 @@ export default function DashboardLayout({ children }) {
                 text-xl
                 font-black
               ">
+
+
+                
+
+
+                
+
+
+                
 
                 {totalProducts}
 
@@ -608,6 +833,21 @@ export default function DashboardLayout({ children }) {
               text-center
             ">
 
+
+
+
+              
+
+
+
+
+              
+
+
+
+
+              
+
               <div className="text-xs">
                 طلبات
               </div>
@@ -616,6 +856,15 @@ export default function DashboardLayout({ children }) {
                 text-xl
                 font-black
               ">
+
+
+                
+
+
+                
+
+
+                
 
                 {totalOrders}
 
@@ -630,6 +879,21 @@ export default function DashboardLayout({ children }) {
               text-center
             ">
 
+
+
+
+              
+
+
+
+
+              
+
+
+
+
+              
+
               <div className="text-xs">
                 تحويلات
               </div>
@@ -638,6 +902,15 @@ export default function DashboardLayout({ children }) {
                 text-xl
                 font-black
               ">
+
+
+                
+
+
+                
+
+
+                
 
                 {totalTransfers}
 
@@ -658,6 +931,27 @@ export default function DashboardLayout({ children }) {
             items-center
           ">
 
+
+
+
+
+
+            
+
+
+
+
+
+
+            
+
+
+
+
+
+
+            
+
             <span className="font-bold">
 
               🔔 الإشعارات
@@ -675,6 +969,33 @@ export default function DashboardLayout({ children }) {
               font-black
             ">
 
+
+
+
+
+
+
+
+              
+
+
+
+
+
+
+
+
+              
+
+
+
+
+
+
+
+
+              
+
               {notifications.length}
 
             </span>
@@ -691,22 +1012,34 @@ export default function DashboardLayout({ children }) {
           p-5
         ">
 
+
+
+          
+
+
+
+          
+
+
+
+          
+
           <nav className="space-y-3">
 
-            {filteredLinks.map((link) => (
+            {filteredLinks.map((link) =>
 
-              <NavLink
-                key={link.path}
-                to={link.path}
-                className={linkClass}
-                onClick={() => setOpen(false)}
-              >
+            <NavLink
+              key={link.path}
+              to={link.path}
+              className={linkClass}
+              onClick={() => setOpen(false)}>
+              
 
                 {link.title}
 
               </NavLink>
 
-            ))}
+            )}
 
           </nav>
 
@@ -721,6 +1054,21 @@ export default function DashboardLayout({ children }) {
           space-y-4
         ">
 
+
+
+
+          
+
+
+
+
+          
+
+
+
+
+          
+
           <div className="
             bg-slate-900
             p-4
@@ -730,6 +1078,27 @@ export default function DashboardLayout({ children }) {
             text-gray-400
           ">
 
+
+
+
+
+
+            
+
+
+
+
+
+
+            
+
+
+
+
+
+
+            
+
             الصفحة الحالية
 
             <div className="
@@ -738,6 +1107,21 @@ export default function DashboardLayout({ children }) {
               font-bold
               break-all
             ">
+
+
+
+
+              
+
+
+
+
+              
+
+
+
+
+              
 
               {location.pathname}
 
@@ -755,8 +1139,32 @@ export default function DashboardLayout({ children }) {
               rounded-2xl
               font-black
               transition
-            "
-          >
+            ">
+
+
+
+
+
+
+
+            
+
+
+
+
+
+
+
+            
+
+
+
+
+
+
+
+
+            
 
             🚪 تسجيل الخروج
 
@@ -775,14 +1183,38 @@ export default function DashboardLayout({ children }) {
         lg:p-8
       ">
 
+
+
+
+        
+
+
+
+
+        
+
+
+
+
+        
+
         <div className="
           max-w-[1900px]
           mx-auto
         ">
 
-          {children ? children : (
 
-            <div className="
+          
+
+
+          
+
+
+          
+
+          {children ? children :
+
+          <div className="
               bg-red-900/30
               border
               border-red-500
@@ -794,18 +1226,48 @@ export default function DashboardLayout({ children }) {
               font-black
             ">
 
+
+
+
+
+
+
+
+
+            
+
+
+
+
+
+
+
+
+
+            
+
+
+
+
+
+
+
+
+
+            
+
               ⚠ الصفحة غير متاحة
 
             </div>
 
-          )}
+          }
 
         </div>
 
       </main>
 
-    </div>
+    </div>);
 
-  )
+
 
 }

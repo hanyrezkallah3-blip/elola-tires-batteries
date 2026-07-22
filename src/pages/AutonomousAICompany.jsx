@@ -1,31 +1,31 @@
-import { useMemo, useState } from 'react'
-import { useWebsiteStore } from '../store/websiteStore'
+import { useUserStore } from "../store/userStore";import { useWalletStore } from "../store/walletStore";import { useOrderStore } from "../store/orderStore";import { useProductStore } from "../store/productStore";import { useMemo, useState } from 'react';
+import { useWebsiteStore } from '../store/websiteStore';
 
 export default function AutonomousAICompany() {
 
   // ================= STORE =================
 
   const products =
-    useWebsiteStore((s) => s.products || [])
+  useProductStore((s) => s.products || []);
 
   const orders =
-    useWebsiteStore((s) => s.orders || [])
+  useOrderStore((s) => s.orders || []);
 
   const wallets =
-    useWebsiteStore((s) => s.wallets || [])
+  useWalletStore((s) => s.wallets || []);
 
   const transfers =
-    useWebsiteStore((s) => s.transfers || [])
+  useWebsiteStore((s) => s.transfers || []);
 
   const users =
-    useWebsiteStore((s) => s.users || [])
+  useUserStore((s) => s.users || []);
 
   // ================= OWNER CONTROL =================
 
   // 🔥 المالك يستطيع تشغيل أو إيقاف الذكاء الاصطناعي
 
   const [aiEnabled, setAiEnabled] =
-    useState(true)
+  useState(true);
 
   // ================= AI METRICS =================
 
@@ -33,41 +33,41 @@ export default function AutonomousAICompany() {
 
     return orders.reduce(
       (acc, order) =>
-        acc + Number(order.total || 0),
+      acc + Number(order.total || 0),
       0
-    )
+    );
 
-  }, [orders])
+  }, [orders]);
 
   const totalWallets = useMemo(() => {
 
     return wallets.reduce(
       (acc, wallet) =>
-        acc + Number(wallet.balance || 0),
+      acc + Number(wallet.balance || 0),
       0
-    )
+    );
 
-  }, [wallets])
+  }, [wallets]);
 
   const totalOrders =
-    orders.length
+  orders.length;
 
   const totalProducts =
-    products.length
+  products.length;
 
   const totalTransfers =
-    transfers.length
+  transfers.length;
 
   const totalUsers =
-    users.length
+  users.length;
 
   // ================= PROFITS =================
 
   const profit = useMemo(() => {
 
-    return totalSales - totalWallets
+    return totalSales - totalWallets;
 
-  }, [totalSales, totalWallets])
+  }, [totalSales, totalWallets]);
 
   // ================= LOW STOCK =================
 
@@ -75,51 +75,51 @@ export default function AutonomousAICompany() {
 
     return products.filter(
       (p) =>
-        Number(p.stock || 0) <= 5
-    )
+      Number(p.stock || 0) <= 5
+    );
 
-  }, [products])
+  }, [products]);
 
   // ================= BEST PRODUCT =================
 
   const bestProduct = useMemo(() => {
 
-    if (!products.length) return null
+    if (!products.length) return null;
 
     return [...products].sort(
       (a, b) =>
-        Number(b.sold || 0) -
-        Number(a.sold || 0)
-    )[0]
+      Number(b.sold || 0) -
+      Number(a.sold || 0)
+    )[0];
 
-  }, [products])
+  }, [products]);
 
   // ================= AI SCORE =================
 
   const aiScore = useMemo(() => {
 
-    let score = 50
+    let score = 50;
 
     if (profit > 100000)
-      score += 20
+    score += 20;
 
     if (totalSales > 300000)
-      score += 15
+    score += 15;
 
     if (lowStock.length === 0)
-      score += 15
+    score += 15;
 
-    return Math.min(100, score)
+    return Math.min(100, score);
 
-  }, [profit, totalSales, lowStock.length])
+  }, [profit, totalSales, lowStock.length]);
 
   // ================= PREDICTIONS =================
 
   const nextMonthSales = useMemo(() => {
 
-    return totalSales * 1.12
+    return totalSales * 1.12;
 
-  }, [totalSales])
+  }, [totalSales]);
 
   // ================= AI DECISIONS =================
 
@@ -130,22 +130,22 @@ export default function AutonomousAICompany() {
     if (!aiEnabled) {
 
       return [
-        '⛔ النظام الذكي متوقف',
-        '👤 الإدارة اليدوية مفعلة',
-        '🛠 جميع القرارات تتم بواسطة المالك'
-      ]
+      '⛔ النظام الذكي متوقف',
+      '👤 الإدارة اليدوية مفعلة',
+      '🛠 جميع القرارات تتم بواسطة المالك'];
+
 
     }
 
     // ================= ACTIVE AI =================
 
-    const decisions = []
+    const decisions = [];
 
     if (lowStock.length > 0) {
 
       decisions.push(
         `📦 يوجد ${lowStock.length} منتج منخفض المخزون`
-      )
+      );
 
     }
 
@@ -153,7 +153,7 @@ export default function AutonomousAICompany() {
 
       decisions.push(
         '💰 الأرباح ممتازة'
-      )
+      );
 
     }
 
@@ -161,7 +161,7 @@ export default function AutonomousAICompany() {
 
       decisions.push(
         '🚨 خطر مالي'
-      )
+      );
 
     }
 
@@ -169,7 +169,7 @@ export default function AutonomousAICompany() {
 
       decisions.push(
         '🏢 ينصح بفتح فرع جديد'
-      )
+      );
 
     }
 
@@ -177,7 +177,7 @@ export default function AutonomousAICompany() {
 
       decisions.push(
         '⚠️ المحافظ تؤثر على السيولة'
-      )
+      );
 
     }
 
@@ -185,7 +185,7 @@ export default function AutonomousAICompany() {
 
       decisions.push(
         '🚚 حركة مخزون قوية'
-      )
+      );
 
     }
 
@@ -193,20 +193,20 @@ export default function AutonomousAICompany() {
 
       decisions.push(
         '✅ الشركة تعمل بكفاءة ممتازة'
-      )
+      );
 
     }
 
-    return decisions
+    return decisions;
 
   }, [
-    aiEnabled,
-    lowStock.length,
-    profit,
-    totalSales,
-    totalWallets,
-    totalTransfers
-  ])
+  aiEnabled,
+  lowStock.length,
+  profit,
+  totalSales,
+  totalWallets,
+  totalTransfers]
+  );
 
   // ================= UI =================
 
@@ -221,6 +221,34 @@ export default function AutonomousAICompany() {
       space-y-10
     ">
 
+
+
+
+
+
+      
+
+
+
+
+
+
+      
+
+
+
+
+
+
+      
+
+
+
+
+
+
+      
+
       {/* HEADER */}
 
       <div className="
@@ -233,6 +261,38 @@ export default function AutonomousAICompany() {
         shadow-2xl
       ">
 
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+
         <div className="
           flex
           justify-between
@@ -241,12 +301,48 @@ export default function AutonomousAICompany() {
           items-center
         ">
 
+
+
+
+
+          
+
+
+
+
+
+          
+
+
+
+
+
+          
+
+
+
+
+
+          
+
           <div>
 
             <h1 className="
               text-5xl
               font-black
             ">
+
+
+              
+
+
+              
+
+
+              
+
+
+              
 
               🤖 Autonomous AI Company
 
@@ -257,6 +353,22 @@ export default function AutonomousAICompany() {
               text-xl
               mt-3
             ">
+
+
+
+              
+
+
+
+              
+
+
+
+              
+
+
+
+              
 
               شركة ذاتية الإدارة بالذكاء الاصطناعي
 
@@ -273,10 +385,42 @@ export default function AutonomousAICompany() {
             space-y-4
           ">
 
+
+
+
+            
+
+
+
+
+            
+
+
+
+
+            
+
+
+
+
+            
+
             <div className="
               text-xl
               font-black
             ">
+
+
+              
+
+
+              
+
+
+              
+
+
+              
 
               🎛 وضع الإدارة
 
@@ -285,7 +429,7 @@ export default function AutonomousAICompany() {
             <button
 
               onClick={() =>
-                setAiEnabled(!aiEnabled)
+              setAiEnabled(!aiEnabled)
               }
 
               className={`
@@ -296,15 +440,15 @@ export default function AutonomousAICompany() {
                 text-lg
                 transition
 
-                ${aiEnabled
-                  ? 'bg-green-500 text-black hover:bg-green-400'
-                  : 'bg-red-600 hover:bg-red-500'}
-              `}
-            >
+                ${aiEnabled ?
+              'bg-green-500 text-black hover:bg-green-400' :
+              'bg-red-600 hover:bg-red-500'}
+              `}>
+              
 
-              {aiEnabled
-                ? '🤖 AI ACTIVE'
-                : '👤 MANUAL MODE'}
+              {aiEnabled ?
+              '🤖 AI ACTIVE' :
+              '👤 MANUAL MODE'}
 
             </button>
 
@@ -324,35 +468,59 @@ export default function AutonomousAICompany() {
         gap-5
       ">
 
+
+
+
+
+        
+
+
+
+
+
+        
+
+
+
+
+
+        
+
+
+
+
+
+        
+
         <Card
           title="💵 المبيعات"
-          value={totalSales}
-        />
+          value={totalSales} />
+        
 
         <Card
           title="📈 الأرباح"
-          value={profit}
-        />
+          value={profit} />
+        
 
         <Card
           title="📦 المنتجات"
-          value={totalProducts}
-        />
+          value={totalProducts} />
+        
 
         <Card
           title="🛒 الطلبات"
-          value={totalOrders}
-        />
+          value={totalOrders} />
+        
 
         <Card
           title="👤 المستخدمين"
-          value={totalUsers}
-        />
+          value={totalUsers} />
+        
 
         <Card
           title="🧠 AI SCORE"
-          value={aiScore}
-        />
+          value={aiScore} />
+        
 
       </div>
 
@@ -364,6 +532,22 @@ export default function AutonomousAICompany() {
         gap-6
       ">
 
+
+
+        
+
+
+
+        
+
+
+
+        
+
+
+
+        
+
         {/* AI DECISIONS */}
 
         <div className="
@@ -374,6 +558,30 @@ export default function AutonomousAICompany() {
           border-blue-600
         ">
 
+
+
+
+
+          
+
+
+
+
+
+          
+
+
+
+
+
+          
+
+
+
+
+
+          
+
           <h2 className="
             text-3xl
             font-black
@@ -381,31 +589,71 @@ export default function AutonomousAICompany() {
             mb-6
           ">
 
+
+
+
+            
+
+
+
+
+            
+
+
+
+
+            
+
+
+
+
+            
+
             🤖 AI DECISION ENGINE
 
           </h2>
 
           <div className="space-y-4">
 
-            {aiDecisions.map((decision, index) => (
+            {aiDecisions.map((decision, index) =>
 
-              <div
+            <div
 
-                key={index}
+              key={index}
 
-                className="
+              className="
                   bg-black/40
                   p-4
                   rounded-2xl
                   text-lg
-                "
-              >
+                ">
+
+
+
+
+              
+
+
+
+
+              
+
+
+
+
+              
+
+
+
+
+
+              
 
                 {decision}
 
               </div>
 
-            ))}
+            )}
 
           </div>
 
@@ -421,12 +669,56 @@ export default function AutonomousAICompany() {
           border-green-600
         ">
 
+
+
+
+
+          
+
+
+
+
+
+          
+
+
+
+
+
+          
+
+
+
+
+
+          
+
           <h2 className="
             text-3xl
             font-black
             text-green-400
             mb-6
           ">
+
+
+
+
+            
+
+
+
+
+            
+
+
+
+
+            
+
+
+
+
+            
 
             📊 AI PREDICTION ENGINE
 
@@ -443,6 +735,18 @@ export default function AutonomousAICompany() {
                 font-black
               ">
 
+
+                
+
+
+                
+
+
+                
+
+
+                
+
                 {nextMonthSales.toLocaleString()} ج.م
 
               </span>
@@ -458,6 +762,18 @@ export default function AutonomousAICompany() {
                 font-black
               ">
 
+
+                
+
+
+                
+
+
+                
+
+
+                
+
                 {bestProduct?.name || 'لا يوجد'}
 
               </span>
@@ -472,6 +788,18 @@ export default function AutonomousAICompany() {
                 text-red-400
                 font-black
               ">
+
+
+                
+
+
+                
+
+
+                
+
+
+                
 
                 {lowStock.length}
 
@@ -495,11 +823,51 @@ export default function AutonomousAICompany() {
         border-slate-700
       ">
 
+
+
+
+
+        
+
+
+
+
+
+        
+
+
+
+
+
+        
+
+
+
+
+
+        
+
         <h2 className="
           text-3xl
           font-black
           mb-8
         ">
+
+
+
+          
+
+
+
+          
+
+
+
+          
+
+
+
+          
 
           🌍 حالة النظام
 
@@ -512,49 +880,69 @@ export default function AutonomousAICompany() {
           gap-5
         ">
 
+
+
+
+          
+
+
+
+
+          
+
+
+
+
+          
+
+
+
+
+          
+
           <StatusCard
             title="AI CEO"
             status={
-              aiEnabled
-                ? 'ACTIVE'
-                : 'OFF'
-            }
-          />
+            aiEnabled ?
+            'ACTIVE' :
+            'OFF'
+            } />
+          
 
           <StatusCard
             title="Finance AI"
             status={
-              aiEnabled
-                ? 'RUNNING'
-                : 'MANUAL'
-            }
-          />
+            aiEnabled ?
+            'RUNNING' :
+            'MANUAL'
+            } />
+          
 
           <StatusCard
             title="Warehouse AI"
             status={
-              aiEnabled
-                ? 'OPTIMIZED'
-                : 'DISABLED'
-            }
-          />
+            aiEnabled ?
+            'OPTIMIZED' :
+            'DISABLED'
+            } />
+          
 
           <StatusCard
             title="Prediction Engine"
             status={
-              aiEnabled
-                ? 'ONLINE'
-                : 'STOPPED'
-            }
-          />
+            aiEnabled ?
+            'ONLINE' :
+            'STOPPED'
+            } />
+          
 
         </div>
 
       </div>
 
-    </div>
+    </div>);
 
-  )
+
 
 }
 
@@ -573,10 +961,50 @@ function Card({ title, value }) {
       text-center
     ">
 
+
+
+
+
+
+      
+
+
+
+
+
+
+      
+
+
+
+
+
+
+      
+
+
+
+
+
+
+      
+
       <div className="
         text-gray-400
         font-bold
       ">
+
+
+        
+
+
+        
+
+
+        
+
+
+        
 
         {title}
 
@@ -588,13 +1016,29 @@ function Card({ title, value }) {
         mt-3
       ">
 
+
+
+        
+
+
+
+        
+
+
+
+        
+
+
+
+        
+
         {Number(value).toLocaleString()}
 
       </div>
 
-    </div>
+    </div>);
 
-  )
+
 
 }
 
@@ -613,6 +1057,34 @@ function StatusCard({ title, status }) {
       text-center
     ">
 
+
+
+
+
+
+      
+
+
+
+
+
+
+      
+
+
+
+
+
+
+      
+
+
+
+
+
+
+      
+
       <div className="text-gray-400">
 
         {title}
@@ -626,12 +1098,32 @@ function StatusCard({ title, status }) {
         mt-3
       ">
 
+
+
+
+        
+
+
+
+
+        
+
+
+
+
+        
+
+
+
+
+        
+
         {status}
 
       </div>
 
-    </div>
+    </div>);
 
-  )
+
 
 }

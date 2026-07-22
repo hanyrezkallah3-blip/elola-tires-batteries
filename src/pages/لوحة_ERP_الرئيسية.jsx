@@ -1,74 +1,74 @@
-import { useMemo } from 'react'
+import { useUserStore } from "../store/userStore";import { useOrderStore } from "../store/orderStore";import { useProductStore } from "../store/productStore";import { useMemo } from 'react';
 
-import { useWebsiteStore } from '../store/websiteStore'
-import { useInventoryStore } from '../store/inventoryStore'
-import { useAnalyticsStore } from '../store/analyticsStore'
 
-import ذكاء_المخزون_العربي
-  from '../components/المخازن/ذكاء_المخزون_العربي'
+import { useInventoryStore } from '../store/inventoryStore';
+import { useAnalyticsStore } from '../store/analyticsStore';
+
+import ذكاء_المخزون_العربي from
+'../components/المخازن/ذكاء_المخزون_العربي';
 
 export default function لوحة_ERP_الرئيسية() {
 
   // ================= STORES =================
 
   const products =
-    useWebsiteStore((s) => s.products) || []
+  useProductStore((s) => s.products) || [];
 
   const orders =
-    useWebsiteStore((s) => s.orders) || []
+  useOrderStore((s) => s.orders) || [];
 
   const users =
-    useWebsiteStore((s) => s.users) || []
+  useUserStore((s) => s.users) || [];
 
   const warehouses =
-    useInventoryStore((s) => s.warehouses) || []
+  useInventoryStore((s) => s.warehouses) || [];
 
   const stockItems =
-    useInventoryStore((s) => s.stockItems) || []
+  useInventoryStore((s) => s.stockItems) || [];
 
   const getInventorySummary =
-    useInventoryStore((s) => s.getInventorySummary)
+  useInventoryStore((s) => s.getInventorySummary);
 
   const dashboardStats =
-    useAnalyticsStore((s) => s.dashboardStats)
+  useAnalyticsStore((s) => s.dashboardStats);
 
   const summary =
-    getInventorySummary?.() || {
-      totalItems: 0,
-      totalQuantity: 0,
-      totalValue: 0,
-      lowStock: 0
-    }
+  getInventorySummary?.() || {
+    totalItems: 0,
+    totalQuantity: 0,
+    totalValue: 0,
+    lowStock: 0
+  };
 
   // ================= ANALYTICS =================
 
   const التحليل_المركزي = useMemo(() => {
 
     const totalSales =
-      (orders || []).reduce(
-        (a, o) => a + Number(o.total || 0),
-        0
-      )
+    (orders || []).reduce(
+      (a, o) => a + Number(o.total || 0),
+      0
+    );
 
     const totalProfit =
-      totalSales * 0.25
+    totalSales * 0.25;
 
     const lowStock =
-      summary.lowStock
+    summary.lowStock;
 
     const criticalStock =
-      (stockItems || []).filter(
-        (i) => Number(i.quantity || 0) === 0
-      ).length
+    (stockItems || []).filter(
+      (i) => Number(i.quantity || 0) === 0
+    ).length;
 
     return {
       totalSales,
       totalProfit,
       lowStock,
       criticalStock
-    }
+    };
 
-  }, [orders, stockItems, summary.lowStock])
+  }, [orders, stockItems, summary.lowStock]);
 
   // ================= UI =================
 
@@ -163,7 +163,7 @@ export default function لوحة_ERP_الرئيسية() {
 
       </div>
 
-    </div>
+    </div>);
 
-  )
+
 }

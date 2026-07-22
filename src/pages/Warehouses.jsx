@@ -1,59 +1,59 @@
-import { useMemo, useState } from 'react'
-import { useWebsiteStore } from '../store/websiteStore'
+import { useUserStore } from "../store/userStore";import { useProductStore } from "../store/productStore";import { useMemo, useState } from 'react';
+
 
 export default function Warehouses() {
 
   const users =
-    useWebsiteStore((s) => s.users || [])
+  useUserStore((s) => s.users || []);
 
   const setUsers =
-    useWebsiteStore((s) => s.setUsers)
+  useUserStore((s) => s.setUsers);
 
   const products =
-    useWebsiteStore((s) => s.products || [])
+  useProductStore((s) => s.products || []);
 
   const currentUser =
-    useWebsiteStore((s) => s.currentUser)
+  useUserStore((s) => s.currentUser);
 
   const isOwner =
-    currentUser?.role === 'owner'
+  currentUser?.role === 'owner';
 
   const [warehouseName, setWarehouseName] =
-    useState('')
+  useState('');
 
   const [managerName, setManagerName] =
-    useState('')
+  useState('');
 
   const [warehouseType, setWarehouseType] =
-    useState('warehouse')
+  useState('warehouse');
 
   const [username, setUsername] =
-    useState('')
+  useState('');
 
   const [password, setPassword] =
-    useState('123456')
+  useState('123456');
 
   const warehouseUsers = useMemo(() => {
 
     return users.filter(
       (u) =>
-        u.role === 'warehouse' ||
-        u.role === 'branch' ||
-        u.role === 'shop' ||
-        u.role === 'service'
-    )
+      u.role === 'warehouse' ||
+      u.role === 'branch' ||
+      u.role === 'shop' ||
+      u.role === 'service'
+    );
 
-  }, [users])
+  }, [users]);
 
   const warehouseStats = useMemo(() => {
 
-    const stats = {}
+    const stats = {};
 
     warehouseUsers.forEach((user) => {
 
       const name =
-        user.warehouseName ||
-        'غير محدد'
+      user.warehouseName ||
+      'غير محدد';
 
       if (!stats[name]) {
 
@@ -64,32 +64,32 @@ export default function Warehouses() {
           products: 0,
 
           type:
-            user.warehouseType ||
-            user.role,
+          user.warehouseType ||
+          user.role,
 
           username:
-            user.username,
+          user.username,
 
           password:
-            user.password,
+          user.password,
 
           manager:
-            user.managerName ||
-            ''
+          user.managerName ||
+          ''
 
-        }
+        };
 
       }
 
-      stats[name].users += 1
+      stats[name].users += 1;
 
-    })
+    });
 
     products.forEach((product) => {
 
       const name =
-        product.warehouseName ||
-        'غير محدد'
+      product.warehouseName ||
+      'غير محدد';
 
       if (!stats[name]) {
 
@@ -107,169 +107,169 @@ export default function Warehouses() {
 
           manager: ''
 
-        }
+        };
 
       }
 
-      stats[name].products += 1
+      stats[name].products += 1;
 
-    })
+    });
 
-    return stats
+    return stats;
 
-  }, [warehouseUsers, products])
+  }, [warehouseUsers, products]);
 
   const getRoleFromType = (type) => {
 
     if (type === 'warehouse')
-      return 'warehouse'
+    return 'warehouse';
 
     if (type === 'branch')
-      return 'branch'
+    return 'branch';
 
     if (type === 'showroom')
-      return 'shop'
+    return 'shop';
 
     if (type === 'distributor')
-      return 'service'
+    return 'service';
 
-    return 'warehouse'
+    return 'warehouse';
 
-  }
+  };
 
   const getTypeName = (type) => {
 
     if (type === 'warehouse')
-      return '🏭 مخزن'
+    return '🏭 مخزن';
 
     if (type === 'branch')
-      return '🏢 فرع'
+    return '🏢 فرع';
 
     if (type === 'showroom')
-      return '🏪 معرض'
+    return '🏪 معرض';
 
     if (type === 'distributor')
-      return '🚚 موزع معتمد'
+    return '🚚 موزع معتمد';
 
-    return '🏭 مخزن'
+    return '🏭 مخزن';
 
-  }
+  };
 
   const createWarehouse = () => {
 
-    if (!isOwner) return
+    if (!isOwner) return;
 
     if (!warehouseName.trim()) {
 
-      alert('ادخل اسم الجهة')
+      alert('ادخل اسم الجهة');
 
-      return
+      return;
 
     }
 
     const exists = users.some(
       (u) =>
-        u.warehouseName ===
-        warehouseName.trim()
-    )
+      u.warehouseName ===
+      warehouseName.trim()
+    );
 
     if (exists) {
 
-      alert('الجهة موجودة بالفعل')
+      alert('الجهة موجودة بالفعل');
 
-      return
+      return;
 
     }
 
     const warehouseId =
-      Date.now().toString()
+    Date.now().toString();
 
     const newUser = {
 
       id:
-        warehouseId,
+      warehouseId,
 
       username:
-        username.trim() ||
-        `user_${warehouseId}`,
+      username.trim() ||
+      `user_${warehouseId}`,
 
       password:
-        password.trim() ||
-        '123456',
+      password.trim() ||
+      '123456',
 
       role:
-        getRoleFromType(
-          warehouseType
-        ),
+      getRoleFromType(
+        warehouseType
+      ),
 
       warehouseType,
 
       warehouseId,
 
       warehouseName:
-        warehouseName.trim(),
+      warehouseName.trim(),
 
       managerName:
-        managerName.trim(),
+      managerName.trim(),
 
       active: true,
 
       permissions: [
 
-        'warehouse_dashboard',
+      'warehouse_dashboard',
 
-        'products_view',
+      'products_view',
 
-        'orders_view',
+      'orders_view',
 
-        'transfers_view',
+      'transfers_view',
 
-        'transfers_create'
+      'transfers_create']
 
-      ]
 
-    }
+
+    };
 
     setUsers([
-      ...users,
-      newUser
-    ])
+    ...users,
+    newUser]
+    );
 
-    setWarehouseName('')
-    setManagerName('')
-    setUsername('')
-    setPassword('123456')
-    setWarehouseType('warehouse')
+    setWarehouseName('');
+    setManagerName('');
+    setUsername('');
+    setPassword('123456');
+    setWarehouseType('warehouse');
 
     alert(
       'تم إنشاء الجهة بنجاح'
-    )
+    );
 
-  }
+  };
 
   const deleteWarehouse = (
-    warehouseName
-  ) => {
+  warehouseName) =>
+  {
 
-    if (!isOwner) return
+    if (!isOwner) return;
 
     const ok =
-      window.confirm(
-        `حذف ${warehouseName} ؟`
-      )
+    window.confirm(
+      `حذف ${warehouseName} ؟`
+    );
 
-    if (!ok) return
+    if (!ok) return;
 
     const updated =
-      users.filter(
-        (u) =>
-          u.warehouseName !==
-          warehouseName
-      )
+    users.filter(
+      (u) =>
+      u.warehouseName !==
+      warehouseName
+    );
 
-    setUsers(updated)
+    setUsers(updated);
 
-  }
+  };
 
   if (!isOwner) {
 
@@ -285,14 +285,28 @@ export default function Warehouses() {
           text-red-300
           p-4
           rounded-xl
-        "
-        >
+        ">
+
+
+
+
+
+
+          
+
+
+
+
+
+
+
+          
           لا تملك صلاحية الوصول
         </div>
 
-      </div>
+      </div>);
 
-    )
+
 
   }
 
@@ -303,8 +317,16 @@ export default function Warehouses() {
       p-6
       space-y-6
       text-white
-    "
-    >
+    ">
+
+
+
+      
+
+
+
+
+      
 
       <div>
 
@@ -313,8 +335,16 @@ export default function Warehouses() {
           text-3xl
           font-black
           text-yellow-400
-        "
-        >
+        ">
+
+
+
+          
+
+
+
+
+          
           🏭 إدارة المخازن والفروع
         </h1>
 
@@ -335,24 +365,44 @@ export default function Warehouses() {
         rounded-2xl
         p-5
         space-y-4
-      "
-      >
+      ">
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+        
 
         <h2
           className="
           text-xl
           font-black
-        "
-        >
+        ">
+
+
+          
+
+
+
+          
           إنشاء جهة جديدة
         </h2>
 
         <select
           value={warehouseType}
           onChange={(e) =>
-            setWarehouseType(
-              e.target.value
-            )
+          setWarehouseType(
+            e.target.value
+          )
           }
           className="
             w-full
@@ -362,8 +412,24 @@ export default function Warehouses() {
             border
             border-slate-700
             text-white
-          "
-        >
+          ">
+
+
+
+
+
+
+
+          
+
+
+
+
+
+
+
+
+          
 
           <option value="warehouse">
             مخزن
@@ -386,9 +452,9 @@ export default function Warehouses() {
         <input
           value={warehouseName}
           onChange={(e) =>
-            setWarehouseName(
-              e.target.value
-            )
+          setWarehouseName(
+            e.target.value
+          )
           }
           placeholder="اسم الجهة"
           className="
@@ -399,15 +465,31 @@ export default function Warehouses() {
             border
             border-slate-700
             text-white
-          "
-        />
+          " />
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
 
         <input
           value={managerName}
           onChange={(e) =>
-            setManagerName(
-              e.target.value
-            )
+          setManagerName(
+            e.target.value
+          )
           }
           placeholder="اسم المسؤول"
           className="
@@ -418,15 +500,31 @@ export default function Warehouses() {
             border
             border-slate-700
             text-white
-          "
-        />
+          " />
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
 
         <input
           value={username}
           onChange={(e) =>
-            setUsername(
-              e.target.value
-            )
+          setUsername(
+            e.target.value
+          )
           }
           placeholder="اسم المستخدم"
           className="
@@ -437,15 +535,31 @@ export default function Warehouses() {
             border
             border-slate-700
             text-white
-          "
-        />
+          " />
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
 
         <input
           value={password}
           onChange={(e) =>
-            setPassword(
-              e.target.value
-            )
+          setPassword(
+            e.target.value
+          )
           }
           placeholder="كلمة المرور"
           className="
@@ -456,8 +570,24 @@ export default function Warehouses() {
             border
             border-slate-700
             text-white
-          "
-        />
+          " />
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
 
         <button
           onClick={createWarehouse}
@@ -468,8 +598,22 @@ export default function Warehouses() {
             font-black
             py-3
             rounded-xl
-          "
-        >
+          ">
+
+
+
+
+
+
+          
+
+
+
+
+
+
+
+          
           إنشاء
         </button>
 
@@ -481,39 +625,69 @@ export default function Warehouses() {
         md:grid-cols-2
         lg:grid-cols-3
         gap-4
-      "
-      >
+      ">
+
+
+
+
+        
+
+
+
+
+
+        
 
         {Object.entries(
           warehouseStats
         ).map(
-          ([name, stats]) => (
+          ([name, stats]) =>
 
-            <div
-              key={name}
-              className="
+          <div
+            key={name}
+            className="
               bg-slate-900
               border
               border-slate-700
               rounded-2xl
               p-5
-            "
-            >
+            ">
+
+
+
+
+
+            
+
+
+
+
+
+
+            
 
               <div
-                className="
+              className="
                 text-yellow-400
                 text-xl
                 font-black
-              "
-              >
+              ">
+
+
+
+              
+
+
+
+
+              
                 {name}
               </div>
 
               <div className="mt-3">
                 {getTypeName(
-                  stats.type
-                )}
+                stats.type
+              )}
               </div>
 
               <div>
@@ -547,32 +721,46 @@ export default function Warehouses() {
               </div>
 
               <button
-                onClick={() =>
-                  deleteWarehouse(
-                    name
-                  )
-                }
-                className="
+              onClick={() =>
+              deleteWarehouse(
+                name
+              )
+              }
+              className="
                   mt-4
                   bg-red-600
                   px-4
                   py-2
                   rounded-xl
                   font-bold
-                "
-              >
+                ">
+
+
+
+
+
+
+              
+
+
+
+
+
+
+
+              
                 حذف
               </button>
 
             </div>
 
-          )
+
         )}
 
       </div>
 
-    </div>
+    </div>);
 
-  )
+
 
 }

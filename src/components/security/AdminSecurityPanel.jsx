@@ -1,74 +1,74 @@
-import { useMemo, useState } from 'react'
-import { useWebsiteStore } from '../../store/websiteStore'
+import { useUserStore } from "../store/userStore";import { useMemo, useState } from 'react';
+import { useWebsiteStore } from '../../store/websiteStore';
 
 export default function AdminSecurityPanel() {
 
   // ================= STORE =================
 
-  const users = useWebsiteStore(s => s.users || [])
-  const auditLogs = useWebsiteStore(s => s.auditLogs || [])
-  const notifications = useWebsiteStore(s => s.notifications || [])
-  const currentUser = useWebsiteStore(s => s.currentUser)
+  const users = useUserStore((s) => s.users || []);
+  const auditLogs = useWebsiteStore((s) => s.auditLogs || []);
+  const notifications = useWebsiteStore((s) => s.notifications || []);
+  const currentUser = useUserStore((s) => s.currentUser);
 
-  const addNotification = useWebsiteStore(s => s.addNotification)
+  const addNotification = useWebsiteStore((s) => s.addNotification);
 
   // ================= STATES =================
 
-  const [search, setSearch] = useState('')
-  const [activeTab, setActiveTab] = useState('users')
+  const [search, setSearch] = useState('');
+  const [activeTab, setActiveTab] = useState('users');
 
   // ================= SECURITY CHECK =================
 
-  const isOwner = currentUser?.role === 'owner'
+  const isOwner = currentUser?.role === 'owner';
 
   // ================= FILTER USERS =================
 
   const filteredUsers = useMemo(() => {
 
-    return (users || []).filter(u =>
-      (u.username || '').toLowerCase().includes(search.toLowerCase()) ||
-      (u.role || '').toLowerCase().includes(search.toLowerCase())
-    )
+    return (users || []).filter((u) =>
+    (u.username || '').toLowerCase().includes(search.toLowerCase()) ||
+    (u.role || '').toLowerCase().includes(search.toLowerCase())
+    );
 
-  }, [users, search])
+  }, [users, search]);
 
   // ================= STATS =================
 
-  const totalUsers = users.length
-  const activeUsers = users.filter(u => u.active).length
-  const logsCount = auditLogs.length
-  const notificationsCount = notifications.length
+  const totalUsers = users.length;
+  const activeUsers = users.filter((u) => u.active).length;
+  const logsCount = auditLogs.length;
+  const notificationsCount = notifications.length;
 
   // ================= DELETE USER =================
 
   const deleteUser = (id) => {
 
     if (!isOwner) {
-      alert('❌ غير مصرح')
-      return
+      alert('❌ غير مصرح');
+      return;
     }
 
-    const ok = window.confirm('هل تريد حذف المستخدم؟')
-    if (!ok) return
+    const ok = window.confirm('هل تريد حذف المستخدم؟');
+    if (!ok) return;
 
-    const updated = users.filter(u => u.id !== id)
+    const updated = users.filter((u) => u.id !== id);
 
-    useWebsiteStore.setState({ users: updated })
+    useWebsiteStore.setState({ users: updated });
 
-    addNotification?.('🗑 حذف مستخدم', 'تم حذف مستخدم بنجاح')
-  }
+    addNotification?.('🗑 حذف مستخدم', 'تم حذف مستخدم بنجاح');
+  };
 
   // ================= TOGGLE USER =================
 
   const toggleUser = (id) => {
 
-    const updated = users.map(u =>
-      u.id === id ? { ...u, active: !u.active } : u
-    )
+    const updated = users.map((u) =>
+    u.id === id ? { ...u, active: !u.active } : u
+    );
 
-    useWebsiteStore.setState({ users: updated })
+    useWebsiteStore.setState({ users: updated });
 
-  }
+  };
 
   // ================= UI =================
 
@@ -99,15 +99,15 @@ export default function AdminSecurityPanel() {
       <div className="flex gap-4">
         <button
           onClick={() => setActiveTab('users')}
-          className={`px-6 py-3 rounded-xl font-bold ${activeTab === 'users' ? 'bg-red-600' : 'bg-slate-800'}`}
-        >
+          className={`px-6 py-3 rounded-xl font-bold ${activeTab === 'users' ? 'bg-red-600' : 'bg-slate-800'}`}>
+          
           👥 المستخدمين
         </button>
 
         <button
           onClick={() => setActiveTab('logs')}
-          className={`px-6 py-3 rounded-xl font-bold ${activeTab === 'logs' ? 'bg-red-600' : 'bg-slate-800'}`}
-        >
+          className={`px-6 py-3 rounded-xl font-bold ${activeTab === 'logs' ? 'bg-red-600' : 'bg-slate-800'}`}>
+          
           📜 السجلات
         </button>
       </div>
@@ -117,15 +117,15 @@ export default function AdminSecurityPanel() {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="🔍 بحث عن مستخدم..."
-        className="w-full p-4 rounded-2xl text-black"
-      />
+        className="w-full p-4 rounded-2xl text-black" />
+      
 
       {/* USERS */}
-      {activeTab === 'users' && (
-        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+      {activeTab === 'users' &&
+      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
 
-          {filteredUsers.map(user => (
-            <div key={user.id} className="bg-slate-900 p-6 rounded-3xl border border-slate-700">
+          {filteredUsers.map((user) =>
+        <div key={user.id} className="bg-slate-900 p-6 rounded-3xl border border-slate-700">
 
               <div className="flex justify-between items-center">
 
@@ -151,39 +151,39 @@ export default function AdminSecurityPanel() {
               <div className="flex gap-3 mt-5">
 
                 <button
-                  onClick={() => toggleUser(user.id)}
-                  className="flex-1 bg-yellow-500 text-black py-2 rounded-xl font-bold"
-                >
+              onClick={() => toggleUser(user.id)}
+              className="flex-1 bg-yellow-500 text-black py-2 rounded-xl font-bold">
+              
                   تبديل الحالة
                 </button>
 
                 <button
-                  onClick={() => deleteUser(user.id)}
-                  className="flex-1 bg-red-600 py-2 rounded-xl font-bold"
-                >
+              onClick={() => deleteUser(user.id)}
+              className="flex-1 bg-red-600 py-2 rounded-xl font-bold">
+              
                   حذف
                 </button>
 
               </div>
 
             </div>
-          ))}
+        )}
 
         </div>
-      )}
+      }
 
       {/* LOGS */}
-      {activeTab === 'logs' && (
-        <div className="space-y-4">
+      {activeTab === 'logs' &&
+      <div className="space-y-4">
 
-          {auditLogs.length === 0 && (
-            <div className="text-gray-500 text-center">
+          {auditLogs.length === 0 &&
+        <div className="text-gray-500 text-center">
               لا توجد سجلات
             </div>
-          )}
+        }
 
-          {auditLogs.map(log => (
-            <div key={log.id} className="bg-slate-900 p-4 rounded-xl border border-slate-700">
+          {auditLogs.map((log) =>
+        <div key={log.id} className="bg-slate-900 p-4 rounded-xl border border-slate-700">
 
               <div className="font-bold text-yellow-400">
                 {log.action}
@@ -198,13 +198,13 @@ export default function AdminSecurityPanel() {
               </div>
 
             </div>
-          ))}
+        )}
 
         </div>
-      )}
+      }
 
-    </div>
-  )
+    </div>);
+
 }
 
 // ================= STAT CARD =================
@@ -216,7 +216,7 @@ function Stat({ title, value, color }) {
     green: 'border-green-500 text-green-400',
     yellow: 'border-yellow-500 text-yellow-400',
     red: 'border-red-500 text-red-400'
-  }
+  };
 
   return (
     <div className={`bg-slate-900 p-5 rounded-2xl border ${colors[color]}`}>
@@ -224,6 +224,6 @@ function Stat({ title, value, color }) {
       <div className="text-3xl font-black mt-3">
         {value}
       </div>
-    </div>
-  )
+    </div>);
+
 }

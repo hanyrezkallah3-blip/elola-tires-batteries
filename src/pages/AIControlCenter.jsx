@@ -1,15 +1,15 @@
-import { useMemo } from 'react'
-import { useWebsiteStore } from '../store/websiteStore'
-import { useInventoryStore } from '../store/inventoryStore'
-import AIControlPanel from '../components/ai/AIControlPanel'
+import { useUserStore } from "../store/userStore";import { useOrderStore } from "../store/orderStore";import { useProductStore } from "../store/productStore";import { useMemo } from 'react';
+
+import { useInventoryStore } from '../store/inventoryStore';
+import AIControlPanel from '../components/ai/AIControlPanel';
 
 export default function AIControlCenter() {
-  const products = useWebsiteStore((state) => state.products)
-  const orders = useWebsiteStore((state) => state.orders)
-  const users = useWebsiteStore((state) => state.users)
+  const products = useProductStore((state) => state.products);
+  const orders = useOrderStore((state) => state.orders);
+  const users = useUserStore((state) => state.users);
 
-  const warehouses = useInventoryStore((state) => state.warehouses)
-  const stockItems = useInventoryStore((state) => state.stockItems)
+  const warehouses = useInventoryStore((state) => state.warehouses);
+  const stockItems = useInventoryStore((state) => state.stockItems);
 
   const summary = useMemo(() => {
     return {
@@ -18,14 +18,14 @@ export default function AIControlCenter() {
       totalUsers: users?.length || 0,
       totalWarehouses: warehouses?.length || 0,
       totalStockItems: stockItems?.length || 0
-    }
+    };
   }, [
-    products,
-    orders,
-    users,
-    warehouses,
-    stockItems
-  ])
+  products,
+  orders,
+  users,
+  warehouses,
+  stockItems]
+  );
 
   return (
     <div className="space-y-6">
@@ -57,6 +57,6 @@ export default function AIControlCenter() {
           <p>{summary.totalStockItems}</p>
         </div>
       </div>
-    </div>
-  )
+    </div>);
+
 }

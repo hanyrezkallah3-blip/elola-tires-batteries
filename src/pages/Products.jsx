@@ -1,430 +1,430 @@
-import {
+import { useProductStore } from "../store/productStore";import {
   useMemo,
   useState,
   useCallback,
-  useEffect
-} from 'react'
+  useEffect } from
+'react';
 
 import {
-  useWebsiteStore
-} from '../store/websiteStore'
+  useWebsiteStore } from
+'../store/websiteStore';
 
 import {
-  useInventoryStore
-} from '../store/inventoryStore'
+  useInventoryStore } from
+'../store/inventoryStore';
 
 
-import ProductForm
-  from '../components/products/ProductForm'
+import ProductForm from
+'../components/products/ProductForm';
 
-import ProductsStats
-  from '../components/products/ProductsStats'
+import ProductsStats from
+'../components/products/ProductsStats';
 
-import ProductsFilters
-  from '../components/products/ProductsFilters'
+import ProductsFilters from
+'../components/products/ProductsFilters';
 
-import ProductsGrid
-  from '../components/products/ProductsGrid'
+import ProductsGrid from
+'../components/products/ProductsGrid';
 
-import ProductsPagination
-  from '../components/products/ProductsPagination'
+import ProductsPagination from
+'../components/products/ProductsPagination';
 
-import ProductsSkeleton
-  from '../components/products/ProductsSkeleton'
+import ProductsSkeleton from
+'../components/products/ProductsSkeleton';
 
-import ProductSearchInfo
-  from '../components/products/ProductSearchInfo'
+import ProductSearchInfo from
+'../components/products/ProductSearchInfo';
 
-import ProductsSort
-  from '../components/products/ProductsSort'
+import ProductsSort from
+'../components/products/ProductsSort';
 
-import LowStockAlert
-  from '../components/products/LowStockAlert'
+import LowStockAlert from
+'../components/products/LowStockAlert';
 
-import ProductListCard
-  from '../components/products/ProductListCard'
+import ProductListCard from
+'../components/products/ProductListCard';
 
 
 import {
-  StockEngine
-} from '../core'
+  StockEngine } from
+'../core';
 
 
 export default function Products() {
 
 
   const products =
-    useWebsiteStore(
-      state => state.products || []
-    )
+  useProductStore(
+    (state) => state.products || []
+  );
 
 
   const addProduct =
-    useWebsiteStore(
-      state => state.addProduct
-    )
+  useProductStore(
+    (state) => state.addProduct
+  );
 
 
   const deleteProduct =
-    useWebsiteStore(
-      state => state.deleteProduct
-    )
+  useProductStore(
+    (state) => state.deleteProduct
+  );
 
 
   const toggleProductVisibility =
-    useWebsiteStore(
-      state =>
-        state.toggleProductVisibility
-    )
+  useWebsiteStore(
+    (state) =>
+    state.toggleProductVisibility
+  );
 
 
   const stockItems =
-    useInventoryStore(
-      state =>
-        state.stockItems || []
-    )
+  useInventoryStore(
+    (state) =>
+    state.stockItems || []
+  );
 
 
 
-  const [search,setSearch] =
-    useState('')
+  const [search, setSearch] =
+  useState('');
 
 
-  const [filter,setFilter] =
-    useState('all')
+  const [filter, setFilter] =
+  useState('all');
 
 
-  const [sortBy,setSortBy] =
-    useState('newest')
+  const [sortBy, setSortBy] =
+  useState('newest');
 
 
-  const [viewMode,setViewMode] =
-    useState('grid')
+  const [viewMode, setViewMode] =
+  useState('grid');
 
 
-  const [currentPage,setCurrentPage] =
-    useState(1)
+  const [currentPage, setCurrentPage] =
+  useState(1);
 
 
-  const [loading,setLoading] =
-    useState(true)
+  const [loading, setLoading] =
+  useState(true);
 
 
 
-  useEffect(()=>{
+  useEffect(() => {
 
     const timer =
-      setTimeout(
-        ()=>setLoading(false),
-        800
-      )
+    setTimeout(
+      () => setLoading(false),
+      800
+    );
 
 
-    return ()=>clearTimeout(timer)
+    return () => clearTimeout(timer);
 
-  },[])
+  }, []);
 
 
 
-  useEffect(()=>{
+  useEffect(() => {
 
-    setCurrentPage(1)
+    setCurrentPage(1);
 
-  },[
-    search,
-    filter,
-    sortBy
-  ])
+  }, [
+  search,
+  filter,
+  sortBy]
+  );
 
 
 
 
   const handleAddProduct =
-    useCallback((product)=>{
+  useCallback((product) => {
 
 
-      addProduct({
+    addProduct({
 
-        ...product,
+      ...product,
 
-        stock:
-          product.quantity || 0,
+      stock:
+      product.quantity || 0,
 
-        sold:0,
+      sold: 0,
 
-        hidden:false
+      hidden: false
 
-      })
+    });
 
 
-    },[
-      addProduct
-    ])
+  }, [
+  addProduct]
+  );
 
 
 
 
   const handleDelete =
-    useCallback((id)=>{
+  useCallback((id) => {
 
 
-      if(
-        window.confirm(
-          'هل تريد حذف المنتج؟'
-        )
-      ){
+    if (
+    window.confirm(
+      'هل تريد حذف المنتج؟'
+    ))
+    {
 
-        deleteProduct(id)
+      deleteProduct(id);
 
-      }
+    }
 
 
-    },[
-      deleteProduct
-    ])
+  }, [
+  deleteProduct]
+  );
 
 
 
 
   const handleUpdateStock =
-    useCallback(
-      (
+  useCallback(
+    (
+    productId,
+    quantity) =>
+    {
+
+
+      return StockEngine.setQuantity({
+
         productId,
+
         quantity
-      )=>{
+
+      });
 
 
-        return StockEngine.setQuantity({
-
-          productId,
-
-          quantity
-
-        })
-
-
-      },
-      []
-    )
+    },
+    []
+  );
 
 
 
 
   const filteredProducts =
-    useMemo(()=>{
+  useMemo(() => {
 
 
-      let result =
-        [...products]
+    let result =
+    [...products];
 
 
 
-      if(search.trim()){
+    if (search.trim()) {
 
 
-        result =
-          result.filter(product=>
+      result =
+      result.filter((product) =>
 
-            product.name
-              ?.toLowerCase()
-              .includes(
-                search.toLowerCase()
-              )
+      product.name?.
+      toLowerCase().
+      includes(
+        search.toLowerCase()
+      )
 
-          )
+      );
 
-      }
+    }
 
 
 
 
-      if(filter==='low'){
+    if (filter === 'low') {
 
-        result =
-          result.filter(product=>
+      result =
+      result.filter((product) =>
 
-            Number(
-              product.stock || 0
-            ) <= 5
+      Number(
+        product.stock || 0
+      ) <= 5
 
-          )
+      );
 
-      }
+    }
 
 
 
-      if(filter==='available'){
+    if (filter === 'available') {
 
-        result =
-          result.filter(product=>
+      result =
+      result.filter((product) =>
 
-            Number(
-              product.stock || 0
-            ) > 0
+      Number(
+        product.stock || 0
+      ) > 0
 
-          )
+      );
 
-      }
+    }
 
 
 
-      if(filter==='hidden'){
+    if (filter === 'hidden') {
 
-        result =
-          result.filter(product=>
+      result =
+      result.filter((product) =>
 
-            product.hidden
+      product.hidden
 
-          )
+      );
 
-      }
+    }
 
 
 
 
-      const sorters = {
+    const sorters = {
 
-        newest:(a,b)=>
+      newest: (a, b) =>
 
-          new Date(
-            b.createdAt || 0
-          )
-          -
-          new Date(
-            a.createdAt || 0
-          ),
+      new Date(
+        b.createdAt || 0
+      ) -
 
+      new Date(
+        a.createdAt || 0
+      ),
 
-        oldest:(a,b)=>
 
-          new Date(
-            a.createdAt || 0
-          )
-          -
-          new Date(
-            b.createdAt || 0
-          ),
+      oldest: (a, b) =>
 
+      new Date(
+        a.createdAt || 0
+      ) -
 
-        priceHigh:(a,b)=>
+      new Date(
+        b.createdAt || 0
+      ),
 
-          Number(b.salePrice || b.price || 0)
-          -
-          Number(a.salePrice || a.price || 0),
 
+      priceHigh: (a, b) =>
 
-        priceLow:(a,b)=>
+      Number(b.salePrice || b.price || 0) -
 
-          Number(a.salePrice || a.price || 0)
-          -
-          Number(b.salePrice || b.price || 0),
+      Number(a.salePrice || a.price || 0),
 
 
-        stockHigh:(a,b)=>
+      priceLow: (a, b) =>
 
-          Number(b.stock || 0)
-          -
-          Number(a.stock || 0),
+      Number(a.salePrice || a.price || 0) -
 
+      Number(b.salePrice || b.price || 0),
 
-        stockLow:(a,b)=>
 
-          Number(a.stock || 0)
-          -
-          Number(b.stock || 0)
+      stockHigh: (a, b) =>
 
-      }
+      Number(b.stock || 0) -
 
+      Number(a.stock || 0),
 
-      if(sorters[sortBy]){
 
-        result.sort(
-          sorters[sortBy]
-        )
+      stockLow: (a, b) =>
 
-      }
+      Number(a.stock || 0) -
 
+      Number(b.stock || 0)
 
+    };
 
-      return result
 
+    if (sorters[sortBy]) {
 
-    },[
-      products,
-      search,
-      filter,
-      sortBy
-    ])
+      result.sort(
+        sorters[sortBy]
+      );
 
+    }
 
 
 
+    return result;
 
-  const stats = useMemo(()=>({
+
+  }, [
+  products,
+  search,
+  filter,
+  sortBy]
+  );
+
+
+
+
+
+  const stats = useMemo(() => ({
 
 
     totalStock:
 
-      stockItems.reduce(
-        (sum,item)=>
-          sum +
-          Number(item.quantity || 0),
-        0
-      ),
+    stockItems.reduce(
+      (sum, item) =>
+      sum +
+      Number(item.quantity || 0),
+      0
+    ),
 
 
     totalSold:
 
-      stockItems.reduce(
-        (sum,item)=>
-          sum +
-          Number(item.sold || 0),
-        0
-      ),
+    stockItems.reduce(
+      (sum, item) =>
+      sum +
+      Number(item.sold || 0),
+      0
+    ),
 
 
     hiddenProducts:
 
-      products.filter(
-        p=>p.hidden
-      ).length,
+    products.filter(
+      (p) => p.hidden
+    ).length,
 
 
     lowStockProducts:
 
-      products.filter(
-        p=>
-          Number(p.stock || 0)<=5
-      )
+    products.filter(
+      (p) =>
+      Number(p.stock || 0) <= 5
+    )
 
 
-  }),[
-    products,
-    stockItems
-  ])
+  }), [
+  products,
+  stockItems]
+  );
 
 
 
 
-  const perPage = 6
+  const perPage = 6;
 
 
   const totalPages =
-    Math.ceil(
-      filteredProducts.length /
-      perPage
-    )
+  Math.ceil(
+    filteredProducts.length /
+    perPage
+  );
 
 
 
   const paginatedProducts =
-    filteredProducts.slice(
+  filteredProducts.slice(
 
-      (currentPage-1)*perPage,
+    (currentPage - 1) * perPage,
 
-      currentPage*perPage
+    currentPage * perPage
 
-    )
+  );
 
 
 
@@ -440,6 +440,12 @@ export default function Products() {
     ">
 
 
+
+
+
+      
+
+
       <div className="
         bg-gradient-to-r
         from-blue-950
@@ -450,10 +456,21 @@ export default function Products() {
         mb-12
       ">
 
+
+
+
+
+
+
+        
+
         <h1 className="
           text-5xl
           font-black
         ">
+
+
+          
 
           إدارة المنتجات والمخزون
 
@@ -466,42 +483,42 @@ export default function Products() {
       <ProductsStats
 
         productsCount={
-          products.length
+        products.length
         }
 
         totalStock={
-          stats.totalStock
+        stats.totalStock
         }
 
         totalSold={
-          stats.totalSold
+        stats.totalSold
         }
 
         hiddenProducts={
-          stats.hiddenProducts
-        }
+        stats.hiddenProducts
+        } />
 
-      />
+      
 
 
 
       <ProductForm
 
         onAddProduct={
-          handleAddProduct
-        }
+        handleAddProduct
+        } />
 
-      />
+      
 
 
 
       <LowStockAlert
 
         lowStockProducts={
-          stats.lowStockProducts
-        }
+        stats.lowStockProducts
+        } />
 
-      />
+      
 
 
 
@@ -513,23 +530,23 @@ export default function Products() {
 
         filter={filter}
 
-        setFilter={setFilter}
+        setFilter={setFilter} />
 
-      />
+      
 
 
 
       <ProductSearchInfo
 
         totalResults={
-          filteredProducts.length
+        filteredProducts.length
         }
 
         search={search}
 
-        filter={filter}
+        filter={filter} />
 
-      />
+      
 
 
 
@@ -537,70 +554,70 @@ export default function Products() {
 
         sortBy={sortBy}
 
-        setSortBy={setSortBy}
+        setSortBy={setSortBy} />
 
-      />
+      
 
 
 
       {
-        loading ?
+      loading ?
 
-        <ProductsSkeleton />
+      <ProductsSkeleton /> :
 
-        :
 
-        viewMode==='grid' ?
 
-        <ProductsGrid
+      viewMode === 'grid' ?
 
-          products={
-            paginatedProducts
-          }
+      <ProductsGrid
+
+        products={
+        paginatedProducts
+        }
+
+        onDelete={
+        handleDelete
+        }
+
+        onToggleVisibility={
+        toggleProductVisibility
+        }
+
+        onUpdateStock={
+        handleUpdateStock
+        } /> :
+
+
+
+
+
+      <div className="space-y-8">
+
+          {
+        paginatedProducts.map((product) =>
+
+        <ProductListCard
+
+          key={product.id}
+
+          product={product}
 
           onDelete={
-            handleDelete
+          handleDelete
           }
 
           onToggleVisibility={
-            toggleProductVisibility
+          toggleProductVisibility
           }
 
           onUpdateStock={
-            handleUpdateStock
-          }
+          handleUpdateStock
+          } />
 
-        />
 
-        :
 
-        <div className="space-y-8">
-
-          {
-            paginatedProducts.map(product=>(
-
-              <ProductListCard
-
-                key={product.id}
-
-                product={product}
-
-                onDelete={
-                  handleDelete
-                }
-
-                onToggleVisibility={
-                  toggleProductVisibility
-                }
-
-                onUpdateStock={
-                  handleUpdateStock
-                }
-
-              />
-
-            ))
-          }
+        )
+        }
 
         </div>
 
@@ -610,29 +627,29 @@ export default function Products() {
 
 
       {
-        totalPages > 1 &&
+      totalPages > 1 &&
 
-        <ProductsPagination
+      <ProductsPagination
 
-          currentPage={
-            currentPage
-          }
+        currentPage={
+        currentPage
+        }
 
-          totalPages={
-            totalPages
-          }
+        totalPages={
+        totalPages
+        }
 
-          onPageChange={
-            setCurrentPage
-          }
+        onPageChange={
+        setCurrentPage
+        } />
 
-        />
+
 
       }
 
 
-    </div>
+    </div>);
 
-  )
+
 
 }

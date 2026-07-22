@@ -1,13 +1,13 @@
-import { useMemo } from 'react'
-import { useWebsiteStore } from '../store/websiteStore'
+import { useWalletStore } from "../store/walletStore";import { useOrderStore } from "../store/orderStore";import { useMemo } from 'react';
+import { useWebsiteStore } from '../store/websiteStore';
 
 export default function AIFinancialERP() {
 
   // ================= STORE =================
 
-  const orders = useWebsiteStore((s) => s.orders || [])
-  const wallets = useWebsiteStore((s) => s.wallets || [])
-  const transfers = useWebsiteStore((s) => s.transfers || [])
+  const orders = useOrderStore((s) => s.orders || []);
+  const wallets = useWalletStore((s) => s.wallets || []);
+  const transfers = useWebsiteStore((s) => s.transfers || []);
 
   // ================= CORE DATA =================
 
@@ -15,73 +15,73 @@ export default function AIFinancialERP() {
     return orders.map((o, i) => ({
       index: i + 1,
       value: Number(o.total || 0)
-    }))
-  }, [orders])
+    }));
+  }, [orders]);
 
   const totalSales = useMemo(
     () => orders.reduce((a, o) => a + Number(o.total || 0), 0),
     [orders]
-  )
+  );
 
   const walletBalance = useMemo(
     () => wallets.reduce((a, w) => a + Number(w.balance || 0), 0),
     [wallets]
-  )
+  );
 
   const totalCashback = useMemo(
     () => wallets.reduce((a, w) => a + Number(w.totalCashback || 0), 0),
     [wallets]
-  )
+  );
 
-  const netProfit = totalSales - totalCashback
-  const cashFlow = netProfit - walletBalance
+  const netProfit = totalSales - totalCashback;
+  const cashFlow = netProfit - walletBalance;
 
   // ================= AI PREDICTION ENGINE =================
 
   const predictedNextMonthSales = useMemo(() => {
-    const growthRate = 0.12 // 12% AI assumed growth
+    const growthRate = 0.12; // 12% AI assumed growth
 
-    return totalSales * (1 + growthRate)
-  }, [totalSales])
+    return totalSales * (1 + growthRate);
+  }, [totalSales]);
 
   const predictedProfit = useMemo(() => {
-    return netProfit * 1.1
-  }, [netProfit])
+    return netProfit * 1.1;
+  }, [netProfit]);
 
   const riskLevel = useMemo(() => {
 
-    if (cashFlow < 0) return '🔥 خطر عالي'
-    if (netProfit < 50000) return '⚠️ خطر متوسط'
-    if (totalSales < 100000) return '📉 نمو ضعيف'
+    if (cashFlow < 0) return '🔥 خطر عالي';
+    if (netProfit < 50000) return '⚠️ خطر متوسط';
+    if (totalSales < 100000) return '📉 نمو ضعيف';
 
-    return '✅ آمن'
+    return '✅ آمن';
 
-  }, [cashFlow, netProfit, totalSales])
+  }, [cashFlow, netProfit, totalSales]);
 
   // ================= INSIGHTS ENGINE =================
 
   const insights = useMemo(() => {
 
-    const list = []
+    const list = [];
 
     if (cashFlow < 0)
-      list.push('🚨 السيولة سلبية - تحتاج تدخل مالي')
+    list.push('🚨 السيولة سلبية - تحتاج تدخل مالي');
 
     if (walletBalance > netProfit)
-      list.push('⚠️ المحافظ تستهلك الأرباح')
+    list.push('⚠️ المحافظ تستهلك الأرباح');
 
     if (totalSales > 200000)
-      list.push('📈 الشركة في مرحلة نمو قوي')
+    list.push('📈 الشركة في مرحلة نمو قوي');
 
     if (orders.length > 100)
-      list.push('🔥 نشاط عالي في الطلبات')
+    list.push('🔥 نشاط عالي في الطلبات');
 
     if (list.length === 0)
-      list.push('✅ الأداء مستقر')
+    list.push('✅ الأداء مستقر');
 
-    return list
+    return list;
 
-  }, [cashFlow, walletBalance, netProfit, totalSales, orders.length])
+  }, [cashFlow, walletBalance, netProfit, totalSales, orders.length]);
 
   // ================= UI =================
 
@@ -152,9 +152,9 @@ export default function AIFinancialERP() {
 
         <ul className="space-y-3 text-lg">
 
-          {insights.map((item, i) => (
-            <li key={i}>• {item}</li>
-          ))}
+          {insights.map((item, i) =>
+          <li key={i}>• {item}</li>
+          )}
 
         </ul>
 
@@ -169,20 +169,20 @@ export default function AIFinancialERP() {
 
         <div className="space-y-2">
 
-          {salesData.slice(-10).map((d, i) => (
+          {salesData.slice(-10).map((d, i) =>
 
-            <div key={i} className="flex items-center gap-3">
+          <div key={i} className="flex items-center gap-3">
 
               <div className="w-20 text-gray-400">
                 {d.index}
               </div>
 
               <div
-                className="bg-blue-500 h-4 rounded"
-                style={{
-                  width: `${Math.min(d.value / 1000, 100)}%`
-                }}
-              />
+              className="bg-blue-500 h-4 rounded"
+              style={{
+                width: `${Math.min(d.value / 1000, 100)}%`
+              }} />
+            
 
               <div className="text-green-400 font-bold">
                 {d.value.toLocaleString()}
@@ -190,14 +190,14 @@ export default function AIFinancialERP() {
 
             </div>
 
-          ))}
+          )}
 
         </div>
 
       </div>
 
-    </div>
-  )
+    </div>);
+
 }
 
 // ================= CARD =================
@@ -209,6 +209,6 @@ function Card({ title, value }) {
       <div className="text-4xl font-black mt-4 text-white">
         {Number(value).toLocaleString()}
       </div>
-    </div>
-  )
+    </div>);
+
 }
