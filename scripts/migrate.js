@@ -4,17 +4,8 @@ import path from 'path'
 
 import { scanDirectory } from './core/scanner.js'
 
-import { productsMigration }
-  from './migrations/products.js'
-
-import { ordersMigration }
-  from './migrations/orders.js'
-
-import { walletsMigration }
-  from './migrations/wallets.js'
-
-import { usersMigration }
-  from './migrations/users.js'
+import { storeMigration }
+  from './migrations/storeMigration.js'
 
 const migration = process.argv[2]
 
@@ -41,27 +32,17 @@ console.log(`Files Found: ${files.length}`)
 
 switch (migration) {
 
+  case 'stores':
+
   case 'products':
-
-    productsMigration(files)
-
-    break
 
   case 'orders':
 
-    ordersMigration(files)
-
-    break
+  case 'users':
 
   case 'wallets':
 
-    walletsMigration(files)
-
-    break
-
-  case 'users':
-
-    usersMigration(files)
+    storeMigration(files)
 
     break
 

@@ -2,16 +2,69 @@ import fs from 'fs'
 
 import { filterFiles } from '../core/fileFilter.js'
 
-import { transformUseProductStore }
-  from '../transforms/products/useProductStore.js'
+import {
+  transformAllStores
+} from '../transforms/shared/transformAllStores.js'
 
-export function productsMigration(files) {
+export function storeMigration(files) {
 
   const keywords = [
 
     'useWebsiteStore',
 
-    'products'
+    ...new Set([
+
+      'products',
+
+      'orders',
+
+      'wallet',
+
+      'wallets',
+
+      'walletTransactions',
+
+      'walletEnabled',
+
+      'cashbackPercentage',
+
+      'users',
+
+      'currentUser',
+
+      'login',
+
+      'logout',
+
+      'register',
+
+      'permissions',
+
+      'setCurrentUser',
+
+      'logoutUser',
+
+      'setUsers',
+
+      'addUser',
+
+      'updateUser',
+
+      'deleteUser',
+
+      'enableUser',
+
+      'disableUser',
+
+      'getUserById',
+
+      'getUserByUsername',
+
+      'searchUsers',
+
+      'getStatistics'
+
+    ])
 
   ]
 
@@ -25,7 +78,7 @@ export function productsMigration(files) {
 
   console.log('')
   console.log('====================================')
-  console.log(' Product Migration')
+  console.log(' Store Migration')
   console.log('====================================')
   console.log('')
 
@@ -37,7 +90,10 @@ export function productsMigration(files) {
 
     try {
 
-      const result = transformUseProductStore(file)
+      const result = transformAllStores(file)
+
+      if (!result)
+        continue
 
       if (result.changed) {
 
@@ -75,6 +131,7 @@ export function productsMigration(files) {
   }
 
   console.log('')
-  console.log('Changed:', changed)
+  console.log(`Changed: ${changed}`)
+  console.log('')
 
 }
