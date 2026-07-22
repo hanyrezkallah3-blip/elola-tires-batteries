@@ -4,50 +4,197 @@ import path from 'path'
 
 import { scanDirectory } from './core/scanner.js'
 
-import { storeMigration }
-  from './migrations/storeMigration.js'
+import {
+  rollbackSession
+} from './core/rollbackManager.js'
 
-const migration = process.argv[2]
+import {
+  storeMigration
+} from './migrations/storeMigration.js'
+
+
+const command = process.argv[2]
+
+const argument = process.argv[3]
+
+
+const preview =
+  process.argv.includes('--preview')
+
 
 console.log('====================================')
 console.log(' Elola Migration Engine')
 console.log('====================================')
 console.log('')
 
-if (!migration) {
+
+
+if (!command) {
 
   console.log('Usage:')
-  console.log('node scripts/migrate.js <migration>')
+
+  console.log(
+    'node scripts/migrate.js <migration>'
+  )
+
+  console.log('')
+
+  console.log('Commands:')
+
+  console.log(
+    'stores'
+  )
+
+  console.log(
+    'rollback <session-id>'
+  )
 
   process.exit(0)
 
 }
 
-const srcPath = path.resolve('src')
 
-const files = scanDirectory(srcPath)
 
-console.log(`Migration : ${migration}`)
-console.log(`Files Found: ${files.length}`)
+// ================= ROLLBACK =================
 
-switch (migration) {
+
+if (command === 'rollback') {
+
+
+  if (!argument) {
+
+    console.log(
+      'Missing session id'
+    )
+
+    process.exit(1)
+
+  }
+
+
+
+  try {
+
+
+    const restoredFiles =
+      rollbackSession(argument)
+
+
+
+    console.log(
+      'Rollback completed'
+    )
+
+
+    console.log(
+      `Restored: ${restoredFiles.length}`
+    )
+
+
+    restoredFiles.forEach(file => {
+
+      console.log(
+        file
+      )
+
+    })
+
+
+  } catch (error) {
+
+
+    console.log(
+      'Rollback failed'
+    )
+
+
+    console.log(
+      error.message
+    )
+
+
+    process.exit(1)
+
+  }
+
+
+
+  process.exit(0)
+
+}
+
+
+
+// ================= MIGRATION =================
+
+
+const srcPath =
+  path.resolve('src')
+
+
+const files =
+  scanDirectory(srcPath)
+
+
+
+console.log(
+  `Migration : ${command}`
+)
+
+
+console.log(
+  `Files Found: ${files.length}`
+)
+
+
+
+if (preview) {
+
+  console.log(
+    'Mode      : PREVIEW'
+  )
+
+}
+
+
+
+switch (command) {
+
 
   case 'stores':
 
+
   case 'products':
+
 
   case 'orders':
 
+
   case 'users':
+
 
   case 'wallets':
 
-    storeMigration(files)
+
+    storeMigration(
+
+      files,
+
+      {
+        preview
+      }
+
+    )
 
     break
 
+
+
   default:
 
-    console.log('Unknown migration')
+
+    console.log(
+      'Unknown command'
+    )
 
 }

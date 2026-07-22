@@ -3,70 +3,111 @@ import fs from 'fs'
 import { filterFiles } from '../core/fileFilter.js'
 
 import {
+  createMigrationSession,
+  addChangedFile,
+  finishMigrationSession
+} from '../core/migrationLogger.js'
+
+import {
+  createBackupSession,
+  backupFile
+} from '../core/backupManager.js'
+
+import {
   transformAllStores
 } from '../transforms/shared/transformAllStores.js'
 
-export function storeMigration(files) {
+
+export function storeMigration(
+
+  files,
+
+  options = {}
+
+) {
+
+
+  const {
+
+    preview = false
+
+  } = options
+
+
+
+  const session = createMigrationSession(
+
+    'stores',
+
+    {
+      preview
+    }
+
+  )
+
+
+
+  let backupPath = null
+
+
 
   const keywords = [
 
     'useWebsiteStore',
 
-    ...new Set([
+    'products',
 
-      'products',
+    'orders',
 
-      'orders',
+    'wallet',
 
-      'wallet',
+    'wallets',
 
-      'wallets',
+    'walletTransactions',
 
-      'walletTransactions',
+    'walletEnabled',
 
-      'walletEnabled',
+    'cashbackPercentage',
 
-      'cashbackPercentage',
+    'users',
 
-      'users',
+    'currentUser',
 
-      'currentUser',
+    'login',
 
-      'login',
+    'logout',
 
-      'logout',
+    'register',
 
-      'register',
+    'permissions',
 
-      'permissions',
+    'setCurrentUser',
 
-      'setCurrentUser',
+    'logoutUser',
 
-      'logoutUser',
+    'setUsers',
 
-      'setUsers',
+    'addUser',
 
-      'addUser',
+    'updateUser',
 
-      'updateUser',
+    'deleteUser',
 
-      'deleteUser',
+    'enableUser',
 
-      'enableUser',
+    'disableUser',
 
-      'disableUser',
+    'getUserById',
 
-      'getUserById',
+    'getUserByUsername',
 
-      'getUserByUsername',
+    'searchUsers',
 
-      'searchUsers',
-
-      'getStatistics'
-
-    ])
+    'getStatistics'
 
   ]
+
+
 
   const targets = filterFiles(
 
@@ -76,26 +117,97 @@ export function storeMigration(files) {
 
   )
 
+
+
   console.log('')
+
   console.log('====================================')
-  console.log(' Store Migration')
+
+  console.log(
+
+    preview
+
+      ? ' Store Migration Preview'
+
+      : ' Store Migration'
+
+  )
+
   console.log('====================================')
+
   console.log('')
+
+
 
   let changed = 0
 
+
+
   for (const file of targets) {
 
-    console.log('CHECKING:', file)
 
-    try {
+    console.log(
 
-      const result = transformAllStores(file)
+      'CHECKING:',
 
-      if (!result)
-        continue
+      file
 
-      if (result.changed) {
+    )
+
+
+
+    const result = transformAllStores(file)
+
+
+
+    if (
+
+      result &&
+
+      result.changed
+
+    ) {
+
+
+
+      changed++
+
+
+
+      addChangedFile(
+
+        session,
+
+        file
+
+      )
+
+
+
+      if (!preview) {
+
+
+        if (!backupPath) {
+
+          backupPath = createBackupSession(
+
+            session.id
+
+          )
+
+        }
+
+
+
+        backupFile(
+
+          file,
+
+          backupPath
+
+        )
+
+
 
         fs.writeFileSync(
 
@@ -107,31 +219,88 @@ export function storeMigration(files) {
 
         )
 
-        changed++
 
-        console.log('UPDATED:', file)
+        console.log(
+
+          'UPDATED:',
+
+          file
+
+        )
+
+
+
+      } else {
+
+
+        console.log(
+
+          'WOULD UPDATE:',
+
+          file
+
+        )
+
 
       }
 
-    } catch (err) {
 
-      console.log('')
-      console.log('====================================')
-      console.log('FAILED FILE:')
-      console.log(file)
-      console.log('------------------------------------')
-      console.log(err.message)
-      console.log('====================================')
-      console.log('')
-
-      throw err
 
     }
 
+
   }
 
+
+
+  const logFile = finishMigrationSession(
+
+    session
+
+  )
+
+
+
   console.log('')
-  console.log(`Changed: ${changed}`)
+
+  console.log(
+
+    preview
+
+      ? `Would Change: ${changed}`
+
+      : `Changed: ${changed}`
+
+  )
+
+
+  console.log(
+
+    'Log:',
+
+    logFile
+
+  )
+
+
+
+  if (backupPath) {
+
+
+    console.log(
+
+      'Backup:',
+
+      backupPath
+
+    )
+
+
+  }
+
+
+
   console.log('')
+
 
 }
