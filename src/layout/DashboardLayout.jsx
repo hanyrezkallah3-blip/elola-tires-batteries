@@ -61,9 +61,8 @@ export default function DashboardLayout({ children }) {
   const warehouseName =
   currentUser?.warehouseName || '';
 
-  const permissions = [
-  'all'];
-
+const permissions =
+  currentUser?.permissions || [];
 
   // ================= ERP AI STATUS =================
 
@@ -182,33 +181,42 @@ export default function DashboardLayout({ children }) {
 
   }, [currentUser]);
 
-  // ================= AUTO BLOCK =================
+ // ================= AUTO BLOCK =================
 
-  useEffect(() => {
+useEffect(() => {
 
-    if (!currentUser) {
+  if (!currentUser) {
 
-      navigate('/login');
+    if (location.pathname !== '/login') {
 
-      return;
+      navigate('/login', {
+        replace: true
+      });
+
     }
 
-    const currentPath =
+    return;
+
+  }
+
+  const currentPath =
     location.pathname;
 
-    const allowed =
-    allowedRoutes.includes(currentPath);
+  if (
+    currentPath !== '/dashboard' &&
+    !allowedRoutes.includes(currentPath)
+  ) {
 
-    if (!allowed) {
+    navigate('/dashboard', {
+      replace: true
+    });
 
-      navigate('/dashboard');
-    }
+  }
 
-  }, [
+}, [
   currentUser,
-  location.pathname,
-  allowedRoutes]
-  );
+  location.pathname
+]);
 
   // ================= LINKS =================
 

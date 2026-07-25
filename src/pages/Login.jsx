@@ -94,6 +94,9 @@ export default function Login() {
 
       const success = login(cleanUsername, cleanPassword);
 
+console.log('Login success:', success);
+console.log('Current user:', useUserStore.getState().currentUser);
+
       if (!success) {
         setError('⚠ اسم المستخدم أو كلمة المرور غير صحيحة');
         setLoading(false);
@@ -101,7 +104,7 @@ export default function Login() {
       }
 
       const user =
-      useWebsiteStore.getState().currentUser;
+  useUserStore.getState().currentUser;
 
       if (!user) {
         setError('⚠ فشل تسجيل الدخول');

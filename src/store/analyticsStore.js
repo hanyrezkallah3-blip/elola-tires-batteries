@@ -458,113 +458,135 @@ const aiInsights = {
 
 }
 
-set({
+const newDashboardStats = {
 
-  dashboardStats: {
+  totalRevenue,
 
-    totalRevenue,
+  totalSales,
 
-    totalSales,
+  totalOrders: orders.length,
 
-    totalOrders: orders.length,
+  totalProducts: products.length,
 
-    totalProducts: products.length,
+  totalStock,
 
-    totalStock,
+  inventoryValue,
 
-    inventoryValue,
+  totalCustomers: wallets.length,
 
-    totalCustomers: wallets.length,
+  totalWalletBalance,
+
+  totalCashback,
+
+  totalWalletTransactions: walletTransactions.length,
+
+  todaySales,
+
+  monthlySales,
+
+  lowStockProducts,
+
+  criticalStockProducts,
+
+  activeWallets,
+
+  topCustomer,
+
+  topProduct
+
+}
+
+const newKPI = {
+
+  revenueGrowth:
+
+    monthlySales > 0
+
+      ? Math.round(
+
+          (todaySales /
+
+            monthlySales) *
+
+            100
+
+        )
+
+      : 0,
+
+  orderGrowth:
+
+    orders.length,
+
+  stockHealth:
+
+    Math.max(
+
+      0,
+
+      100 -
+
+        criticalStockProducts * 20 -
+
+        lowStockProducts * 5
+
+    ),
+
+  walletGrowth:
 
     totalWalletBalance,
 
-    totalCashback,
+  inventoryTurnover:
 
-    totalWalletTransactions:
+    totalSales,
 
-      walletTransactions.length,
+  averageOrder:
 
-    todaySales,
+    orders.length
 
-    monthlySales,
+      ? Math.round(
 
-    lowStockProducts,
+          totalRevenue /
 
-    criticalStockProducts,
+            orders.length
 
-    activeWallets,
+        )
 
-    topCustomer,
+      : 0
 
-    topProduct
+}
 
-  },
+const state = get()
+
+if (
+
+  JSON.stringify(state.dashboardStats) ===
+
+    JSON.stringify(newDashboardStats) &&
+
+  JSON.stringify(state.kpi) ===
+
+    JSON.stringify(newKPI) &&
+
+  JSON.stringify(state.aiInsights) ===
+
+    JSON.stringify(aiInsights)
+
+) {
+
+  return
+
+}
+
+set({
+
+  dashboardStats: newDashboardStats,
 
   aiInsights,
 
-  kpi: {
+  kpi: newKPI,
 
-    revenueGrowth:
-
-      monthlySales > 0
-
-        ? Math.round(
-
-            (todaySales /
-
-              monthlySales) *
-
-              100
-
-          )
-
-        : 0,
-
-    orderGrowth:
-
-      orders.length,
-
-    stockHealth:
-
-      Math.max(
-
-        0,
-
-        100 -
-
-          criticalStockProducts * 20 -
-
-          lowStockProducts * 5
-
-      ),
-
-    walletGrowth:
-
-      totalWalletBalance,
-
-    inventoryTurnover:
-
-      totalSales,
-
-    averageOrder:
-
-      orders.length
-
-        ? Math.round(
-
-            totalRevenue /
-
-              orders.length
-
-          )
-
-        : 0
-
-  },
-
-  lastUpdated:
-
-    new Date().toISOString()
+  lastUpdated: new Date().toISOString()
 
 })
 
@@ -655,49 +677,53 @@ updateERPSummary: ({
 
     totalSales * 0.25
 
-  set({
+  const newERPSummary = {
 
-    erpSummary: {
+  warehouses: warehouses.length,
 
-      warehouses:
+  products: products.length,
 
-        warehouses.length,
+  orders: orders.length,
 
-      products:
+  users: users.length,
 
-        products.length,
+  stockItems: stockItems.length,
 
-      orders:
+  totalStock,
 
-        orders.length,
+  inventoryValue,
 
-      users:
+  lowStock,
 
-        users.length,
+  criticalStock,
 
-      stockItems:
+  totalSales,
 
-        stockItems.length,
+  totalProfit
 
-      totalStock,
+}
 
-      inventoryValue,
+const state = get()
 
-      lowStock,
+if (
 
-      criticalStock,
+  JSON.stringify(state.erpSummary) ===
 
-      totalSales,
+  JSON.stringify(newERPSummary)
 
-      totalProfit
+) {
 
-    },
+  return
 
-    lastUpdated:
+}
 
-      new Date().toISOString()
+set({
 
-  })
+  erpSummary: newERPSummary,
+
+  lastUpdated: new Date().toISOString()
+
+})
 
 },
 // ================= SALES CHART =================

@@ -1,5 +1,6 @@
 import { useCoreStore } from '../store/coreStore'
 import { useWebsiteStore } from '../store/websiteStore'
+import { useUserStore } from '../store/userStore'
 
 export const AuthEngine = {
 
@@ -7,12 +8,29 @@ export const AuthEngine = {
 
   getUser: () => {
 
-    const coreUser = useCoreStore?.getState?.()?.currentUser
-    const websiteUser = useWebsiteStore?.getState?.()?.currentUser
+  const userStoreUser =
+    useUserStore?.getState?.()?.currentUser
 
-    // 🧠 choose FIRST valid user only (no race switching)
-    return coreUser || websiteUser || null
-  },
+  if (userStoreUser) {
+    return userStoreUser
+  }
+
+  const coreUser =
+    useCoreStore?.getState?.()?.currentUser
+
+  if (coreUser) {
+    return coreUser
+  }
+
+  const websiteUser =
+    useWebsiteStore?.getState?.()?.currentUser
+
+  if (websiteUser) {
+    return websiteUser
+  }
+
+  return null
+},
 
   // ================= ROLE CHECK =================
 

@@ -1,9 +1,62 @@
 import * as t from '@babel/types'
 
-import {
-  visit
-} from '../../core/ast.js'
+import { visit } from '../../core/ast.js'
 
+import { hasIdentifier } from '../../core/astUtils.js'
+
+import { AUTH_PROPERTIES } from './authProperties.js'
+
+function isAuthProperty(name) {
+
+  return AUTH_PROPERTIES.includes(name)
+
+}
+
+function createUserStoreCall() {
+
+  return t.callExpression(
+
+    t.identifier('useUserStore'),
+
+    []
+
+  )
+
+}
+
+function createWebsiteStoreCall() {
+
+  return t.callExpression(
+
+    t.identifier('useWebsiteStore'),
+
+    []
+
+  )
+
+}
+
+function createUserImport() {
+
+  return t.importDeclaration(
+
+    [
+
+      t.importSpecifier(
+
+        t.identifier('useUserStore'),
+
+        t.identifier('useUserStore')
+
+      )
+
+    ],
+
+    t.stringLiteral('./store/userStore')
+
+  )
+
+}
 
 export function transformAuthMigration(session) {
 
@@ -13,68 +66,49 @@ export function transformAuthMigration(session) {
 
   let websiteImport = null
 
-
-  const authProperties = [
-
-    'login',
-
-    'logout',
-
-    'currentUser',
-
-    'setCurrentUser'
-
-  ]
-
-
-  // ==========================================
-  // SCAN IMPORTS
-  // ==========================================
-
   visit(session.ast, {
 
     ImportDeclaration(path) {
 
-      const source =
-        path.node.source.value
-
+      const source = path.node.source.value
 
       if (
+
         source.endsWith('/store/userStore')
+
       ) {
 
         hasUserImport = true
 
       }
 
-
       if (
+
         source.endsWith('/store/websiteStore')
+
       ) {
 
         websiteImport = path
 
       }
 
-    }
-
-  })
-
-
-  // ==========================================
-  // REPLACE AUTH CALLS ONLY
-  // ==========================================
-
-  visit(session.ast, {
+    },
 
     CallExpression(path) {
 
       const node = path.node
 
-
       if (
 
-        node.callee?.type !== 'Identifier' ||
+        !t.isIdentifier(node.callee)
+
+      ) {
+
+        return
+
+      }
+
+      if (
 
         node.callee.name !== 'useWebsiteStore'
 
@@ -83,7 +117,6 @@ export function transformAuthMigration(session) {
         return
 
       }
-
 
       if (
 
@@ -95,14 +128,11 @@ export function transformAuthMigration(session) {
 
       }
 
-
-      const selector =
-        node.arguments[0]
-
+      const selector = node.arguments[0]
 
       if (
 
-        selector.type !== 'ArrowFunctionExpression'
+        !t.isArrowFunctionExpression(selector)
 
       ) {
 
@@ -110,25 +140,9 @@ export function transformAuthMigration(session) {
 
       }
 
-
-      let property = null
-
-
       if (
 
-        selector.body?.type === 'MemberExpression'
-
-      ) {
-
-        property =
-          selector.body.property?.name
-
-      }
-
-
-      if (
-
-        !authProperties.includes(property)
+        !t.isMemberExpression(selector.body)
 
       ) {
 
@@ -136,113 +150,436 @@ export function transformAuthMigration(session) {
 
       }
 
+      if (
 
-      node.callee.name =
-        'useUserStore'
+        !t.isIdentifier(selector.body.property)
 
+      ) {
+
+        return
+
+      }
+
+      const property =
+
+        selector.body.property.name
+
+      if (
+
+        !isAuthProperty(property)
+
+      ) {
+
+        return
+
+      }
+
+      node.callee =
+
+        t.identifier('useUserStore')
 
       changed = true
 
+    },
+        VariableDeclarator(path) {
 
-    }
+      const node = path.node
 
-  })
+      if (
 
+        !t.isObjectPattern(node.id)
 
-  // ==========================================
-  // STOP IF NOTHING CHANGED
-  // ==========================================
+      ) {
 
-  if (!changed) {
+        return
 
-    return
+      }
 
-  }
+      if (
 
+        !t.isCallExpression(node.init)
 
-  session.changed = true
+      ) {
 
+        return
 
-  // ==========================================
-  // ADD USER STORE IMPORT
-  // ==========================================
+      }
 
-  if (!hasUserImport) {
+      if (
 
+        !t.isIdentifier(node.init.callee)
 
-    session.ast.program.body.unshift(
+      ) {
 
-      t.importDeclaration(
+        return
 
-        [
+      }
 
-          t.importSpecifier(
+      if (
 
-            t.identifier('useUserStore'),
+        node.init.callee.name !== 'useWebsiteStore'
 
-            t.identifier('useUserStore')
+      ) {
+
+        return
+
+      }
+
+      const authProperties = []
+
+      const websiteProperties = []
+
+      for (const property of node.id.properties) {
+
+        if (
+
+          !t.isObjectProperty(property)
+
+        ) {
+
+          websiteProperties.push(property)
+
+          continue
+
+        }
+
+        if (
+
+          !t.isIdentifier(property.key)
+
+        ) {
+
+          websiteProperties.push(property)
+
+          continue
+
+        }
+
+        if (
+
+          isAuthProperty(property.key.name)
+
+        ) {
+
+          authProperties.push(property)
+
+        }
+
+        else {
+
+          websiteProperties.push(property)
+
+        }
+
+      }
+
+      if (
+
+        authProperties.length === 0
+
+      ) {
+
+        return
+
+      }
+
+      changed = true
+
+      const declarations = []
+
+      if (
+
+        websiteProperties.length > 0
+
+      ) {
+
+        declarations.push(
+
+          t.variableDeclarator(
+
+            t.objectPattern(
+
+              websiteProperties
+
+            ),
+
+            createWebsiteStoreCall()
 
           )
 
-        ],
+        )
 
-        t.stringLiteral(
+      }
+            declarations.push(
 
-          './store/userStore'
+        t.variableDeclarator(
+
+          t.objectPattern(
+
+            authProperties
+
+          ),
+
+          createUserStoreCall()
 
         )
 
       )
 
-    )
+      path.replaceWith(
 
+        t.variableDeclaration(
 
-  }
+          'const',
 
+          declarations
 
-  // ==========================================
-  // REMOVE WEBSITE IMPORT IF EMPTY
-  // ==========================================
+        )
 
-  if (websiteImport) {
+      )
 
+    },
 
-    let stillUsingWebsite = false
+    VariableDeclaration(path) {
 
+      if (
 
-    visit(session.ast, {
+        path.node.kind !== 'const'
 
+      ) {
 
-      Identifier(path) {
-
-
-        if (
-
-          path.node.name === 'useWebsiteStore' &&
-
-          path.parent.type !== 'ImportSpecifier'
-
-        ) {
-
-          stillUsingWebsite = true
-
-        }
-
+        return
 
       }
 
+      if (
 
-    })
+        path.node.declarations.length !== 1
 
+      ) {
 
-    if (!stillUsingWebsite) {
+        return
 
-      websiteImport.remove()
+      }
+
+      const declaration =
+
+        path.node.declarations[0]
+
+      if (
+
+        !t.isVariableDeclarator(declaration)
+
+      ) {
+
+        return
+
+      }
+
+      if (
+
+        !t.isCallExpression(declaration.init)
+
+      ) {
+
+        return
+
+      }
+
+      if (
+
+        !t.isIdentifier(declaration.init.callee)
+
+      ) {
+
+        return
+
+      }
+
+      if (
+
+        declaration.init.callee.name !== 'useWebsiteStore'
+
+      ) {
+
+        return
+
+      }
+
+      if (
+
+        !t.isObjectPattern(declaration.id)
+
+      ) {
+
+        return
+
+      }
+
+      declaration.id.properties =
+
+        declaration.id.properties.filter(property => {
+
+          if (
+
+            !t.isObjectProperty(property)
+
+          ) {
+
+            return true
+
+          }
+
+          if (
+
+            !t.isIdentifier(property.key)
+
+          ) {
+
+            return true
+
+          }
+
+          return !isAuthProperty(
+
+            property.key.name
+
+          )
+
+        })
+
+    },
+        Identifier(path) {
+
+      if (
+
+        path.node.name !== 'useWebsiteStore'
+
+      ) {
+
+        return
+
+      }
+
+      if (
+
+        !path.isReferencedIdentifier()
+
+      ) {
+
+        return
+
+      }
+
+      const parent = path.parent
+
+      if (
+
+        t.isCallExpression(parent) &&
+
+        parent.callee === path.node
+
+      ) {
+
+        return
+
+      }
 
     }
 
+  })
+
+  if (
+
+    !changed
+
+  ) {
+
+    return
 
   }
 
+  session.changed = true
+
+  if (
+
+    !hasUserImport
+
+  ) {
+
+    session.ast.program.body.unshift(
+
+      createUserImport()
+
+    )
+
+  }
+
+  if (
+
+    !websiteImport
+
+  ) {
+
+    return
+
+  }
+    let stillUsesWebsiteStore = false
+
+  visit(session.ast, {
+
+    Identifier(path) {
+
+      if (
+
+        path.node.name !== 'useWebsiteStore'
+
+      ) {
+
+        return
+
+      }
+
+      if (
+
+        !path.isReferencedIdentifier()
+
+      ) {
+
+        return
+
+      }
+
+      const parent = path.parent
+
+      if (
+
+        t.isImportSpecifier(parent) ||
+
+        t.isImportDeclaration(parent)
+
+      ) {
+
+        return
+
+      }
+
+      stillUsesWebsiteStore = true
+
+      path.stop()
+
+    }
+
+  })
+
+  if (
+
+    !stillUsesWebsiteStore
+
+  ) {
+
+    websiteImport.remove()
+
+  }
 
 }
