@@ -3,8 +3,8 @@
 // Compatibility Engine
 // ======================================================
 
-import vehicleDatabase
-from '../database/vehicleDatabase'
+import ProductsRepository
+  from '../../repositories/ProductsRepository'
 
 export default class CompatibilityEngine {
 
@@ -12,7 +12,7 @@ export default class CompatibilityEngine {
   // VEHICLE → PRODUCTS
   // ====================================================
 
-  static byVehicle({
+  static async byVehicle({
 
     make,
 
@@ -22,25 +22,23 @@ export default class CompatibilityEngine {
 
   }) {
 
-    return vehicleDatabase.find(vehicle =>
+    return await ProductsRepository.findCompatibleProducts({
 
-      vehicle.make === make &&
+      brand: make,
 
-      vehicle.model === model &&
+      model,
 
-      Number(year) >= Number(vehicle.yearFrom) &&
+      year
 
-      Number(year) <= Number(vehicle.yearTo)
-
-    ) || null
+    })
 
   }
 
   // ====================================================
-  // TIRE SIZE → VEHICLES
+  // TIRE SIZE → PRODUCTS
   // ====================================================
 
-  static byTireSize({
+  static async byTireSize({
 
     width,
 
@@ -50,69 +48,51 @@ export default class CompatibilityEngine {
 
   }) {
 
-    return vehicleDatabase.filter(vehicle =>
+    return await ProductsRepository.findTiresBySize({
 
-      vehicle.tires.some(tire =>
+      width,
 
-        Number(tire.width) === Number(width)
+      profile,
 
-        &&
+      rim
 
-        Number(tire.profile) === Number(profile)
-
-        &&
-
-        Number(tire.rim) === Number(rim)
-
-      )
-
-    )
+    })
 
   }
 
   // ====================================================
-  // BATTERY
+  // BATTERY → PRODUCTS
   // ====================================================
 
-  static byBattery({
+  static async byBattery({
 
     capacity
 
   }) {
 
-    return vehicleDatabase.filter(vehicle =>
+    return await ProductsRepository.findBatteries({
 
-      vehicle.batteries.some(battery =>
+      capacity
 
-        Number(battery.capacity) ===
-
-        Number(capacity)
-
-      )
-
-    )
+    })
 
   }
 
   // ====================================================
-  // OIL
+  // OIL → PRODUCTS
   // ====================================================
 
-  static byOil({
+  static async byOil({
 
     viscosity
 
   }) {
 
-    return vehicleDatabase.filter(vehicle =>
+    return await ProductsRepository.findOils({
 
-      vehicle.oils.some(oil =>
+      viscosity
 
-        oil.viscosity === viscosity
-
-      )
-
-    )
+    })
 
   }
 
@@ -120,7 +100,7 @@ export default class CompatibilityEngine {
   // GENERIC SEARCH
   // ====================================================
 
-  static search({
+  static async search({
 
     type,
 
@@ -128,19 +108,23 @@ export default class CompatibilityEngine {
 
   }) {
 
-    switch(type){
+    switch (type) {
+
+      case 'vehicle':
+
+        return await this.byVehicle(value)
 
       case 'tire':
 
-        return this.byTireSize(value)
+        return await this.byTireSize(value)
 
       case 'battery':
 
-        return this.byBattery(value)
+        return await this.byBattery(value)
 
       case 'oil':
 
-        return this.byOil(value)
+        return await this.byOil(value)
 
       default:
 

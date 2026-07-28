@@ -38,7 +38,6 @@ export default function ProductBasicInfo({
 
       </h3>
 
-
       <div>
 
         <label className="
@@ -77,7 +76,6 @@ export default function ProductBasicInfo({
 
       </div>
 
-
       <div>
 
         <label className="
@@ -89,7 +87,6 @@ export default function ProductBasicInfo({
           نوع المنتج
 
         </label>
-
 
         <select
 
@@ -132,7 +129,6 @@ export default function ProductBasicInfo({
         </select>
 
       </div>
-
 
       <div className="
         grid
@@ -178,7 +174,6 @@ export default function ProductBasicInfo({
 
         </div>
 
-
         <div>
 
           <label className="
@@ -219,6 +214,211 @@ export default function ProductBasicInfo({
 
       </div>
 
+      <div className="
+        grid
+        md:grid-cols-2
+        gap-5
+      ">
+
+        <div>
+
+          <label className="
+            block
+            mb-2
+            font-black
+          ">
+
+            SKU
+
+          </label>
+
+          <input
+
+            value={form.sku || ''}
+
+            onChange={(e)=>
+              update(
+                'sku',
+                e.target.value
+              )
+            }
+
+            className="
+              w-full
+              p-4
+              rounded-2xl
+              bg-white
+              text-black
+              font-bold
+            "
+
+            placeholder="SKU-001"
+
+          />
+
+        </div>
+
+        <div>
+
+          <label className="
+            block
+            mb-2
+            font-black
+          ">
+
+            Barcode
+
+          </label>
+
+          <input
+
+            value={form.barcode || ''}
+
+            onChange={(e)=>
+              update(
+                'barcode',
+                e.target.value
+              )
+            }
+
+            className="
+              w-full
+              p-4
+              rounded-2xl
+              bg-white
+              text-black
+              font-bold
+            "
+
+            placeholder="629xxxxxxxx"
+
+          />
+
+        </div>
+
+      </div>
+
+      <div className="
+        grid
+        md:grid-cols-2
+        gap-5
+      ">
+
+        <div>
+
+          <label className="
+            block
+            mb-2
+            font-black
+          ">
+
+            الكود الداخلي
+
+          </label>
+
+          <input
+
+            value={form.code || ''}
+
+            onChange={(e)=>
+              update(
+                'code',
+                e.target.value
+              )
+            }
+
+            className="
+              w-full
+              p-4
+              rounded-2xl
+              bg-white
+              text-black
+              font-bold
+            "
+
+            placeholder="OEM / Internal Code"
+
+          />
+
+        </div>
+
+        <div>
+
+          <label className="
+            block
+            mb-2
+            font-black
+          ">
+
+            المركبات المتوافقة
+
+          </label>
+
+          <input
+
+            value={form.vehicleCompatibility || ''}
+
+            onChange={(e)=>
+              update(
+                'vehicleCompatibility',
+                e.target.value
+              )
+            }
+
+            className="
+              w-full
+              p-4
+              rounded-2xl
+              bg-white
+              text-black
+              font-bold
+            "
+
+            placeholder="Corolla - Elantra - Sunny"
+
+          />
+
+        </div>
+
+      </div>
+
+      <div>
+
+        <label className="
+          block
+          mb-2
+          font-black
+        ">
+
+          كلمات مفتاحية
+
+        </label>
+
+        <input
+
+          value={form.keywords || ''}
+
+          onChange={(e)=>
+            update(
+              'keywords',
+              e.target.value
+            )
+          }
+
+          className="
+            w-full
+            p-4
+            rounded-2xl
+            bg-white
+            text-black
+            font-bold
+          "
+
+          placeholder="Michelin صيفى فرنسا 205 55 R16"
+
+        />
+
+      </div>
 
     </div>
 

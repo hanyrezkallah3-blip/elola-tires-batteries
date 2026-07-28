@@ -47,6 +47,47 @@ export default function ProductTireFields({
 
       </h3>
 
+      <div>
+
+        <label className="
+          block
+          mb-2
+          font-black
+        ">
+
+          المقاس الكامل
+
+        </label>
+
+        <input
+
+          value={
+            form.tire?.size || ''
+          }
+
+          onChange={(e)=>
+
+            update(
+              'size',
+              e.target.value
+            )
+
+          }
+
+          className="
+            w-full
+            p-4
+            rounded-2xl
+            bg-white
+            text-black
+          "
+
+          placeholder="205/55R16"
+
+        />
+
+      </div>
+
       <div className="
         grid
         md:grid-cols-3

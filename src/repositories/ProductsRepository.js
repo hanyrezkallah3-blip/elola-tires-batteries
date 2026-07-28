@@ -29,7 +29,11 @@ class ProductsRepository extends BaseRepository {
 
       name: '',
 
+      type: 'tire',
+
       brand: '',
+
+      model: '',
 
       category: '',
 
@@ -56,6 +60,14 @@ class ProductsRepository extends BaseRepository {
       stockByWarehouse: {},
 
       totalStock: 0,
+
+      compatibleVehicles: [],
+
+      tire: {},
+
+      battery: {},
+
+      oil: {},
 
       active: true,
 
@@ -193,6 +205,184 @@ class ProductsRepository extends BaseRepository {
       totalStock
 
     })
+
+  }
+
+  // =====================================================
+  // VEHICLE SEARCH
+  // =====================================================
+
+  async findCompatibleProducts({
+
+    brand,
+
+    model,
+
+    year
+
+  }) {
+
+    const products =
+
+      await this.getAll()
+
+    return products.filter(product => {
+
+      const vehicles =
+
+        Array.isArray(product.compatibleVehicles)
+
+          ? product.compatibleVehicles
+
+          : []
+
+      return vehicles.some(vehicle =>
+
+        (!brand || vehicle.brand === brand)
+
+        &&
+
+        (!model || vehicle.model === model)
+
+        &&
+
+        (
+
+          !year ||
+
+          (
+
+            Number(year) >= Number(vehicle.yearFrom)
+
+            &&
+
+            Number(year) <= Number(vehicle.yearTo)
+
+          )
+
+        )
+
+      )
+
+    })
+
+  }
+
+  // =====================================================
+  // TIRE SEARCH
+  // =====================================================
+
+  async findTiresBySize({
+
+    width,
+
+    profile,
+
+    rim
+
+  }) {
+
+    const products =
+
+      await this.getAll()
+
+    return products.filter(product =>
+
+      product.type === 'tire'
+
+      &&
+
+      Number(product.tire?.width)
+
+      ===
+
+      Number(width)
+
+      &&
+
+      Number(product.tire?.height)
+
+      ===
+
+      Number(profile)
+
+      &&
+
+      Number(product.tire?.rim)
+
+      ===
+
+      Number(rim)
+
+    )
+
+  }
+
+  // =====================================================
+  // BATTERY SEARCH
+  // =====================================================
+
+  async findBatteries({
+
+    capacity
+
+  }) {
+
+    const products =
+
+      await this.getAll()
+
+    return products.filter(product =>
+
+      product.type === 'battery'
+
+      &&
+
+      Number(product.battery?.capacity)
+
+      ===
+
+      Number(capacity)
+
+    )
+
+  }
+
+  // =====================================================
+  // OIL SEARCH
+  // =====================================================
+
+  async findOils({
+
+    viscosity
+
+  }) {
+
+    const products =
+
+      await this.getAll()
+
+    return products.filter(product =>
+
+      product.type === 'oil'
+
+      &&
+
+      String(
+
+        product.oil?.viscosity || ''
+
+      ).toLowerCase()
+
+      ===
+
+      String(
+
+        viscosity || ''
+
+      ).toLowerCase()
+
+    )
 
   }
 

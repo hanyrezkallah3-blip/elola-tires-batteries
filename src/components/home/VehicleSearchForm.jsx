@@ -78,21 +78,21 @@ export default function VehicleSearchForm({
 
         {
 
-          brands.map(item=>(
+          brands.map(item => (
 
-            <option
+  <option
 
-              key={item}
+    key={item.id}
 
-              value={item}
+    value={item.id}
 
-            >
+  >
 
-              {item}
+    {item.name}
 
-            </option>
+  </option>
 
-          ))
+))
 
         }
 

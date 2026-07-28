@@ -1,12 +1,15 @@
+import CompatibilityResults
+  from './CompatibilityResults'
+
 export default function HomeSearchResults({
 
   title,
 
   results = [],
 
-  renderItem,
+  emptyMessage = 'لا توجد نتائج',
 
-  emptyMessage = 'لا توجد نتائج'
+  onAddToCart
 
 }) {
 
@@ -53,23 +56,13 @@ export default function HomeSearchResults({
 
         : (
 
-          <div
-            className="
-              grid
-              grid-cols-1
-              md:grid-cols-2
-              xl:grid-cols-3
-              gap-6
-            "
-          >
+          <CompatibilityResults
 
-            {
+            results={results}
 
-              results.map(renderItem)
+            onAddToCart={onAddToCart}
 
-            }
-
-          </div>
+          />
 
         )
 

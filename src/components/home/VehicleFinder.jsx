@@ -1,10 +1,18 @@
-import { useProductStore } from "../store/productStore";import { useMemo, useState } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useState
+} from 'react'
 
+import { useProductStore } from "../store/productStore";
 
+import VehicleSearchTrackingService
+  from '../../services/VehicleSearchTrackingService'
 
 import { vehicleDatabase } from '../../data/vehicleDatabase';
 
 import VehicleEngine from '../../engines/VehicleEngine';
+
 
 export default function VehicleFinder() {
 
@@ -94,41 +102,50 @@ export default function VehicleFinder() {
 
   const result = useMemo(() => {
 
-    if (
+  if (!make || !model || !year)
+    return null
 
-    !make ||
+  return VehicleEngine.search({
+    make,
+    model,
+    year,
+    products
+  })
 
-    !model ||
-
-    !year)
-
-
-
-    return null;
-
-    return VehicleEngine.search({
-
-      make,
-
-      model,
-
-      year,
-
-      products
-
-    });
-
-  }, [
-
+}, [
   make,
-
   model,
-
   year,
+  products
+])
 
-  products]
+useEffect(() => {
 
-  );
+  if (!result)
+    return
+
+  VehicleSearchTrackingService.track({
+
+    make,
+    model,
+    year,
+
+    vehicle: result.vehicle,
+
+    tires: result.tires,
+
+    batteries: result.batteries,
+
+    oils: result.oils
+
+  })
+
+}, [
+  result,
+  make,
+  model,
+  year
+])
 
   return (
 

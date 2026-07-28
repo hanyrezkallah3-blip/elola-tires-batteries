@@ -24,6 +24,8 @@ import ProductOilFields
 import ProductImageUpload
   from './form/ProductImageUpload'
 
+import ProductVehicleCompatibility
+  from './vehicle/ProductVehicleCompatibility'
 
 const INITIAL_PRODUCT = {
 
@@ -31,10 +33,23 @@ const INITIAL_PRODUCT = {
 
   type: 'tire',
 
+  category: 'tire',
+
   brand: '',
 
   model: '',
 
+  sku: '',
+
+  barcode: '',
+
+  code: '',
+
+  keywords: '',
+
+  description: '',
+
+  vehicleCompatibility: '',
 
   purchasePrice: 0,
 
@@ -44,7 +59,6 @@ const INITIAL_PRODUCT = {
 
   cost: 0,
 
-
   quantity: 0,
 
   minimumStock: 0,
@@ -52,7 +66,6 @@ const INITIAL_PRODUCT = {
   maximumStock: 0,
 
   reorderPoint: 0,
-
 
   tire: {
 
@@ -66,10 +79,11 @@ const INITIAL_PRODUCT = {
 
     speedRating: '',
 
-    season: ''
+    season: '',
+
+    size: ''
 
   },
-
 
   battery: {
 
@@ -85,10 +99,11 @@ const INITIAL_PRODUCT = {
 
     width: '',
 
-    height: ''
+    height: '',
+
+    model: ''
 
   },
-
 
   oil: {
 
@@ -102,16 +117,13 @@ const INITIAL_PRODUCT = {
 
   },
 
-
   compatibleVehicles: [],
 
   compatibleSizes: [],
 
-
   image: '',
 
   images: [],
-
 
   active: true,
 
@@ -165,7 +177,55 @@ export default function ProductForm({
 
     const product = {
 
-      ...form,
+  ...form,
+
+  category: form.type,
+
+  size:
+
+    form.type === 'tire'
+
+      ? `${form.tire.width}/${form.tire.height}R${form.tire.rim}`
+
+      : '',
+
+  capacity: form.battery.capacity,
+
+  cca: form.battery.cca,
+
+  model:
+
+    form.type === 'battery'
+
+      ? form.battery.model || form.model
+
+      : form.model,
+
+  vehicleCompatibility:
+
+    Array.isArray(form.compatibleVehicles)
+
+      ? form.compatibleVehicles.join(' ')
+
+      : '',
+
+  keywords:
+
+    [
+      form.name,
+      form.brand,
+      form.model,
+      form.sku,
+      form.barcode,
+      form.code,
+      form.tire.width,
+      form.tire.height,
+      form.tire.rim,
+      form.battery.capacity,
+      form.battery.cca
+    ]
+      .filter(Boolean)
+      .join(' '),
 
 
       profit:
@@ -293,6 +353,14 @@ export default function ProductForm({
 
 
       <ProductOilFields
+
+        form={form}
+
+        setForm={setForm}
+
+      />
+
+      <ProductVehicleCompatibility
 
         form={form}
 

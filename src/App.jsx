@@ -30,6 +30,8 @@ import Users from './pages/Users';
 import Transfers from './pages/Transfers';
 import Permissions from './pages/Permissions';
 import WalletSettings from './pages/WalletSettings';
+import DemandAnalytics
+  from './pages/DemandAnalytics'
 
 // ================= LOADING =================
 
@@ -308,7 +310,16 @@ export default function App() {
           </OwnerRoute>
         } />
       
-
+      <Route
+  path="/demand-analytics"
+  element={
+    <OwnerRoute>
+      <DashboardLayout>
+        <DemandAnalytics />
+      </DashboardLayout>
+    </OwnerRoute>
+  }
+/>
       <Route path="/" element={<Navigate to="/home" replace />} />
 
       <Route path="*" element={<Navigate to="/home" replace />} />

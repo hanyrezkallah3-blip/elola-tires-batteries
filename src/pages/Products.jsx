@@ -49,10 +49,16 @@ import {
   StockEngine } from
 '../core';
 
+import useProductSearch from '../hooks/useProductSearch';
 
 export default function Products() {
 
+    const {
+    search: smartSearch,
+    results: smartResults
+  } = useProductSearch();
 
+  
   const products =
   useProductStore(
     (state) => state.products || []
@@ -108,6 +114,19 @@ export default function Products() {
 
   const [loading, setLoading] =
   useState(true);
+
+  // =====================================================
+// SMART SEARCH SYNC
+// =====================================================
+
+useEffect(() => {
+
+  smartSearch(search);
+
+}, [
+  search,
+  smartSearch
+]);
 
 
 
@@ -221,19 +240,11 @@ export default function Products() {
 
     if (search.trim()) {
 
+  result = smartResults;
 
-      result =
-      result.filter((product) =>
+}
 
-      product.name?.
-      toLowerCase().
-      includes(
-        search.toLowerCase()
-      )
 
-      );
-
-    }
 
 
 
@@ -349,13 +360,13 @@ export default function Products() {
     return result;
 
 
-  }, [
-  products,
-  search,
-  filter,
-  sortBy]
-  );
-
+}, [
+products,
+search,
+smartResults,
+filter,
+sortBy
+]);
 
 
 

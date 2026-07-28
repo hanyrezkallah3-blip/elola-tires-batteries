@@ -1,244 +1,335 @@
 import React from 'react'
 
-export default function CompatibilityResults({
+function ProductCard({
 
-  results = [],
+  product,
 
   onAddToCart
 
 }) {
 
-  if (!results.length) {
-
-    return (
-
-      <div className="
-
-        bg-slate-900
-
-        border
-
-        border-slate-700
-
-        rounded-3xl
-
-        p-10
-
-        text-center
-
-        text-gray-400
-
-        text-xl
-
-      ">
-
-        لا توجد نتائج مطابقة.
-
-      </div>
-
-    )
-
-  }
-
   return (
 
-    <div className="
+    <div
+      className="
+        bg-slate-900
+        rounded-3xl
+        overflow-hidden
+        border
+        border-slate-700
+      "
+    >
 
-      grid
+      <img
 
-      grid-cols-1
+        src={product.image}
 
-      md:grid-cols-2
+        alt={product.name}
 
-      xl:grid-cols-3
+        className="
+          w-full
+          h-56
+          object-cover
+        "
 
-      gap-6
+      />
 
-    ">
+      <div className="p-6">
 
-      {
+        <div
+          className="
+            text-2xl
+            font-black
+          "
+        >
 
-        results.map(product => (
+          {product.name}
 
-          <div
+        </div>
 
-            key={product.id}
+        {
+
+          product.brand &&
+
+          <div className="text-gray-400 mt-2">
+
+            {product.brand}
+
+          </div>
+
+        }
+
+        <div
+          className="
+            text-yellow-400
+            text-3xl
+            font-black
+            mt-4
+          "
+        >
+
+          {product.price} ج
+
+        </div>
+
+        <div
+          className="
+            mt-3
+            font-bold
+            text-green-400
+          "
+        >
+
+          {
+
+            Number(product.stock) > 0
+
+            ?
+
+            '✔ متوفر'
+
+            :
+
+            '❌ غير متوفر'
+
+          }
+
+        </div>
+
+        {
+
+          onAddToCart &&
+
+          <button
+
+            type="button"
+
+            onClick={()=>
+
+              onAddToCart(product)
+
+            }
 
             className="
-
-              bg-slate-900
-
-              rounded-3xl
-
-              overflow-hidden
-
-              border
-
-              border-slate-700
-
-              hover:border-yellow-500
-
-              transition-all
-
+              w-full
+              mt-6
+              bg-yellow-500
+              hover:bg-yellow-600
+              rounded-2xl
+              py-4
+              text-black
+              font-black
             "
 
           >
 
-            <img
+            إضافة إلى السلة
 
-              src={product.image}
+          </button>
 
-              alt={product.name}
+        }
 
-              className="
+      </div>
 
-                w-full
+    </div>
 
-                h-56
+  )
 
-                object-cover
+}
 
-              "
+function Section({
+
+  title,
+
+  products,
+
+  onAddToCart
+
+}) {
+
+  if (!products?.length)
+
+    return null
+
+  return (
+
+    <div className="space-y-6">
+
+      <h2
+        className="
+          text-3xl
+          font-black
+          text-yellow-400
+        "
+      >
+
+        {title}
+
+      </h2>
+
+      <div
+        className="
+          grid
+          md:grid-cols-2
+          xl:grid-cols-3
+          gap-6
+        "
+      >
+
+        {
+
+          products.map(product=>
+
+            <ProductCard
+
+              key={product.id}
+
+              product={product}
+
+              onAddToCart={onAddToCart}
 
             />
 
-            <div className="p-6">
+          )
 
-              <div className="
+        }
 
-                text-2xl
+      </div>
 
-                font-black
+    </div>
 
-                mb-3
+  )
 
-              ">
+}
 
-                {product.name}
+export default function CompatibilityResults({
 
-              </div>
+  result,
 
-              {
+  onAddToCart
 
-                product.brand && (
+}) {
 
-                  <div className="text-gray-400 mb-2">
+  if (!result)
 
-                    الماركة: {product.brand}
+    return null
 
-                  </div>
+  const {
 
-                )
+    vehicle,
 
-              }
+    tires = [],
 
-              {
+    batteries = [],
 
-                product.model && (
+    oils = [],
 
-                  <div className="text-gray-400 mb-2">
+    parts = []
 
-                    الموديل: {product.model}
+  } = result
 
-                  </div>
+  return (
 
-                )
+    <section
+      className="
+        max-w-7xl
+        mx-auto
+        mt-12
+        space-y-10
+      "
+    >
 
-              }
+      {
 
-              {
+        vehicle &&
 
-                product.productionDate && (
+        <div
+          className="
+            bg-slate-900
+            rounded-3xl
+            p-8
+            border
+            border-yellow-500
+          "
+        >
 
-                  <div className="text-gray-400 mb-2">
+          <div
+            className="
+              text-3xl
+              font-black
+              text-yellow-400
+            "
+          >
 
-                    تاريخ الإنتاج: {product.productionDate}
-
-                  </div>
-
-                )
-
-              }
-
-              <div className="
-
-                text-yellow-400
-
-                text-3xl
-
-                font-black
-
-                mt-4
-
-              ">
-
-                {product.price} ج
-
-              </div>
-
-              <div className="
-
-                mt-3
-
-                text-green-400
-
-                font-bold
-
-              ">
-
-                {
-
-                  Number(product.stock || 0) > 0
-
-                    ? '✔ متوفر'
-
-                    : '❌ غير متوفر'
-
-                }
-
-              </div>
-
-              <button
-
-                type="button"
-
-                onClick={() => onAddToCart(product)}
-
-                className="
-
-                  w-full
-
-                  mt-6
-
-                  bg-yellow-500
-
-                  hover:bg-yellow-600
-
-                  rounded-2xl
-
-                  py-4
-
-                  text-black
-
-                  font-black
-
-                "
-
-              >
-
-                إضافة إلى السلة
-
-              </button>
-
-            </div>
+            السيارة المطابقة
 
           </div>
 
-        ))
+          <div className="mt-5 text-xl">
+
+            {vehicle.make}
+
+            {' '}
+
+            {vehicle.model}
+
+          </div>
+
+          <div className="text-gray-300 mt-2">
+
+            {vehicle.yearFrom}
+
+            -
+
+            {vehicle.yearTo}
+
+          </div>
+
+        </div>
 
       }
 
-    </div>
+      <Section
+
+        title="🚗 الإطارات المناسبة"
+
+        products={tires}
+
+        onAddToCart={onAddToCart}
+
+      />
+
+      <Section
+
+        title="🔋 البطاريات المناسبة"
+
+        products={batteries}
+
+        onAddToCart={onAddToCart}
+
+      />
+
+      <Section
+
+        title="🛢 الزيوت المناسبة"
+
+        products={oils}
+
+        onAddToCart={onAddToCart}
+
+      />
+
+      <Section
+
+        title="🔧 قطع الغيار"
+
+        products={parts}
+
+        onAddToCart={onAddToCart}
+
+      />
+
+    </section>
 
   )
 

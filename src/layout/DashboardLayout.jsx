@@ -172,6 +172,7 @@ const permissions =
     '/permissions',
     '/finance',
     '/wallets',
+    '/demand-analytics',
     '/company',
     '/home'] :
 
@@ -226,6 +227,12 @@ useEffect(() => {
     path: '/dashboard',
     title: '📊 لوحة التحكم',
     visible: true
+  },
+  
+  {
+  path: '/demand-analytics',
+  title: '🧠 تحليل طلبات السوق',
+  visible: isOwner
   },
 
   {
@@ -397,24 +404,6 @@ useEffect(() => {
       overflow-hidden
     ">
 
-
-
-
-
-      
-
-
-
-
-
-      
-
-
-
-
-
-      
-
       {/* MOBILE OVERLAY */}
 
       {open &&
@@ -428,25 +417,6 @@ useEffect(() => {
             bg-black/80
             z-40
           " />
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
       }
 
@@ -469,49 +439,6 @@ useEffect(() => {
           font-black
           shadow-2xl
         ">
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
 
         ☰
 
@@ -559,21 +486,6 @@ useEffect(() => {
           space-y-5
         ">
 
-
-
-
-          
-
-
-
-
-          
-
-
-
-
-          
-
           <div className="text-center">
 
             <h1 className="
@@ -581,18 +493,6 @@ useEffect(() => {
               font-black
               text-yellow-400
             ">
-
-
-
-              
-
-
-
-              
-
-
-
-              
 
               نظام ERP
 
@@ -603,18 +503,6 @@ useEffect(() => {
               mt-2
               text-sm
             ">
-
-
-
-              
-
-
-
-              
-
-
-
-              
 
               شركة العلا للإطارات والبطاريات
 
@@ -633,44 +521,11 @@ useEffect(() => {
             space-y-3
           ">
 
-
-
-
-
-
-            
-
-
-
-
-
-
-            
-
-
-
-
-
-
-            
-
             <div className="
               text-2xl
               font-black
               text-yellow-400
             ">
-
-
-
-              
-
-
-
-              
-
-
-
-              
 
               {username}
 
@@ -688,15 +543,6 @@ useEffect(() => {
                 text-cyan-400
                 font-bold
               ">
-
-
-              
-
-
-              
-
-
-              
 
                 📍 {warehouseName}
 
@@ -717,40 +563,10 @@ useEffect(() => {
             space-y-3
           ">
 
-
-
-
-
-
-            
-
-
-
-
-
-
-            
-
-
-
-
-
-
-            
-
             <div className="
               text-lg
               font-black
             ">
-
-
-              
-
-
-              
-
-
-              
 
               🤖 حالة الذكاء الاصطناعي
 
@@ -776,39 +592,12 @@ useEffect(() => {
             gap-3
           ">
 
-
-
-            
-
-
-
-            
-
-
-
-            
-
             <div className="
               bg-blue-700
               p-3
               rounded-2xl
               text-center
             ">
-
-
-
-
-              
-
-
-
-
-              
-
-
-
-
-              
 
               <div className="text-xs">
                 منتجات
@@ -818,15 +607,6 @@ useEffect(() => {
                 text-xl
                 font-black
               ">
-
-
-                
-
-
-                
-
-
-                
 
                 {totalProducts}
 
@@ -841,21 +621,6 @@ useEffect(() => {
               text-center
             ">
 
-
-
-
-              
-
-
-
-
-              
-
-
-
-
-              
-
               <div className="text-xs">
                 طلبات
               </div>
@@ -864,15 +629,6 @@ useEffect(() => {
                 text-xl
                 font-black
               ">
-
-
-                
-
-
-                
-
-
-                
 
                 {totalOrders}
 
@@ -887,21 +643,6 @@ useEffect(() => {
               text-center
             ">
 
-
-
-
-              
-
-
-
-
-              
-
-
-
-
-              
-
               <div className="text-xs">
                 تحويلات
               </div>
@@ -910,15 +651,6 @@ useEffect(() => {
                 text-xl
                 font-black
               ">
-
-
-                
-
-
-                
-
-
-                
 
                 {totalTransfers}
 
@@ -939,27 +671,6 @@ useEffect(() => {
             items-center
           ">
 
-
-
-
-
-
-            
-
-
-
-
-
-
-            
-
-
-
-
-
-
-            
-
             <span className="font-bold">
 
               🔔 الإشعارات
@@ -977,33 +688,6 @@ useEffect(() => {
               font-black
             ">
 
-
-
-
-
-
-
-
-              
-
-
-
-
-
-
-
-
-              
-
-
-
-
-
-
-
-
-              
-
               {notifications.length}
 
             </span>
@@ -1019,18 +703,6 @@ useEffect(() => {
           overflow-y-auto
           p-5
         ">
-
-
-
-          
-
-
-
-          
-
-
-
-          
 
           <nav className="space-y-3">
 
@@ -1062,21 +734,6 @@ useEffect(() => {
           space-y-4
         ">
 
-
-
-
-          
-
-
-
-
-          
-
-
-
-
-          
-
           <div className="
             bg-slate-900
             p-4
@@ -1086,27 +743,6 @@ useEffect(() => {
             text-gray-400
           ">
 
-
-
-
-
-
-            
-
-
-
-
-
-
-            
-
-
-
-
-
-
-            
-
             الصفحة الحالية
 
             <div className="
@@ -1115,21 +751,6 @@ useEffect(() => {
               font-bold
               break-all
             ">
-
-
-
-
-              
-
-
-
-
-              
-
-
-
-
-              
 
               {location.pathname}
 
@@ -1149,31 +770,6 @@ useEffect(() => {
               transition
             ">
 
-
-
-
-
-
-
-            
-
-
-
-
-
-
-
-            
-
-
-
-
-
-
-
-
-            
-
             🚪 تسجيل الخروج
 
           </button>
@@ -1191,34 +787,10 @@ useEffect(() => {
         lg:p-8
       ">
 
-
-
-
-        
-
-
-
-
-        
-
-
-
-
-        
-
         <div className="
           max-w-[1900px]
           mx-auto
         ">
-
-
-          
-
-
-          
-
-
-          
 
           {children ? children :
 
@@ -1233,36 +805,6 @@ useEffect(() => {
               text-2xl
               font-black
             ">
-
-
-
-
-
-
-
-
-
-            
-
-
-
-
-
-
-
-
-
-            
-
-
-
-
-
-
-
-
-
-            
 
               ⚠ الصفحة غير متاحة
 

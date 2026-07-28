@@ -1,22 +1,52 @@
 import { useState } from 'react'
 
-export default function HomeVehicleSearch({
+import useVehicleSearch
+  from '../../hooks/useVehicleSearch'
 
-  onSearchVehicle,
+import VehicleTypeCards
+  from './VehicleTypeCards'
 
-  onSearchTire,
+import VehicleSearchForm
+  from './VehicleSearchForm'
 
-  onSearchBattery,
+import HomeSearchResults
+  from './HomeSearchResults'
 
-  onSearchOil
 
-}) {
+export default function HomeVehicleSearch() {
+
 
   const [tab, setTab] = useState('vehicle')
+
+
+  const {
+
+    loading,
+
+    results,
+
+    form,
+
+    setForm,
+
+    vehicleTypes,
+
+    brands,
+
+    models,
+
+    years,
+
+    search
+
+  } = useVehicleSearch()
+
+
 
   return (
 
     <section
+
       className="
         bg-slate-950
         py-12
@@ -24,11 +54,14 @@ export default function HomeVehicleSearch({
         border-y
         border-yellow-500
       "
+
     >
 
       <div className="max-w-7xl mx-auto">
 
+
         <h2
+
           className="
             text-4xl
             md:text-5xl
@@ -36,28 +69,32 @@ export default function HomeVehicleSearch({
             text-center
             text-yellow-400
           "
+
         >
 
           ابحث عن المنتج المناسب
 
         </h2>
 
+
         <p
+
           className="
             text-center
             text-gray-300
             mt-4
             mb-10
           "
+
         >
 
           يمكنك البحث بأكثر من طريقة
 
         </p>
 
-        {/* TABS */}
 
         <div
+
           className="
             grid
             grid-cols-2
@@ -65,17 +102,15 @@ export default function HomeVehicleSearch({
             gap-4
             mb-10
           "
+
         >
+
 
           <button
 
             type="button"
 
-            onClick={()=>
-
-              setTab('vehicle')
-
-            }
+            onClick={() => setTab('vehicle')}
 
             className={`
 
@@ -89,15 +124,11 @@ export default function HomeVehicleSearch({
 
               ${
 
-                tab==='vehicle'
+                tab === 'vehicle'
 
-                ?
+                  ? 'bg-yellow-500 text-black'
 
-                'bg-yellow-500 text-black'
-
-                :
-
-                'bg-slate-800'
+                  : 'bg-slate-800'
 
               }
 
@@ -109,15 +140,12 @@ export default function HomeVehicleSearch({
 
           </button>
 
+
           <button
 
             type="button"
 
-            onClick={()=>
-
-              setTab('tire')
-
-            }
+            onClick={() => setTab('tire')}
 
             className={`
 
@@ -131,15 +159,11 @@ export default function HomeVehicleSearch({
 
               ${
 
-                tab==='tire'
+                tab === 'tire'
 
-                ?
+                  ? 'bg-yellow-500 text-black'
 
-                'bg-yellow-500 text-black'
-
-                :
-
-                'bg-slate-800'
+                  : 'bg-slate-800'
 
               }
 
@@ -151,15 +175,12 @@ export default function HomeVehicleSearch({
 
           </button>
 
+
           <button
 
             type="button"
 
-            onClick={()=>
-
-              setTab('battery')
-
-            }
+            onClick={() => setTab('battery')}
 
             className={`
 
@@ -173,15 +194,11 @@ export default function HomeVehicleSearch({
 
               ${
 
-                tab==='battery'
+                tab === 'battery'
 
-                ?
+                  ? 'bg-yellow-500 text-black'
 
-                'bg-yellow-500 text-black'
-
-                :
-
-                'bg-slate-800'
+                  : 'bg-slate-800'
 
               }
 
@@ -193,15 +210,12 @@ export default function HomeVehicleSearch({
 
           </button>
 
+
           <button
 
             type="button"
 
-            onClick={()=>
-
-              setTab('oil')
-
-            }
+            onClick={() => setTab('oil')}
 
             className={`
 
@@ -215,15 +229,11 @@ export default function HomeVehicleSearch({
 
               ${
 
-                tab==='oil'
+                tab === 'oil'
 
-                ?
+                  ? 'bg-yellow-500 text-black'
 
-                'bg-yellow-500 text-black'
-
-                :
-
-                'bg-slate-800'
+                  : 'bg-slate-800'
 
               }
 
@@ -235,117 +245,429 @@ export default function HomeVehicleSearch({
 
           </button>
 
-        </div>
 
-        <div
+        </div>
+                <div
+
           className="
             bg-slate-900
             rounded-[30px]
             p-8
             border
             border-slate-700
+            space-y-8
           "
+
         >
 
+
           {
 
-            tab==='vehicle'
+            tab === 'vehicle'
+
+            &&
+
+            <>
+
+              <VehicleTypeCards
+
+                types={vehicleTypes}
+
+                selected={form.vehicleType}
+
+                onSelect={(vehicleType) =>
+
+                  setForm(prev => ({
+
+                    ...prev,
+
+                    vehicleType,
+
+                    brand: '',
+
+                    model: '',
+
+                    year: ''
+
+                  }))
+
+                }
+
+              />
+
+
+              <VehicleSearchForm
+
+                vehicleTypes={vehicleTypes}
+
+                brands={brands}
+
+                models={models}
+
+                years={years}
+
+                form={form}
+
+                setForm={setForm}
+
+                onSearch={search}
+
+              />
+
+            </>
+
+          }
+
+
+
+          {
+
+            tab === 'tire'
 
             &&
 
             <div
+
               className="
-                text-center
-                text-xl
+                grid
+                md:grid-cols-4
+                gap-4
               "
+
             >
 
-              هنا سيظهر اختيار
+              <input
 
-              نوع المركبة
+                value={form.width || ''}
 
-              →
+                onChange={(e) =>
 
-              الشركة
+                  setForm(prev => ({
 
-              →
+                    ...prev,
 
-              الموديل
+                    width: e.target.value
 
-              →
+                  }))
 
-              السنة
+                }
+
+                placeholder="عرض الإطار"
+
+                className="
+                  p-4
+                  rounded-2xl
+                  bg-slate-800
+                  border
+                  border-slate-700
+                "
+
+              />
+
+
+              <input
+
+                value={form.profile || ''}
+
+                onChange={(e) =>
+
+                  setForm(prev => ({
+
+                    ...prev,
+
+                    profile: e.target.value
+
+                  }))
+
+                }
+
+                placeholder="الارتفاع"
+
+                className="
+                  p-4
+                  rounded-2xl
+                  bg-slate-800
+                  border
+                  border-slate-700
+                "
+
+              />
+
+
+              <input
+
+                value={form.rim || ''}
+
+                onChange={(e) =>
+
+                  setForm(prev => ({
+
+                    ...prev,
+
+                    rim: e.target.value
+
+                  }))
+
+                }
+
+                placeholder="مقاس الجنط"
+
+                className="
+                  p-4
+                  rounded-2xl
+                  bg-slate-800
+                  border
+                  border-slate-700
+                "
+
+              />
+
+
+              <button
+
+                type="button"
+
+                onClick={search}
+
+                className="
+                  rounded-2xl
+                  bg-yellow-500
+                  text-black
+                  font-black
+                "
+
+              >
+
+                🔍 بحث
+
+              </button>
+
 
             </div>
 
           }
 
+
+
           {
 
-            tab==='tire'
+            tab === 'battery'
 
             &&
 
             <div
+
               className="
-                text-center
-                text-xl
+                grid
+                md:grid-cols-2
+                gap-4
               "
+
             >
 
-              هنا سيظهر البحث
+              <input
 
-              بالمقاس
+                value={form.capacity || ''}
+
+                onChange={(e) =>
+
+                  setForm(prev => ({
+
+                    ...prev,
+
+                    capacity: e.target.value
+
+                  }))
+
+                }
+
+                placeholder="سعة البطارية"
+
+                className="
+                  p-4
+                  rounded-2xl
+                  bg-slate-800
+                  border
+                  border-slate-700
+                "
+
+              />
+
+
+              <button
+
+                type="button"
+
+                onClick={search}
+
+                className="
+                  rounded-2xl
+                  bg-yellow-500
+                  text-black
+                  font-black
+                "
+
+              >
+
+                🔍 بحث
+
+              </button>
+
 
             </div>
 
           }
 
+
+
           {
 
-            tab==='battery'
+            tab === 'oil'
 
             &&
 
             <div
+
               className="
-                text-center
-                text-xl
+                grid
+                md:grid-cols-2
+                gap-4
               "
+
             >
 
-              هنا سيظهر البحث
+              <input
 
-              بالبطارية
+                value={form.viscosity || ''}
+
+                onChange={(e) =>
+
+                  setForm(prev => ({
+
+                    ...prev,
+
+                    viscosity: e.target.value
+
+                  }))
+
+                }
+
+                placeholder="لزوجة الزيت"
+
+                className="
+                  p-4
+                  rounded-2xl
+                  bg-slate-800
+                  border
+                  border-slate-700
+                "
+
+              />
+
+
+              <button
+
+                type="button"
+
+                onClick={search}
+
+                className="
+                  rounded-2xl
+                  bg-yellow-500
+                  text-black
+                  font-black
+                "
+
+              >
+
+                🔍 بحث
+
+              </button>
+
+
+            </div>
+
+          }
+                    {
+
+            loading &&
+
+            <div
+
+              className="
+                text-center
+                text-yellow-400
+                text-xl
+                font-black
+              "
+
+            >
+
+              جارٍ البحث...
 
             </div>
 
           }
 
-          {
 
-            tab==='oil'
 
-            &&
+          <HomeSearchResults
 
-            <div
-              className="
-                text-center
-                text-xl
-              "
-            >
+            title="نتائج البحث"
 
-              هنا سيظهر البحث
+            results={results}
 
-              بالزيت
+            emptyMessage="لا توجد منتجات مطابقة"
 
-            </div>
+            renderItem={(product)=>(
 
-          }
+              <div
+
+                key={product.id}
+
+                className="
+                  bg-slate-800
+                  rounded-2xl
+                  p-5
+                  border
+                  border-slate-700
+                "
+
+              >
+
+                <div className="font-black text-xl">
+
+                  {product.name}
+
+                </div>
+
+
+                <div className="text-gray-400 mt-2">
+
+                  {product.brand}
+
+                </div>
+
+
+                <div className="text-yellow-400 text-2xl mt-4">
+
+                  {product.salePrice ?? product.price} ج
+
+                </div>
+
+
+              </div>
+
+            )}
+
+          />
+
 
         </div>
 
+
       </div>
+
 
     </section>
 

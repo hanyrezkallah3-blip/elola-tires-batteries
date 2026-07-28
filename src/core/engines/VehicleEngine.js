@@ -3,7 +3,11 @@
 // Vehicle Engine
 // ======================================================
 
-import { vehicleDatabase } from '../data/vehicleDatabase'
+import VehicleRepository
+  from '../../repositories/VehicleRepository'
+
+import VehicleCompatibilityEngine
+  from './VehicleCompatibilityEngine'
 
 export class VehicleEngine {
 
@@ -21,149 +25,25 @@ export class VehicleEngine {
 
   }) {
 
-    return (
+    return VehicleRepository.find({
 
-      vehicleDatabase.find(vehicle =>
+      brand: make,
 
-        vehicle.make
-          .toLowerCase() ===
-        String(make)
-          .toLowerCase()
+      model,
 
-        &&
-
-        vehicle.model
-          .toLowerCase() ===
-        String(model)
-          .toLowerCase()
-
-        &&
-
-        Number(year) >=
-        Number(vehicle.yearFrom)
-
-        &&
-
-        Number(year) <=
-        Number(vehicle.yearTo)
-
-      ) ||
-
-      null
-
-    )
-
-  }
-
-  // ======================================================
-  // MATCH TIRES
-  // ======================================================
-
-  static findMatchingTires({
-
-    vehicle,
-
-    products = []
-
-  }) {
-
-    if (!vehicle)
-      return []
-
-    return products.filter(product => {
-
-      if (product.type !== 'tire')
-        return false
-
-      return vehicle.tires.some(size =>
-
-        Number(product.width) === Number(size.width)
-
-        &&
-
-        Number(product.profile) === Number(size.profile)
-
-        &&
-
-        Number(product.rim) === Number(size.rim)
-
-      )
+      year
 
     })
 
   }
 
   // ======================================================
-  // MATCH BATTERIES
-  // ======================================================
-
-  static findMatchingBatteries({
-
-    vehicle,
-
-    products = []
-
-  }) {
-
-    if (!vehicle)
-      return []
-
-    return products.filter(product => {
-
-      if (product.type !== 'battery')
-        return false
-
-      return vehicle.batteries.some(battery =>
-
-        Number(product.capacity) === Number(battery.capacity)
-
-      )
-
-    })
-
-  }
-
-  // ======================================================
-  // MATCH OILS
-  // ======================================================
-
-  static findMatchingOils({
-
-    vehicle,
-
-    products = []
-
-  }) {
-
-    if (!vehicle)
-      return []
-
-    return products.filter(product => {
-
-      if (product.type !== 'oil')
-        return false
-
-      return vehicle.oils.some(oil =>
-
-        String(product.viscosity || '')
-          .toLowerCase()
-
-        ===
-
-        String(oil.viscosity || '')
-          .toLowerCase()
-
-      )
-
-    })
-
-  }
-
-  // ======================================================
-  // COMPLETE SEARCH
+  // SEARCH
   // ======================================================
 
   static search({
+
+    vehicleType,
 
     make,
 
@@ -187,55 +67,79 @@ export class VehicleEngine {
 
       })
 
-    if (!vehicle) {
+    const tires =
 
-      return {
+      VehicleCompatibilityEngine.filterProducts({
 
-        vehicle: null,
+        products,
 
-        tires: [],
+        type: 'tire',
 
-        batteries: [],
+        vehicleType,
 
-        oils: []
+        make,
 
-      }
+        model,
 
-    }
+        year
+
+      })
+
+    const batteries =
+
+      VehicleCompatibilityEngine.filterProducts({
+
+        products,
+
+        type: 'battery',
+
+        vehicleType,
+
+        make,
+
+        model,
+
+        year
+
+      })
+
+    const oils =
+
+      VehicleCompatibilityEngine.filterProducts({
+
+        products,
+
+        type: 'oil',
+
+        vehicleType,
+
+        make,
+
+        model,
+
+        year
+
+      })
 
     return {
 
       vehicle,
 
-      tires:
+      tires,
 
-        this.findMatchingTires({
+      batteries,
 
-          vehicle,
+      oils,
 
-          products
+      products: [
 
-        }),
+        ...tires,
 
-      batteries:
+        ...batteries,
 
-        this.findMatchingBatteries({
+        ...oils
 
-          vehicle,
-
-          products
-
-        }),
-
-      oils:
-
-        this.findMatchingOils({
-
-          vehicle,
-
-          products
-
-        })
+      ]
 
     }
 

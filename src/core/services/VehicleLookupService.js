@@ -3,58 +3,54 @@
 // Vehicle Lookup Service
 // ======================================================
 
-import vehicleCategories from '../database/vehicleCategories'
-import vehicleBrands from '../database/vehicleBrands'
-import vehicleModels from '../database/vehicleModels'
-import vehicleDatabase from '../database/vehicleDatabase'
+import VehicleRepository
+  from '../../repositories/VehicleRepository'
 
 class VehicleLookupService {
 
-  // ================= CATEGORIES =================
+  // ======================================================
+  // VEHICLE TYPES
+  // ======================================================
 
   static getCategories() {
 
-    return vehicleCategories
+    return VehicleRepository.getVehicleTypes()
 
   }
 
-  // ================= BRANDS =================
+  // ======================================================
+  // BRANDS
+  // ======================================================
 
-  static getBrands(categoryId = null) {
+  static getBrands(vehicleType = '') {
 
-    if (!categoryId) {
+    return VehicleRepository.getBrands(
 
-      return vehicleBrands
-
-    }
-
-    return vehicleBrands.filter(
-
-      brand =>
-
-        !brand.category ||
-
-        brand.category === categoryId
+      vehicleType
 
     )
 
   }
 
-  // ================= MODELS =================
+  // ======================================================
+  // MODELS
+  // ======================================================
 
-  static getModels(manufacturer) {
+  static getModels(brand, vehicleType = '') {
 
-    return vehicleModels.filter(
+    return VehicleRepository.getModels({
 
-      model =>
+      brand,
 
-        model.manufacturer === manufacturer
+      vehicleType
 
-    )
+    })
 
   }
 
-  // ================= YEARS =================
+  // ======================================================
+  // YEARS
+  // ======================================================
 
   static getYears({
 
@@ -64,37 +60,39 @@ class VehicleLookupService {
 
   }) {
 
-    const vehicle = vehicleDatabase.filter(
+    return VehicleRepository.getYears({
 
-      item =>
+      brand: manufacturer,
 
-        item.make === manufacturer &&
-
-        item.model === model
-
-    )
-
-    const years = new Set()
-
-    vehicle.forEach(item => {
-
-      for (
-
-        let year = item.yearFrom;
-
-        year <= item.yearTo;
-
-        year++
-
-      ) {
-
-        years.add(year)
-
-      }
+      model
 
     })
 
-    return [...years].sort()
+  }
+
+  // ======================================================
+  // FIND VEHICLE
+  // ======================================================
+
+  static findVehicle({
+
+    manufacturer,
+
+    model,
+
+    year
+
+  }) {
+
+    return VehicleRepository.find({
+
+      brand: manufacturer,
+
+      model,
+
+      year
+
+    })
 
   }
 

@@ -53,6 +53,47 @@ export default function ProductBatteryFields({
         gap-5
       ">
 
+        <div>
+
+          <label className="
+            block
+            mb-2
+            font-black
+          ">
+
+            الموديل
+
+          </label>
+
+          <input
+
+            value={
+              form.battery?.model || ''
+            }
+
+            onChange={(e)=>
+
+              update(
+                'model',
+                e.target.value
+              )
+
+            }
+
+            className="
+              w-full
+              p-4
+              rounded-2xl
+              bg-white
+              text-black
+            "
+
+            placeholder="DIN66 / NS70 ..."
+
+          />
+
+        </div>
+
         {
 
           [
