@@ -3,7 +3,11 @@
 // Vehicle AI Engine
 // ======================================================
 
-import { vehicleDatabase } from '../data/vehicleDatabase'
+import VehicleProvider
+from '../vehicles/VehicleProvider'
+
+import VehicleFuzzySearch
+from '../search/VehicleFuzzySearch'
 
 export default class VehicleAIEngine {
 
@@ -18,17 +22,14 @@ export default class VehicleAIEngine {
       .toLowerCase()
 
       .replace(/أ|إ|آ/g, 'ا')
-
       .replace(/ة/g, 'ه')
-
       .replace(/ى/g, 'ي')
-
       .trim()
 
   }
 
   // ======================================================
-  // EXTRACT YEAR
+  // YEAR
   // ======================================================
 
   static extractYear(text = '') {
@@ -39,16 +40,26 @@ export default class VehicleAIEngine {
 
         .match(/(19|20)\d{2}/)
 
-    if (!match)
+    return match
 
-      return null
+      ? Number(match[0])
 
-    return Number(match[0])
+      : null
 
   }
 
   // ======================================================
-  // FIND VEHICLE
+  // DATABASE
+  // ======================================================
+
+  static getDatabase() {
+
+    return VehicleProvider.getAll() || []
+
+  }
+
+  // ======================================================
+  // PARSE
   // ======================================================
 
   static parse(text = '') {
@@ -61,49 +72,43 @@ export default class VehicleAIEngine {
 
       this.extractYear(query)
 
-    for (
+    const vehicle =
 
-      const vehicle of vehicleDatabase
+      VehicleFuzzySearch
 
-    ) {
+        .search(
 
-      const make =
+          query,
 
-        this.normalize(vehicle.make)
+          this.getDatabase()
 
-      const model =
+        )[0]
 
-        this.normalize(vehicle.model)
+    if (!vehicle)
 
-      if (
+      return null
 
-        query.includes(make)
+    return {
 
-        &&
+      vehicle,
 
-        query.includes(model)
+      make: vehicle.make,
 
-      ) {
+      model: vehicle.model,
 
-        return {
+      vehicleType:
 
-          make: vehicle.make,
+        vehicle.vehicleType ??
 
-          model: vehicle.model,
+        vehicle.type,
 
-          year:
+      year:
 
-            year ||
+        year ||
 
-            vehicle.yearFrom
-
-        }
-
-      }
+        vehicle.yearFrom
 
     }
-
-    return null
 
   }
 
@@ -113,35 +118,35 @@ export default class VehicleAIEngine {
 
   static suggestions(text = '') {
 
-    const query =
+    return VehicleFuzzySearch.search(
 
-      this.normalize(text)
+      text,
 
-    if (!query)
+      this.getDatabase()
 
-      return []
+    )
 
-    return vehicleDatabase
+  }
 
-      .filter(vehicle => {
+  // ======================================================
+  // SEARCH
+  // ======================================================
 
-        return (
+  static search(text = '') {
 
-          this.normalize(vehicle.make)
+    return {
 
-            .includes(query)
+      query: text,
 
-          ||
+      vehicle:
 
-          this.normalize(vehicle.model)
+        this.parse(text),
 
-            .includes(query)
+      suggestions:
 
-        )
+        this.suggestions(text)
 
-      })
-
-      .slice(0, 10)
+    }
 
   }
 

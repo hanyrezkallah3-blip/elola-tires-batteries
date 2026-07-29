@@ -16,13 +16,40 @@ export default function VehicleSearchForm({
 
   const update = (key, value) => {
 
-    setForm(prev => ({
+    const next = {
 
-      ...prev,
+      ...form,
 
       [key]: value
 
-    }))
+    }
+
+    // ====================================================
+    // RESET DEPENDENT FIELDS
+    // ====================================================
+
+    if (key === 'vehicleType') {
+
+      next.brand = ''
+      next.model = ''
+      next.year = ''
+
+    }
+
+    if (key === 'brand') {
+
+      next.model = ''
+      next.year = ''
+
+    }
+
+    if (key === 'model') {
+
+      next.year = ''
+
+    }
+
+    setForm(next)
 
   }
 
@@ -34,7 +61,7 @@ export default function VehicleSearchForm({
 
         value={form.vehicleType || ''}
 
-        onChange={(e)=>update('vehicleType', e.target.value)}
+        onChange={(e) => update('vehicleType', e.target.value)}
 
         className="p-4 rounded-2xl bg-slate-900 border border-slate-700"
 
@@ -44,7 +71,7 @@ export default function VehicleSearchForm({
 
         {
 
-          vehicleTypes.map(item=>(
+          vehicleTypes.map(item => (
 
             <option
 
@@ -68,7 +95,7 @@ export default function VehicleSearchForm({
 
         value={form.brand || ''}
 
-        onChange={(e)=>update('brand', e.target.value)}
+        onChange={(e) => update('brand', e.target.value)}
 
         className="p-4 rounded-2xl bg-slate-900 border border-slate-700"
 
@@ -80,19 +107,19 @@ export default function VehicleSearchForm({
 
           brands.map(item => (
 
-  <option
+            <option
 
-    key={item.id}
+              key={item.id}
 
-    value={item.id}
+              value={item.id}
 
-  >
+            >
 
-    {item.name}
+              {item.name}
 
-  </option>
+            </option>
 
-))
+          ))
 
         }
 
@@ -102,7 +129,7 @@ export default function VehicleSearchForm({
 
         value={form.model || ''}
 
-        onChange={(e)=>update('model', e.target.value)}
+        onChange={(e) => update('model', e.target.value)}
 
         className="p-4 rounded-2xl bg-slate-900 border border-slate-700"
 
@@ -112,7 +139,7 @@ export default function VehicleSearchForm({
 
         {
 
-          models.map(item=>(
+          models.map(item => (
 
             <option
 
@@ -136,7 +163,7 @@ export default function VehicleSearchForm({
 
         value={form.year || ''}
 
-        onChange={(e)=>update('year', e.target.value)}
+        onChange={(e) => update('year', e.target.value)}
 
         className="p-4 rounded-2xl bg-slate-900 border border-slate-700"
 
@@ -146,7 +173,7 @@ export default function VehicleSearchForm({
 
         {
 
-          years.map(item=>(
+          years.map(item => (
 
             <option
 

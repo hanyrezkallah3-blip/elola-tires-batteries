@@ -1,117 +1,111 @@
 // ======================================================
 // EL OLA ERP
-// Vehicle Provider
+// Vehicle Cache
 // ======================================================
 
-import CachedVehicleSource
-from './CachedVehicleSource'
+export default class VehicleCache {
 
-import LocalVehicleSource
-from './LocalVehicleSource'
-
-export default class VehicleProvider {
+  static storage = new Map()
 
   // ====================================================
-  // TYPES
+  // GET
   // ====================================================
 
-  static getVehicleTypes() {
+  static get(key) {
 
-    return CachedVehicleSource.getVehicleTypes()
+    return this.storage.get(key)
 
   }
 
   // ====================================================
-  // BRANDS
+  // SET
   // ====================================================
 
-  static getBrands(vehicleType) {
+  static set(
 
-    return CachedVehicleSource.getBrands(
+    key,
 
-      vehicleType
+    value
+
+  ) {
+
+    this.storage.set(
+
+      key,
+
+      value
 
     )
 
-  }
-
-  // ====================================================
-  // MODELS
-  // ====================================================
-
-  static getModels(params) {
-
-    return CachedVehicleSource.getModels(
-
-      params
-
-    )
+    return value
 
   }
 
   // ====================================================
-  // YEARS
+  // HAS
   // ====================================================
 
-  static getYears(params) {
+  static has(key) {
 
-    return CachedVehicleSource.getYears(
-
-      params
-
-    )
+    return this.storage.has(key)
 
   }
 
   // ====================================================
-  // VEHICLE
+  // REMOVE
   // ====================================================
 
-  static findVehicle(params) {
+  static remove(key) {
 
-    return CachedVehicleSource.findVehicle(
-
-      params
-
-    )
+    this.storage.delete(key)
 
   }
 
   // ====================================================
-  // DATABASE
+  // CLEAR
   // ====================================================
 
-  static getAll() {
+  static clear() {
 
-    return CachedVehicleSource.getAll()
+    this.storage.clear()
 
   }
 
   // ====================================================
-  // LOCAL DATABASE
+  // SIZE
   // ====================================================
 
-  static getLocalDatabase() {
+  static size() {
 
-    return LocalVehicleSource.getAll()
+    return this.storage.size
 
   }
 
   // ====================================================
-  // CACHE
+  // KEYS
   // ====================================================
 
-  static clearCache() {
+  static keys() {
 
-    if (
+    return [
 
-      CachedVehicleSource.clear
+      ...this.storage.keys()
 
-    ) {
+    ]
 
-      CachedVehicleSource.clear()
+  }
 
-    }
+  // ====================================================
+  // VALUES
+  // ====================================================
+
+  static values() {
+
+    return [
+
+      ...this.storage.values()
+
+    ]
 
   }
 

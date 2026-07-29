@@ -3,11 +3,11 @@
 // Vehicle Engine
 // ======================================================
 
-import VehicleRepository
-  from '../../repositories/VehicleRepository'
+import VehicleProvider
+from '../vehicles/VehicleProvider'
 
 import VehicleCompatibilityEngine
-  from './VehicleCompatibilityEngine'
+from './VehicleCompatibilityEngine'
 
 export class VehicleEngine {
 
@@ -25,9 +25,9 @@ export class VehicleEngine {
 
   }) {
 
-    return VehicleRepository.find({
+    return VehicleProvider.findVehicle({
 
-      brand: make,
+      make,
 
       model,
 
@@ -69,11 +69,9 @@ export class VehicleEngine {
 
     const tires =
 
-      VehicleCompatibilityEngine.filterProducts({
+      this.filterTires({
 
         products,
-
-        type: 'tire',
 
         vehicleType,
 
@@ -87,11 +85,9 @@ export class VehicleEngine {
 
     const batteries =
 
-      VehicleCompatibilityEngine.filterProducts({
+      this.filterBatteries({
 
         products,
-
-        type: 'battery',
 
         vehicleType,
 
@@ -105,11 +101,9 @@ export class VehicleEngine {
 
     const oils =
 
-      VehicleCompatibilityEngine.filterProducts({
+      this.filterOils({
 
         products,
-
-        type: 'oil',
 
         vehicleType,
 
@@ -142,6 +136,72 @@ export class VehicleEngine {
       ]
 
     }
+
+  }
+
+  // ======================================================
+  // FILTER TIRES
+  // ======================================================
+
+  static filterTires(params) {
+
+    return VehicleCompatibilityEngine.filterProducts({
+
+      ...params,
+
+      type: 'tire'
+
+    })
+
+  }
+
+  // ======================================================
+  // FILTER BATTERIES
+  // ======================================================
+
+  static filterBatteries(params) {
+
+    return VehicleCompatibilityEngine.filterProducts({
+
+      ...params,
+
+      type: 'battery'
+
+    })
+
+  }
+
+  // ======================================================
+  // FILTER OILS
+  // ======================================================
+
+  static filterOils(params) {
+
+    return VehicleCompatibilityEngine.filterProducts({
+
+      ...params,
+
+      type: 'oil'
+
+    })
+
+  }
+
+  // ======================================================
+  // ALL PRODUCTS
+  // ======================================================
+
+  static filterAll(params) {
+
+    return [
+
+      ...this.filterTires(params),
+
+      ...this.filterBatteries(params),
+
+      ...this.filterOils(params)
+
+    ]
 
   }
 

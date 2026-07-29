@@ -3,26 +3,13 @@
 // Cached Vehicle Source
 // ======================================================
 
+import VehicleCache
+from './VehicleCache'
+
 import LocalVehicleSource
 from './LocalVehicleSource'
 
 export default class CachedVehicleSource {
-
-  static cache = {
-
-    vehicleTypes: null,
-
-    brands: new Map(),
-
-    models: new Map(),
-
-    years: new Map(),
-
-    vehicles: new Map(),
-
-    allVehicles: null
-
-  }
 
   // ====================================================
   // TYPES
@@ -30,15 +17,25 @@ export default class CachedVehicleSource {
 
   static getVehicleTypes() {
 
-    if (!this.cache.vehicleTypes) {
+    const key = 'vehicleTypes'
 
-      this.cache.vehicleTypes =
+    if (
 
-        LocalVehicleSource.getVehicleTypes()
+      VehicleCache.has(key)
+
+    ) {
+
+      return VehicleCache.get(key)
 
     }
 
-    return this.cache.vehicleTypes
+    return VehicleCache.set(
+
+      key,
+
+      LocalVehicleSource.getVehicleTypes()
+
+    )
 
   }
 
@@ -48,21 +45,27 @@ export default class CachedVehicleSource {
 
   static getBrands(vehicleType) {
 
-    const key = vehicleType || '__all__'
+    const key =
 
-    if (!this.cache.brands.has(key)) {
+      `brands:${vehicleType || '__all__'}`
 
-      this.cache.brands.set(
+    if (
 
-        key,
+      VehicleCache.has(key)
 
-        LocalVehicleSource.getBrands(vehicleType)
+    ) {
 
-      )
+      return VehicleCache.get(key)
 
     }
 
-    return this.cache.brands.get(key)
+    return VehicleCache.set(
+
+      key,
+
+      LocalVehicleSource.getBrands(vehicleType)
+
+    )
 
   }
 
@@ -72,21 +75,27 @@ export default class CachedVehicleSource {
 
   static getModels(params) {
 
-    const key = JSON.stringify(params)
+    const key =
 
-    if (!this.cache.models.has(key)) {
+      `models:${JSON.stringify(params)}`
 
-      this.cache.models.set(
+    if (
 
-        key,
+      VehicleCache.has(key)
 
-        LocalVehicleSource.getModels(params)
+    ) {
 
-      )
+      return VehicleCache.get(key)
 
     }
 
-    return this.cache.models.get(key)
+    return VehicleCache.set(
+
+      key,
+
+      LocalVehicleSource.getModels(params)
+
+    )
 
   }
 
@@ -96,21 +105,27 @@ export default class CachedVehicleSource {
 
   static getYears(params) {
 
-    const key = JSON.stringify(params)
+    const key =
 
-    if (!this.cache.years.has(key)) {
+      `years:${JSON.stringify(params)}`
 
-      this.cache.years.set(
+    if (
 
-        key,
+      VehicleCache.has(key)
 
-        LocalVehicleSource.getYears(params)
+    ) {
 
-      )
+      return VehicleCache.get(key)
 
     }
 
-    return this.cache.years.get(key)
+    return VehicleCache.set(
+
+      key,
+
+      LocalVehicleSource.getYears(params)
+
+    )
 
   }
 
@@ -120,21 +135,27 @@ export default class CachedVehicleSource {
 
   static findVehicle(params) {
 
-    const key = JSON.stringify(params)
+    const key =
 
-    if (!this.cache.vehicles.has(key)) {
+      `vehicle:${JSON.stringify(params)}`
 
-      this.cache.vehicles.set(
+    if (
 
-        key,
+      VehicleCache.has(key)
 
-        LocalVehicleSource.findVehicle(params)
+    ) {
 
-      )
+      return VehicleCache.get(key)
 
     }
 
-    return this.cache.vehicles.get(key)
+    return VehicleCache.set(
+
+      key,
+
+      LocalVehicleSource.findVehicle(params)
+
+    )
 
   }
 
@@ -144,15 +165,25 @@ export default class CachedVehicleSource {
 
   static getAll() {
 
-    if (!this.cache.allVehicles) {
+    const key = 'vehicleDatabase'
 
-      this.cache.allVehicles =
+    if (
 
-        LocalVehicleSource.getAll()
+      VehicleCache.has(key)
+
+    ) {
+
+      return VehicleCache.get(key)
 
     }
 
-    return this.cache.allVehicles
+    return VehicleCache.set(
+
+      key,
+
+      LocalVehicleSource.getAll()
+
+    )
 
   }
 
@@ -162,21 +193,7 @@ export default class CachedVehicleSource {
 
   static clear() {
 
-    this.cache = {
-
-      vehicleTypes: null,
-
-      brands: new Map(),
-
-      models: new Map(),
-
-      years: new Map(),
-
-      vehicles: new Map(),
-
-      allVehicles: null
-
-    }
+    VehicleCache.clear()
 
   }
 
