@@ -6,8 +6,8 @@
 import VehicleProvider
 from '../vehicles/VehicleProvider'
 
-import VehicleFuzzySearch
-from '../search/VehicleFuzzySearch'
+import VehicleSearchIndex
+from '../search/VehicleSearchIndex'
 
 export default class VehicleAIEngine {
 
@@ -59,6 +59,24 @@ export default class VehicleAIEngine {
   }
 
   // ======================================================
+  // FIND BEST MATCH
+  // ======================================================
+
+  static findBest(query) {
+
+    const results =
+
+      VehicleSearchIndex.search(
+
+        query
+
+      )
+
+    return results[0] || null
+
+  }
+
+  // ======================================================
   // PARSE
   // ======================================================
 
@@ -68,21 +86,17 @@ export default class VehicleAIEngine {
 
       this.normalize(text)
 
+    if (!query)
+
+      return null
+
     const year =
 
       this.extractYear(query)
 
     const vehicle =
 
-      VehicleFuzzySearch
-
-        .search(
-
-          query,
-
-          this.getDatabase()
-
-        )[0]
+      this.findBest(query)
 
     if (!vehicle)
 
@@ -92,19 +106,23 @@ export default class VehicleAIEngine {
 
       vehicle,
 
-      make: vehicle.make,
-
-      model: vehicle.model,
-
       vehicleType:
 
         vehicle.vehicleType ??
 
         vehicle.type,
 
+      make:
+
+        vehicle.make,
+
+      model:
+
+        vehicle.model,
+
       year:
 
-        year ||
+        year ??
 
         vehicle.yearFrom
 
@@ -118,11 +136,13 @@ export default class VehicleAIEngine {
 
   static suggestions(text = '') {
 
-    return VehicleFuzzySearch.search(
+    if (!text.trim())
 
-      text,
+      return []
 
-      this.getDatabase()
+    return VehicleSearchIndex.search(
+
+      text
 
     )
 
@@ -134,13 +154,15 @@ export default class VehicleAIEngine {
 
   static search(text = '') {
 
+    const vehicle =
+
+      this.parse(text)
+
     return {
 
       query: text,
 
-      vehicle:
-
-        this.parse(text),
+      vehicle,
 
       suggestions:
 

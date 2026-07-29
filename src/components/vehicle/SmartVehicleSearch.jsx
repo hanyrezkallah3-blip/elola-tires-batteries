@@ -4,7 +4,9 @@
 // ======================================================
 
 import {
+  useEffect,
   useMemo,
+  useRef,
   useState
 } from 'react'
 
@@ -17,6 +19,8 @@ export default function SmartVehicleSearch({
 
 }) {
 
+  const rootRef = useRef(null)
+
   const [
 
     text,
@@ -25,17 +29,45 @@ export default function SmartVehicleSearch({
 
   ] = useState('')
 
-  const suggestions = useMemo(() => {
+  const [
 
-    if (!text.trim())
+    query,
 
-      return []
+    setQuery
 
-    return VehicleAIEngine.suggestions(
+  ] = useState('')
 
-      text
+  const [
 
-    )
+    opened,
+
+    setOpened
+
+  ] = useState(false)
+
+  const [
+
+    highlighted,
+
+    setHighlighted
+
+  ] = useState(0)
+
+  // ======================================================
+  // DEBOUNCE
+  // ======================================================
+
+  useEffect(() => {
+
+    const timer = setTimeout(() => {
+
+      setQuery(text)
+
+    }, 250)
+
+    return () =>
+
+      clearTimeout(timer)
 
   }, [
 
@@ -43,13 +75,97 @@ export default function SmartVehicleSearch({
 
   ])
 
-  function handleChoose(vehicle) {
+  // ======================================================
+  // CLOSE OUTSIDE
+  // ======================================================
+
+  useEffect(() => {
+
+    function handleClick(event) {
+
+      if (
+
+        rootRef.current &&
+
+        !rootRef.current.contains(
+
+          event.target
+
+        )
+
+      ) {
+
+        setOpened(false)
+
+      }
+
+    }
+
+    document.addEventListener(
+
+      'mousedown',
+
+      handleClick
+
+    )
+
+    return () =>
+
+      document.removeEventListener(
+
+        'mousedown',
+
+        handleClick
+
+      )
+
+  }, [])
+
+  // ======================================================
+  // SEARCH
+  // ======================================================
+
+  const suggestions = useMemo(() => {
+
+    if (!query.trim())
+
+      return []
+
+    return VehicleAIEngine.suggestions(
+
+      query
+
+    )
+
+  }, [
+
+    query
+
+  ])
+
+  useEffect(() => {
+
+    setHighlighted(0)
+
+  }, [
+
+    suggestions
+
+  ])
+
+  // ======================================================
+  // SELECT
+  // ======================================================
+
+  function choose(vehicle) {
 
     setText(
 
       `${vehicle.make} ${vehicle.model}`
 
     )
+
+    setOpened(false)
 
     onSelect?.({
 
@@ -77,15 +193,111 @@ export default function SmartVehicleSearch({
 
   }
 
+  // ======================================================
+  // KEYBOARD
+  // ======================================================
+
+  function onKeyDown(event) {
+
+    if (!opened)
+
+      return
+
+    if (
+
+      event.key === 'ArrowDown'
+
+    ) {
+
+      event.preventDefault()
+
+      setHighlighted(value =>
+
+        Math.min(
+
+          value + 1,
+
+          suggestions.length - 1
+
+        )
+
+      )
+
+    }
+
+    if (
+
+      event.key === 'ArrowUp'
+
+    ) {
+
+      event.preventDefault()
+
+      setHighlighted(value =>
+
+        Math.max(
+
+          value - 1,
+
+          0
+
+        )
+
+      )
+
+    }
+
+    if (
+
+      event.key === 'Enter'
+
+    ) {
+
+      event.preventDefault()
+
+      if (
+
+        suggestions[highlighted]
+
+      ) {
+
+        choose(
+
+          suggestions[highlighted]
+
+        )
+
+      }
+
+    }
+
+    if (
+
+      event.key === 'Escape'
+
+    ) {
+
+      setOpened(false)
+
+    }
+
+  }
+
   return (
 
-    <div className="space-y-4">
+    <div
+
+      ref={rootRef}
+
+      className="relative space-y-4"
+
+    >
 
       <input
 
         value={text}
 
-        onChange={e =>
+        onChange={e => {
 
           setText(
 
@@ -93,7 +305,17 @@ export default function SmartVehicleSearch({
 
           )
 
+          setOpened(true)
+
+        }}
+
+        onFocus={() =>
+
+          setOpened(true)
+
         }
+
+        onKeyDown={onKeyDown}
 
         placeholder="ابحث باسم السيارة مثل Corolla أو تويوتا كورولا"
 
@@ -123,11 +345,21 @@ export default function SmartVehicleSearch({
 
       {
 
+        opened &&
+
         suggestions.length > 0 &&
 
         <div
 
           className="
+
+            absolute
+
+            left-0
+
+            right-0
+
+            z-50
 
             rounded-2xl
 
@@ -137,9 +369,9 @@ export default function SmartVehicleSearch({
 
             border-slate-700
 
-            divide-y
+            bg-slate-800
 
-            divide-slate-700
+            shadow-2xl
 
           "
 
@@ -147,81 +379,119 @@ export default function SmartVehicleSearch({
 
           {
 
-            suggestions.map(vehicle => (
+            suggestions.map(
 
-              <button
+              (
 
-                key={
+                vehicle,
 
-                  vehicle.id ??
+                index
 
-                  `${vehicle.make}-${vehicle.model}-${vehicle.yearFrom}`
+              ) => (
 
-                }
+                <button
 
-                type="button"
+                  key={
 
-                onClick={() =>
+                    vehicle.id ??
 
-                  handleChoose(vehicle)
-
-                }
-
-                className="
-
-                  w-full
-
-                  text-left
-
-                  p-4
-
-                  bg-slate-800
-
-                  hover:bg-slate-700
-
-                  transition-colors
-
-                "
-
-              >
-
-                <div className="font-black">
-
-                  {vehicle.make}
-
-                  {' '}
-
-                  {vehicle.model}
-
-                </div>
-
-                <div className="text-sm text-slate-400 mt-1">
-
-                  {
-
-                    vehicle.yearFrom
+                    `${vehicle.make}-${vehicle.model}-${vehicle.yearFrom}`
 
                   }
 
-                  {
+                  type="button"
 
-                    vehicle.yearTo
+                  onMouseEnter={() =>
 
-                    ?
+                    setHighlighted(
 
-                    ` - ${vehicle.yearTo}`
+                      index
 
-                    :
-
-                    ''
+                    )
 
                   }
 
-                </div>
+                  onClick={() =>
 
-              </button>
+                    choose(
 
-            ))
+                      vehicle
+
+                    )
+
+                  }
+
+                  className={
+
+                    `
+
+                    w-full
+
+                    text-left
+
+                    p-4
+
+                    border-b
+
+                    border-slate-700
+
+                    transition-colors
+
+                    ${
+
+                      highlighted === index
+
+                        ? 'bg-yellow-500 text-black'
+
+                        : 'bg-slate-800 hover:bg-slate-700 text-white'
+
+                    }
+
+                    `
+
+                  }
+
+                >
+
+                  <div className="font-black">
+
+                    {vehicle.make}
+
+                    {' '}
+
+                    {vehicle.model}
+
+                  </div>
+
+                  <div className="text-xs opacity-70 mt-1">
+
+                    {
+
+                      vehicle.yearFrom
+
+                    }
+
+                    {
+
+                      vehicle.yearTo
+
+                      ?
+
+                      ` - ${vehicle.yearTo}`
+
+                      :
+
+                      ''
+
+                    }
+
+                  </div>
+
+                </button>
+
+              )
+
+            )
 
           }
 
