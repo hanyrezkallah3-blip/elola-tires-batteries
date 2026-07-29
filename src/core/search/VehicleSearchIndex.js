@@ -9,6 +9,10 @@ from '../vehicles/VehicleProvider'
 import VehicleFuzzySearch
 from './VehicleFuzzySearch'
 
+import VehicleAliasDictionary
+from './VehicleAliasDictionary'
+
+
 class VehicleSearchIndex {
 
   constructor() {
@@ -18,6 +22,7 @@ class VehicleSearchIndex {
     this.loaded = false
 
   }
+
 
   // ====================================================
   // BUILD
@@ -29,43 +34,61 @@ class VehicleSearchIndex {
 
       return
 
+
     const vehicles =
 
       VehicleProvider.getAll() || []
 
-    this.index = vehicles.map(vehicle => ({
 
-      vehicle,
+    this.index = vehicles.map(vehicle => {
 
-      make:
+      const make =
 
         VehicleFuzzySearch.normalize(
 
           vehicle.make
 
-        ),
+        )
 
-      model:
+
+      const model =
 
         VehicleFuzzySearch.normalize(
 
           vehicle.model
 
-        ),
-
-      full:
-
-        VehicleFuzzySearch.normalize(
-
-          `${vehicle.make} ${vehicle.model}`
-
         )
 
-    }))
+
+      return {
+
+        vehicle,
+
+        make,
+
+        model,
+
+        full:
+
+          `${make} ${model}`,
+
+        aliases:
+
+          VehicleAliasDictionary.expand(
+
+            make
+
+          )
+
+      }
+
+    })
+
 
     this.loaded = true
 
   }
+
 
   // ====================================================
   // CLEAR
@@ -79,6 +102,69 @@ class VehicleSearchIndex {
 
   }
 
+
+  // ====================================================
+  // SCORE ITEM
+  // ====================================================
+
+  score(item, query) {
+
+
+    let score = Math.max(
+
+      VehicleFuzzySearch.score(
+
+        query,
+
+        item.make
+
+      ),
+
+
+      VehicleFuzzySearch.score(
+
+        query,
+
+        item.model
+
+      ),
+
+
+      VehicleFuzzySearch.score(
+
+        query,
+
+        item.full
+
+      )
+
+    )
+
+
+    item.aliases.forEach(alias => {
+
+      score = Math.max(
+
+        score,
+
+        VehicleFuzzySearch.score(
+
+          query,
+
+          alias
+
+        )
+
+      )
+
+    })
+
+
+    return score
+
+  }
+
+
   // ====================================================
   // SEARCH
   // ====================================================
@@ -87,55 +173,56 @@ class VehicleSearchIndex {
 
     this.build()
 
-    query =
 
-      VehicleFuzzySearch.normalize(
+    const expanded =
+
+      VehicleAliasDictionary.expand(
 
         query
 
       )
 
-    if (!query)
+
+    if (!expanded.length)
 
       return []
 
-    return this.index
 
-      .map(item => ({
+    const results = []
 
-        vehicle:
 
-          item.vehicle,
+    expanded.forEach(value => {
 
-        score: Math.max(
 
-          VehicleFuzzySearch.score(
+      this.index.forEach(item => {
 
-            query,
 
-            item.make
+        results.push({
 
-          ),
+          vehicle:
 
-          VehicleFuzzySearch.score(
+            item.vehicle,
 
-            query,
+          score:
 
-            item.model
+            this.score(
 
-          ),
+              item,
 
-          VehicleFuzzySearch.score(
+              value
 
-            query,
+            )
 
-            item.full
+        })
 
-          )
 
-        )
+      })
 
-      }))
+
+    })
+
+
+    return results
 
       .filter(item =>
 
@@ -143,11 +230,9 @@ class VehicleSearchIndex {
 
       )
 
-      .sort(
+      .sort((a, b) =>
 
-        (a, b) =>
-
-          b.score - a.score
+        b.score - a.score
 
       )
 
@@ -155,10 +240,13 @@ class VehicleSearchIndex {
 
       .map(item =>
 
-        item.vehicle)
+        item.vehicle
+
+      )
 
   }
 
 }
+
 
 export default new VehicleSearchIndex()
