@@ -3,9 +3,24 @@
 // Vehicle Cache
 // ======================================================
 
+import CacheManager
+from '../cache/CacheManager'
+
 export default class VehicleCache {
 
-  static storage = new Map()
+  // ====================================================
+  // HAS
+  // ====================================================
+
+  static has(key) {
+
+    return CacheManager.has(
+
+      key
+
+    )
+
+  }
 
   // ====================================================
   // GET
@@ -13,7 +28,11 @@ export default class VehicleCache {
 
   static get(key) {
 
-    return this.storage.get(key)
+    return CacheManager.get(
+
+      key
+
+    )
 
   }
 
@@ -29,25 +48,13 @@ export default class VehicleCache {
 
   ) {
 
-    this.storage.set(
+    return CacheManager.set(
 
       key,
 
       value
 
     )
-
-    return value
-
-  }
-
-  // ====================================================
-  // HAS
-  // ====================================================
-
-  static has(key) {
-
-    return this.storage.has(key)
 
   }
 
@@ -57,7 +64,11 @@ export default class VehicleCache {
 
   static remove(key) {
 
-    this.storage.delete(key)
+    CacheManager.remove(
+
+      key
+
+    )
 
   }
 
@@ -67,45 +78,29 @@ export default class VehicleCache {
 
   static clear() {
 
-    this.storage.clear()
+    CacheManager.clear()
 
   }
 
   // ====================================================
-  // SIZE
+  // GET OR SET
   // ====================================================
 
-  static size() {
+  static getOrSet(
 
-    return this.storage.size
+    key,
 
-  }
+    loader
 
-  // ====================================================
-  // KEYS
-  // ====================================================
+  ) {
 
-  static keys() {
+    return CacheManager.getOrSet(
 
-    return [
+      key,
 
-      ...this.storage.keys()
+      loader
 
-    ]
-
-  }
-
-  // ====================================================
-  // VALUES
-  // ====================================================
-
-  static values() {
-
-    return [
-
-      ...this.storage.values()
-
-    ]
+    )
 
   }
 

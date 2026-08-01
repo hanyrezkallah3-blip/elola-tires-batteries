@@ -3,36 +3,38 @@
 // NHTSA Provider
 // ======================================================
 
-import NHTSAClient
-from './NHTSAClient'
+import HttpClient
+from '../../network/HttpClient'
 
 export default class NHTSAProvider {
 
-  // ====================================================
-  // VEHICLE TYPES
-  // ====================================================
+  static baseUrl =
 
-  static async getVehicleTypes() {
-
-    return []
-
-  }
+    'https://vpic.nhtsa.dot.gov/api'
 
   // ====================================================
-  // BRANDS
+  // GET MAKES
   // ====================================================
 
   static async getBrands() {
 
-    const response =
+    const result = await HttpClient.get(
 
-      await NHTSAClient.getManufacturers()
+      `${this.baseUrl}/vehicles/GetAllMakes`,
+
+      {
+
+        format: 'json'
+
+      }
+
+    )
 
     if (
 
-      !response ||
+      !result ||
 
-      !Array.isArray(response.Results)
+      !Array.isArray(result.Results)
 
     ) {
 
@@ -40,36 +42,26 @@ export default class NHTSAProvider {
 
     }
 
-    return response.Results
+    return result.Results.map(make => ({
 
-      .map(item => ({
+      id:
 
-        id:
+        String(
 
-          String(
+          make.Make_ID
 
-            item.Make_ID
+        ),
 
-          ),
+      name:
 
-        name:
+        make.Make_Name
 
-          item.Make_Name
-
-      }))
-
-      .sort(
-
-        (a, b) =>
-
-          a.name.localeCompare(b.name)
-
-      )
+    }))
 
   }
 
   // ====================================================
-  // MODELS
+  // GET MODELS
   // ====================================================
 
   static async getModels({
@@ -82,19 +74,23 @@ export default class NHTSAProvider {
 
       return []
 
-    const response =
+    const result = await HttpClient.get(
 
-      await NHTSAClient.getModels(
+      `${this.baseUrl}/vehicles/GetModelsForMake/${encodeURIComponent(brand)}`,
 
-        brand
+      {
 
-      )
+        format: 'json'
+
+      }
+
+    )
 
     if (
 
-      !response ||
+      !result ||
 
-      !Array.isArray(response.Results)
+      !Array.isArray(result.Results)
 
     ) {
 
@@ -102,17 +98,21 @@ export default class NHTSAProvider {
 
     }
 
-    return response.Results
+    return result.Results.map(model => ({
 
-      .map(item =>
+      id:
 
-        item.Model_Name
+        String(
 
-      )
+          model.Model_ID
 
-      .filter(Boolean)
+        ),
 
-      .sort()
+      name:
+
+        model.Model_Name
+
+    }))
 
   }
 
@@ -122,17 +122,65 @@ export default class NHTSAProvider {
 
   static async getYears() {
 
+    const current =
+
+      new Date().getFullYear()
+
+    const years = []
+
+    for (
+
+      let year = current;
+
+      year >= 1980;
+
+      year--
+
+    ) {
+
+      years.push(year)
+
+    }
+
+    return years
+
+  }
+
+  // ====================================================
+  // TYPES
+  // ====================================================
+
+  static async getVehicleTypes() {
+
     return []
 
   }
 
   // ====================================================
-  // VEHICLE
+  // FIND VEHICLE
   // ====================================================
 
-  static async findVehicle() {
+  static async findVehicle({
 
-    return null
+    make,
+
+    model,
+
+    year
+
+  }) {
+
+    return {
+
+      vehicleType: '',
+
+      make,
+
+      model,
+
+      year
+
+    }
 
   }
 

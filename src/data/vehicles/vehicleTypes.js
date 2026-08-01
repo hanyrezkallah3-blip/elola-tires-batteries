@@ -1,68 +1,136 @@
-// ======================================================
-// EL OLA ERP
-// Vehicle Types Database
-// ======================================================
-
-
-export const vehicleTypes = [
+const vehicleTypes = [
 
   {
-    id: 'car',
 
-    name: 'سيارات',
+    id: 'passenger',
 
-    icon: '🚗'
+    name: 'سيارات ركوب',
+
+    icon: '🚗',
+
+    order: 1
 
   },
 
-
   {
+
     id: 'suv',
 
     name: 'SUV',
 
-    icon: '🚙'
+    icon: '🚙',
+
+    order: 2
 
   },
 
+  {
+
+    id: 'pickup',
+
+    name: 'بيك أب',
+
+    icon: '🛻',
+
+    order: 3
+
+  },
 
   {
-    id: 'truck',
+
+    id: 'van',
+
+    name: 'فان',
+
+    icon: '🚐',
+
+    order: 4
+
+  },
+
+  {
+
+    id: 'light_truck',
+
+    name: 'نقل خفيف',
+
+    icon: '🚚',
+
+    order: 5
+
+  },
+    {
+
+    id: 'heavy_truck',
 
     name: 'شاحنات',
 
-    icon: '🚚'
+    icon: '🚛',
+
+    order: 6
 
   },
 
-
   {
+
     id: 'bus',
 
-    name: 'حافلات',
+    name: 'أتوبيسات',
 
-    icon: '🚌'
+    icon: '🚌',
+
+    order: 7
 
   },
 
-
   {
+
     id: 'motorcycle',
 
     name: 'دراجات نارية',
 
-    icon: '🏍️'
+    icon: '🏍️',
+
+    order: 8
 
   },
 
+  {
+
+    id: 'agriculture',
+
+    name: 'معدات زراعية',
+
+    icon: '🚜',
+
+    order: 9
+
+  },
 
   {
-    id: 'heavy',
 
-    name: 'معدات ثقيلة',
+    id: 'industrial',
 
-    icon: '🚜'
+    name: 'معدات صناعية',
+
+    icon: '🏗️',
+
+    order: 10
+
+  },
+
+  {
+
+    id: 'forklift',
+
+    name: 'رافعات شوكية',
+
+    icon: '🏭',
+
+    order: 11
 
   }
 
 ]
+
+export default vehicleTypes

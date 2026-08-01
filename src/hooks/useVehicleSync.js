@@ -3,13 +3,10 @@
 // Vehicle Sync Hook
 // ======================================================
 
-import { useEffect }
+import { useEffect } from 'react'
 
-from 'react'
-
-import VehicleSyncManager
-
-from '../core/vehicles/VehicleSyncManager'
+import VehicleSyncService
+from '../core/vehicles/VehicleSyncService'
 
 export default function useVehicleSync({
 
@@ -19,15 +16,17 @@ export default function useVehicleSync({
 
   model
 
-} = {}) {
+}) {
 
   // ====================================================
-  // INITIAL
+  // START
   // ====================================================
 
   useEffect(() => {
 
-    VehicleSyncManager.start()
+    VehicleSyncService.start()
+
+    VehicleSyncService.syncVehicleTypes()
 
   }, [])
 
@@ -41,13 +40,17 @@ export default function useVehicleSync({
 
       return
 
-    VehicleSyncManager.syncBrands(
+    VehicleSyncService.syncBrands(
 
       vehicleType
 
     )
 
-  }, [vehicleType])
+  }, [
+
+    vehicleType
+
+  ])
 
   // ====================================================
   // MODELS
@@ -55,11 +58,17 @@ export default function useVehicleSync({
 
   useEffect(() => {
 
-    if (!brand)
+    if (
+
+      !vehicleType ||
+
+      !brand
+
+    )
 
       return
 
-    VehicleSyncManager.syncModels({
+    VehicleSyncService.syncModels({
 
       vehicleType,
 
@@ -83,6 +92,8 @@ export default function useVehicleSync({
 
     if (
 
+      !vehicleType ||
+
       !brand ||
 
       !model
@@ -91,7 +102,9 @@ export default function useVehicleSync({
 
       return
 
-    VehicleSyncManager.syncYears({
+    VehicleSyncService.syncYears({
+
+      vehicleType,
 
       brand,
 
@@ -100,6 +113,8 @@ export default function useVehicleSync({
     })
 
   }, [
+
+    vehicleType,
 
     brand,
 

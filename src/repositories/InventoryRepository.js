@@ -77,6 +77,12 @@ class InventoryRepository extends BaseRepository {
 
       maximumStock: 0,
 
+      reorderPoint: 0,
+
+      location: '',
+
+      note: '',
+
       createdAt:
         new Date().toISOString(),
 
@@ -107,10 +113,53 @@ class InventoryRepository extends BaseRepository {
     )
 
   }
-
-  async delete(id) {
+    async delete(id) {
 
     return await super.delete(id)
+
+  }
+
+  async increaseStock(id, quantity) {
+
+    const item =
+      await this.getById(id)
+
+    if (!item)
+      return null
+
+    return await this.update(id, {
+
+      quantity:
+
+        Number(item.quantity || 0) +
+
+        Number(quantity || 0)
+
+    })
+
+  }
+
+  async decreaseStock(id, quantity) {
+
+    const item =
+      await this.getById(id)
+
+    if (!item)
+      return null
+
+    return await this.update(id, {
+
+      quantity: Math.max(
+
+        0,
+
+        Number(item.quantity || 0) -
+
+        Number(quantity || 0)
+
+      )
+
+    })
 
   }
 

@@ -1,135 +1,46 @@
+import ProductBasicSection
+  from './form/ProductBasicSection'
+
+import ProductTypeSection
+  from './form/ProductTypeSection'
+
+import ProductPricingSection
+  from './form/ProductPricingSection'
+
+import ProductWarehouseSection
+  from './form/ProductWarehouseSection'
+
+import ProductTireSection
+  from './form/ProductTireSection'
+
+import ProductBatterySection
+  from './form/ProductBatterySection'
+
+import ProductOilSection
+  from './form/ProductOilSection'
+
+import ProductCompatibilitySection
+  from './form/ProductCompatibilitySection'
+
+import ProductMediaSection
+  from './form/ProductMediaSection'
+
+import ProductSubmitButton
+  from './form/ProductSubmitButton'
+
+
 import {
-  useCallback,
-  useState
+  useWarehouseStore
+} from '../../store/warehouseStore'
+
+
+import useProductForm
+  from '../../hooks/products/useProductForm'
+
+
+import {
+  useCallback
 } from 'react'
-
-import ProductBasicInfo
-  from './form/ProductBasicInfo'
-
-import ProductPricing
-  from './form/ProductPricing'
-
-import ProductInventory
-  from './form/ProductInventory'
-
-import ProductTireFields
-  from './form/ProductTireFields'
-
-import ProductBatteryFields
-  from './form/ProductBatteryFields'
-
-import ProductOilFields
-  from './form/ProductOilFields'
-
-import ProductImageUpload
-  from './form/ProductImageUpload'
-
-import ProductVehicleCompatibility
-  from './vehicle/ProductVehicleCompatibility'
-
-const INITIAL_PRODUCT = {
-
-  name: '',
-
-  type: 'tire',
-
-  category: 'tire',
-
-  brand: '',
-
-  model: '',
-
-  sku: '',
-
-  barcode: '',
-
-  code: '',
-
-  keywords: '',
-
-  description: '',
-
-  vehicleCompatibility: '',
-
-  purchasePrice: 0,
-
-  salePrice: 0,
-
-  discountPrice: 0,
-
-  cost: 0,
-
-  quantity: 0,
-
-  minimumStock: 0,
-
-  maximumStock: 0,
-
-  reorderPoint: 0,
-
-  tire: {
-
-    width: '',
-
-    height: '',
-
-    rim: '',
-
-    loadIndex: '',
-
-    speedRating: '',
-
-    season: '',
-
-    size: ''
-
-  },
-
-  battery: {
-
-    capacity: '',
-
-    cca: '',
-
-    voltage: '',
-
-    polarity: '',
-
-    length: '',
-
-    width: '',
-
-    height: '',
-
-    model: ''
-
-  },
-
-  oil: {
-
-    viscosity: '',
-
-    api: '',
-
-    acea: '',
-
-    volume: ''
-
-  },
-
-  compatibleVehicles: [],
-
-  compatibleSizes: [],
-
-  image: '',
-
-  images: [],
-
-  active: true,
-
-  createdAt: ''
-
-}
 
 
 export default function ProductForm({
@@ -139,170 +50,327 @@ export default function ProductForm({
 }) {
 
 
-  const [form,setForm] =
+  const {
 
-    useState(INITIAL_PRODUCT)
+    form,
+
+    setForm,
+
+    resetForm
+
+  } = useProductForm()
+    const submit = useCallback(() => {
 
 
+    if (!form.name.trim()) {
 
-  const submit = useCallback(()=>{
-
-
-    if(
-      !form.name.trim()
-    ){
 
       alert(
+
         'اسم المنتج مطلوب'
+
       )
+
 
       return
 
     }
 
 
-    if(
-      Number(form.salePrice) <= 0
-    ){
+
+    if (
+
+      Number(form.salePrice || 0) <= 0
+
+    ) {
+
 
       alert(
+
         'سعر البيع غير صحيح'
+
       )
+
 
       return
 
     }
+
+
+
+    if (!form.warehouseId) {
+
+
+      alert(
+
+        'اختر المخزن أولاً'
+
+      )
+
+
+      return
+
+    }
+
+
+
+    const quantity =
+
+      Number(
+
+        form.quantity ||
+
+        form.stock ||
+
+        0
+
+      )
 
 
 
     const product = {
 
-  ...form,
 
-  category: form.type,
-
-  size:
-
-    form.type === 'tire'
-
-      ? `${form.tire.width}/${form.tire.height}R${form.tire.rim}`
-
-      : '',
-
-  capacity: form.battery.capacity,
-
-  cca: form.battery.cca,
-
-  model:
-
-    form.type === 'battery'
-
-      ? form.battery.model || form.model
-
-      : form.model,
-
-  vehicleCompatibility:
-
-    Array.isArray(form.compatibleVehicles)
-
-      ? form.compatibleVehicles.join(' ')
-
-      : '',
-
-  keywords:
-
-    [
-      form.name,
-      form.brand,
-      form.model,
-      form.sku,
-      form.barcode,
-      form.code,
-      form.tire.width,
-      form.tire.height,
-      form.tire.rim,
-      form.battery.capacity,
-      form.battery.cca
-    ]
-      .filter(Boolean)
-      .join(' '),
+      ...form,
 
 
-      profit:
-
-        Number(form.salePrice || 0)
-        -
-        Number(form.purchasePrice || 0),
+      stock: 0,
 
 
-      profitMargin:
+      sold: 0,
 
-        form.purchasePrice > 0
 
-        ?
+      quantity: 0,
 
-        (
 
-          (
+      category:
 
-            form.salePrice -
-            form.purchasePrice
+        form.type,
 
-          )
 
-          /
 
-          form.purchasePrice
+      keywords:
 
-        )
 
-        * 100
+        [
 
-        :
+          form.name,
 
-        0,
+          form.brand,
+
+          form.model,
+
+          form.sku,
+
+          form.barcode
+
+        ]
+
+        .filter(Boolean)
+
+        .join(' '),
+
 
 
       createdAt:
 
+
         new Date()
-        .toISOString()
+
+          .toISOString()
 
     }
 
 
 
-    onAddProduct(product)
+    const createdProduct =
+
+      onAddProduct(
+
+        product
+
+      )
 
 
 
-    setForm(
-      INITIAL_PRODUCT
-    )
+    if (
+
+      quantity > 0 &&
+
+      createdProduct?.id
+
+    ) {
+
+
+      const {
+
+        addTransaction
+
+      } = useWarehouseStore.getState()
+
+
+
+      addTransaction(
+
+
+        form.warehouseId,
+
+
+        {
+
+
+          type: 'in',
+
+
+          quantity,
+
+
+          productId:
+
+            createdProduct.id,
+
+
+          productName:
+
+            createdProduct.name
+
+
+        }
+
+      )
+
+    }
+
+
+
+    resetForm()
+
 
 
     alert(
+
       'تم إضافة المنتج بنجاح'
+
     )
 
 
-  },[
+  }, [
+
     form,
-    onAddProduct
+
+    onAddProduct,
+
+    resetForm
+
   ])
+    return (
+
+    <div
+
+      className="
+        space-y-8
+        mb-12
+      "
+
+    >
+
+      <ProductBasicSection
+
+        form={form}
+
+        setForm={setForm}
+
+      />
+
+
+      <ProductTypeSection
+
+        form={form}
+
+        setForm={setForm}
+
+      />
+
+
+      <ProductPricingSection
+
+        form={form}
+
+        setForm={setForm}
+
+      />
+
+
+      <ProductWarehouseSection
+
+        form={form}
+
+        setForm={setForm}
+
+      />
+
+
+      {
+
+        form.type === 'tire' &&
+
+        (
+
+          <ProductTireSection
+
+            form={form}
+
+            setForm={setForm}
+
+          />
+
+        )
+
+      }
 
 
 
+      {
 
-  return (
+        form.type === 'battery' &&
 
-    <div className="
-      space-y-8
-      mb-12
-    ">
+        (
+
+          <ProductBatterySection
+
+            form={form}
+
+            setForm={setForm}
+
+          />
+
+        )
+
+      }
 
 
-      <ProductBasicInfo
+
+      {
+
+        form.type === 'oil' &&
+
+        (
+
+          <ProductOilSection
+
+            form={form}
+
+            setForm={setForm}
+
+          />
+
+        )
+
+      }
+
+
+
+      <ProductCompatibilitySection
 
         form={form}
 
@@ -312,7 +380,7 @@ export default function ProductForm({
 
 
 
-      <ProductPricing
+      <ProductMediaSection
 
         form={form}
 
@@ -322,88 +390,11 @@ export default function ProductForm({
 
 
 
-      <ProductInventory
+      <ProductSubmitButton
 
-        form={form}
-
-        setForm={setForm}
+        onSubmit={submit}
 
       />
-
-
-
-      <ProductTireFields
-
-        form={form}
-
-        setForm={setForm}
-
-      />
-
-
-
-      <ProductBatteryFields
-
-        form={form}
-
-        setForm={setForm}
-
-      />
-
-
-
-      <ProductOilFields
-
-        form={form}
-
-        setForm={setForm}
-
-      />
-
-      <ProductVehicleCompatibility
-
-        form={form}
-
-        setForm={setForm}
-
-      />
-
-
-
-      <ProductImageUpload
-
-        form={form}
-
-        setForm={setForm}
-
-      />
-
-
-
-
-      <button
-
-        type="button"
-
-        onClick={submit}
-
-        className="
-          w-full
-          bg-yellow-500
-          hover:bg-yellow-600
-          text-black
-          py-5
-          rounded-3xl
-          text-2xl
-          font-black
-          shadow-xl
-        "
-
-      >
-
-        ➕ إضافة المنتج
-
-      </button>
 
 
     </div>

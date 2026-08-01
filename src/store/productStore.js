@@ -1,5 +1,3 @@
-// src/store/productStore.js
-
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
@@ -9,12 +7,13 @@ import {
   ensureArray,
   generateId,
   now,
-  contains,
-  toNumber
+  contains
 } from './helpers'
+
 
 export const useProductStore = create(
   persist(
+
     (set, get) => ({
 
       // ==================================================
@@ -23,24 +22,33 @@ export const useProductStore = create(
 
       products: [],
 
+
       // ==================================================
       // SET
       // ==================================================
 
       setProducts: (products) =>
+
         set({
-          products: ensureArray(products)
+
+          products:
+            ensureArray(products)
+
         }),
+
 
       // ==================================================
       // CREATE
       // ==================================================
 
-      addProduct: (product) => {
+      addProduct: (product = {}) => {
 
         const newProduct = {
 
-          id: generateId(),
+          id:
+            generateId(),
+
+          // ================= BASIC =================
 
           name: '',
 
@@ -50,29 +58,118 @@ export const useProductStore = create(
 
           brand: '',
 
+          model: '',
+
           category: '',
 
           description: '',
 
           image: '',
 
-          cost: 0,
 
-          price: 0,
+          // ================= PRICING =================
 
-          stock: 0,
+          purchasePrice: 0,
 
-          sold: 0,
+          salePrice: 0,
+
+          averagePurchasePrice: 0,
+
+          profit: 0,
+
+          profitMargin: 0,
+
+
+          // ================= STATUS =================
 
           active: true,
 
           featured: false,
 
-          createdAt: now(),
+
+          createdAt:
+            now(),
+
+          updatedAt:
+            now(),
+
+
+          // ================= TYPE =================
+
+          type: 'tire',
+
+
+          // ================= TIRE =================
+
+          tire: {
+
+            width: null,
+
+            height: null,
+
+            rim: null,
+
+            loadIndex: '',
+
+            speedRating: '',
+
+            season: '',
+
+            runFlat: false
+
+          },
+
+
+          // ================= BATTERY =================
+
+          battery: {
+
+            capacity: null,
+
+            cca: null,
+
+            voltage: 12,
+
+            technology: '',
+
+            polarity: '',
+
+            terminalType: ''
+
+          },
+
+
+          // ================= OIL =================
+
+          oil: {
+
+            viscosity: '',
+
+            standard: '',
+
+            oilType: ''
+
+          },
+
+
+          // ================= VEHICLES =================
+
+          compatibleVehicles: [],
+
+
+          // ================= EXTRA =================
+
+          specifications: {},
+
+          attributes: {},
+
+          tags: [],
+
 
           ...product
 
         }
+
 
         set(state => ({
 
@@ -86,9 +183,11 @@ export const useProductStore = create(
 
         }))
 
+
         return newProduct
 
       },
+
 
       // ==================================================
       // UPDATE
@@ -98,25 +197,31 @@ export const useProductStore = create(
 
         set(state => ({
 
-          products: state.products.map(product =>
+          products:
 
-            product.id === id
+            state.products.map(product =>
 
-              ? {
+              product.id === id
 
-                  ...product,
+                ? {
 
-                  ...updates
+                    ...product,
 
-                }
+                    ...updates,
 
-              : product
+                    updatedAt:
+                      now()
 
-          )
+                  }
+
+                :
+
+                  product
+
+            )
 
         })),
-
-      // ==================================================
+              // ==================================================
       // DELETE
       // ==================================================
 
@@ -128,71 +233,14 @@ export const useProductStore = create(
 
             state.products.filter(
 
-              product => product.id !== id
+              product =>
+
+                product.id !== id
 
             )
 
         })),
 
-      // ==================================================
-      // STOCK
-      // ==================================================
-
-      increaseStock: (id, quantity = 0) =>
-
-        set(state => ({
-
-          products: state.products.map(product =>
-
-            product.id === id
-
-              ? {
-
-                  ...product,
-
-                  stock:
-
-                    toNumber(product.stock) +
-
-                    toNumber(quantity)
-
-                }
-
-              : product
-
-          )
-
-        })),
-
-      decreaseStock: (id, quantity = 0) =>
-
-        set(state => ({
-
-          products: state.products.map(product => {
-
-            if (product.id !== id)
-              return product
-
-            const nextStock = Math.max(
-              0,
-              toNumber(product.stock) - toNumber(quantity)
-            )
-
-            return {
-
-              ...product,
-
-              stock: nextStock,
-
-              sold:
-                toNumber(product.sold) +
-                toNumber(quantity)
-
-            }
-
-          })
-
-        })),
 
       // ==================================================
       // SEARCH
@@ -201,23 +249,49 @@ export const useProductStore = create(
       searchProducts: (keyword) => {
 
         if (!keyword)
+
           return get().products
+
 
         return get().products.filter(product =>
 
-          contains(product.name, keyword) ||
+          contains(
+            product.name,
+            keyword
+          )
 
-          contains(product.brand, keyword) ||
+          ||
 
-          contains(product.category, keyword) ||
+          contains(
+            product.brand,
+            keyword
+          )
 
-          contains(product.sku, keyword) ||
+          ||
 
-          contains(product.barcode, keyword)
+          contains(
+            product.category,
+            keyword
+          )
+
+          ||
+
+          contains(
+            product.sku,
+            keyword
+          )
+
+          ||
+
+          contains(
+            product.barcode,
+            keyword
+          )
 
         )
 
       },
+
 
       // ==================================================
       // HELPERS
@@ -226,94 +300,42 @@ export const useProductStore = create(
       getProduct: (id) =>
 
         get().products.find(
-          product => product.id === id
-        ) || null,
-
-      getLowStockProducts: (limit = 5) =>
-
-        get().products.filter(product =>
-
-          toNumber(product.stock) <= limit
-
-        ),
-
-      // ==================================================
-      // STATISTICS
-      // ==================================================
-
-      getStatistics: () => {
-
-        const products = get().products
-
-        const totalProducts = products.length
-
-        const totalStock = products.reduce(
-
-          (sum, product) =>
-
-            sum + toNumber(product.stock),
-
-          0
-
-        )
-
-        const totalSold = products.reduce(
-
-          (sum, product) =>
-
-            sum + toNumber(product.sold),
-
-          0
-
-        )
-
-        const inventoryValue = products.reduce(
-
-          (sum, product) =>
-
-            sum +
-
-            toNumber(product.stock) *
-
-            toNumber(product.cost),
-
-          0
-
-        )
-
-        const lowStock = products.filter(
 
           product =>
 
-            toNumber(product.stock) <= 5
+            product.id === id
 
-        ).length
+        ) || null,
 
-        return {
 
-          totalProducts,
+      getProductsCount: () =>
 
-          totalStock,
+        get().products.length,
 
-          totalSold,
 
-          inventoryValue,
+      getActiveProducts: () =>
 
-          lowStock
+        get().products.filter(
 
-        }
+          product =>
 
-      }
+            product.active
+
+        )
 
     }),
 
+
     {
 
-      name: STORAGE_KEYS.PRODUCTS,
+      name:
+        STORAGE_KEYS.PRODUCTS,
+
 
       partialize: state => ({
 
-        products: state.products
+        products:
+          state.products
 
       })
 

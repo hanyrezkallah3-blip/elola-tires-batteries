@@ -1,6 +1,5 @@
 import {
   useEffect,
-  useMemo,
   useState
 } from 'react'
 
@@ -66,6 +65,16 @@ export default function useVehicleFinder() {
     setYears
   ] = useState([])
 
+  const [
+    result,
+    setResult
+  ] = useState(null)
+
+  const [
+    loading,
+    setLoading
+  ] = useState(false)
+
   useVehicleSync({
 
     vehicleType,
@@ -76,7 +85,9 @@ export default function useVehicleFinder() {
 
   })
 
-  // ================= TYPES =================
+  // ====================================================
+  // TYPES
+  // ====================================================
 
   useEffect(() => {
 
@@ -98,13 +109,25 @@ export default function useVehicleFinder() {
 
   }
 
-  // ================= BRANDS =================
+  // ====================================================
+  // BRANDS
+  // ====================================================
 
   useEffect(() => {
 
     if (!vehicleType) {
 
-      resetBrands()
+      setMakes([])
+
+      setModels([])
+
+      setYears([])
+
+      setMake('')
+
+      setModel('')
+
+      setYear('')
 
       return
 
@@ -135,24 +158,9 @@ export default function useVehicleFinder() {
     )
 
   }
-
-  function resetBrands() {
-
-    setMakes([])
-
-    setModels([])
-
-    setYears([])
-
-    setMake('')
-
-    setModel('')
-
-    setYear('')
-
-  }
-
-  // ================= MODELS =================
+    // ====================================================
+  // MODELS
+  // ====================================================
 
   useEffect(() => {
 
@@ -206,7 +214,9 @@ export default function useVehicleFinder() {
 
   }
 
-  // ================= YEARS =================
+  // ====================================================
+  // YEARS
+  // ====================================================
 
   useEffect(() => {
 
@@ -242,6 +252,8 @@ export default function useVehicleFinder() {
 
       await VehicleProvider.getYears({
 
+        vehicleType,
+
         brand: make,
 
         model
@@ -256,37 +268,79 @@ export default function useVehicleFinder() {
 
   }
 
-  // ================= SEARCH =================
+  // ====================================================
+  // SEARCH
+  // ====================================================
 
-  const result = useMemo(() => {
+  useEffect(() => {
 
-    if (
+    async function performSearch() {
 
-      !vehicleType ||
+      if (
 
-      !make ||
+        !vehicleType ||
 
-      !model ||
+        !make ||
 
-      !year
+        !model ||
 
-    )
+        !year
 
-      return null
+      ) {
 
-    return VehicleEngine.search({
+        setResult(null)
 
-      vehicleType,
+        return
 
-      make,
+      }
 
-      model,
+      try {
 
-      year,
+        setLoading(true)
 
-      products
+        const data =
 
-    })
+          await VehicleEngine.search({
+
+            vehicleType,
+
+            make,
+
+            model,
+
+            year,
+
+            products
+
+          })
+
+        setResult(data)
+
+      }
+
+      catch (error) {
+
+        console.error(
+
+          '[useVehicleFinder]',
+
+          error
+
+        )
+
+        setResult(null)
+
+      }
+
+      finally {
+
+        setLoading(false)
+
+      }
+
+    }
+
+    performSearch()
 
   }, [
 
@@ -301,8 +355,9 @@ export default function useVehicleFinder() {
     products
 
   ])
-
-  // ================= TRACK =================
+    // ====================================================
+  // TRACK SEARCH
+  // ====================================================
 
   useEffect(() => {
 
@@ -332,9 +387,21 @@ export default function useVehicleFinder() {
 
   }, [
 
-    result
+    result,
+
+    vehicleType,
+
+    make,
+
+    model,
+
+    year
 
   ])
+
+  // ====================================================
+  // RETURN
+  // ====================================================
 
   return {
 
@@ -358,7 +425,9 @@ export default function useVehicleFinder() {
 
     years,
 
-    result
+    result,
+
+    loading
 
   }
 

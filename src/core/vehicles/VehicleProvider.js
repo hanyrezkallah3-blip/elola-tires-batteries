@@ -9,15 +9,22 @@ from './CachedVehicleSource'
 import LocalVehicleSource
 from './LocalVehicleSource'
 
+import VehicleMapper
+from './VehicleMapper'
+
 export default class VehicleProvider {
 
   // ====================================================
-  // TYPES
+  // VEHICLE TYPES
   // ====================================================
 
   static getVehicleTypes() {
 
-    return CachedVehicleSource.getVehicleTypes()
+    return VehicleMapper.mapVehicleTypes(
+
+      CachedVehicleSource.getVehicleTypes()
+
+    )
 
   }
 
@@ -27,9 +34,13 @@ export default class VehicleProvider {
 
   static getBrands(vehicleType) {
 
-    return CachedVehicleSource.getBrands(
+    return VehicleMapper.mapBrands(
 
-      vehicleType
+      CachedVehicleSource.getBrands(
+
+        vehicleType
+
+      )
 
     )
 
@@ -41,9 +52,13 @@ export default class VehicleProvider {
 
   static getModels(params) {
 
-    return CachedVehicleSource.getModels(
+    return VehicleMapper.mapModels(
 
-      params
+      CachedVehicleSource.getModels(
+
+        params
+
+      )
 
     )
 
@@ -55,9 +70,13 @@ export default class VehicleProvider {
 
   static getYears(params) {
 
-    return CachedVehicleSource.getYears(
+    return VehicleMapper.mapYears(
 
-      params
+      CachedVehicleSource.getYears(
+
+        params
+
+      )
 
     )
 
@@ -69,9 +88,21 @@ export default class VehicleProvider {
 
   static findVehicle(params) {
 
-    return CachedVehicleSource.findVehicle(
+    const vehicle =
 
-      params
+      CachedVehicleSource.findVehicle(
+
+        params
+
+      )
+
+    if (!vehicle)
+
+      return null
+
+    return VehicleMapper.fromLocal(
+
+      vehicle
 
     )
 
@@ -83,7 +114,13 @@ export default class VehicleProvider {
 
   static getAll() {
 
-    return CachedVehicleSource.getAll()
+    return VehicleMapper.mapArray(
+
+      CachedVehicleSource.getAll(),
+
+      VehicleMapper.fromLocal
+
+    )
 
   }
 
@@ -93,7 +130,13 @@ export default class VehicleProvider {
 
   static getLocalDatabase() {
 
-    return LocalVehicleSource.getAll()
+    return VehicleMapper.mapArray(
+
+      LocalVehicleSource.getAll(),
+
+      VehicleMapper.fromLocal
+
+    )
 
   }
 

@@ -1,4 +1,5 @@
 import ProductsRepository from '../../../repositories/ProductsRepository'
+import InventoryRepository from '../../../repositories/InventoryRepository'
 
 class ProductEngine {
 
@@ -14,11 +15,8 @@ class ProductEngine {
       salePrice - purchasePrice
 
     const profitMargin =
-
       salePrice > 0
-
         ? (profit / salePrice) * 100
-
         : 0
 
     return {
@@ -30,7 +28,6 @@ class ProductEngine {
       salePrice,
 
       averagePurchasePrice:
-
         Number(
           product.averagePurchasePrice ??
           purchasePrice
@@ -40,29 +37,15 @@ class ProductEngine {
 
       profitMargin,
 
-      minimumStock:
-
-        Number(product.minimumStock || 0),
-
-      preferredWarehouseId:
-
-        product.preferredWarehouseId || null,
-
-      warehouses:
-
-        Array.isArray(product.warehouses)
-
-          ? product.warehouses
-
+      compatibleVehicles:
+        Array.isArray(
+          product.compatibleVehicles
+        )
+          ? product.compatibleVehicles
           : [],
 
-      stockByWarehouse:
-
-        product.stockByWarehouse || {},
-
-      totalStock:
-
-        Number(product.totalStock || 0)
+      active:
+        product.active ?? true
 
     }
 
@@ -72,36 +55,49 @@ class ProductEngine {
 
     const errors = []
 
-    if (!product.name?.trim())
+    if (!product.name?.trim()) {
 
       errors.push(
         'اسم المنتج مطلوب'
       )
 
+    }
+
+    if (!product.warehouseId) {
+
+      errors.push(
+        'يجب اختيار المخزن'
+      )
+
+    }
+
     if (
 
       Number(product.salePrice || 0) < 0
 
-    )
+    ) {
 
       errors.push(
         'سعر البيع غير صحيح'
       )
 
+    }
+
     if (
 
       Number(product.purchasePrice || 0) < 0
 
-    )
+    ) {
 
       errors.push(
         'سعر الشراء غير صحيح'
       )
 
+    }
+
     return {
 
       valid:
-
         errors.length === 0,
 
       errors
@@ -109,13 +105,12 @@ class ProductEngine {
     }
 
   }
-
-  async create(product) {
+    async create(product = {}) {
 
     const validation =
       this.validate(product)
 
-    if (!validation.valid)
+    if (!validation.valid) {
 
       return {
 
@@ -126,35 +121,100 @@ class ProductEngine {
 
       }
 
+    }
+
     const normalized =
       this.normalize(product)
 
-    const result =
+    const {
+
+      warehouseId,
+
+      quantity = 0,
+
+      minimumStock = 0,
+
+      maximumStock = 0,
+
+      reorderPoint = 0,
+
+      ...productData
+
+    } = normalized
+
+    const createdProduct =
 
       await ProductsRepository.create(
-        normalized
+        productData
       )
+
+    await InventoryRepository.create({
+
+      productId:
+        createdProduct.id,
+
+      warehouseId,
+
+      quantity:
+        Number(quantity),
+
+      minimumStock:
+        Number(minimumStock),
+
+      maximumStock:
+        Number(maximumStock),
+
+      reorderPoint:
+        Number(reorderPoint),
+
+      purchasePrice:
+        Number(
+          normalized.purchasePrice
+        ),
+
+      salePrice:
+        Number(
+          normalized.salePrice
+        )
+
+    })
 
     return {
 
       success: true,
 
-      data: result
+      data: createdProduct
 
     }
 
   }
 
-  async update(id, product) {
+  async update(id, product = {}) {
 
     const normalized =
       this.normalize(product)
+
+    const {
+
+      warehouseId,
+
+      quantity,
+
+      minimumStock,
+
+      maximumStock,
+
+      reorderPoint,
+
+      ...productData
+
+    } = normalized
 
     return await ProductsRepository.update(
 
       id,
 
-      normalized
+      productData
 
     )
 
@@ -165,50 +225,31 @@ class ProductEngine {
     return await ProductsRepository.delete(id)
 
   }
+    async getAll() {
 
-  async increaseStock(
-
-    productId,
-
-    warehouseId,
-
-    quantity
-
-  ) {
-
-    return await ProductsRepository
-      .increaseStock(
-
-        productId,
-
-        warehouseId,
-
-        quantity
-
-      )
+    return await ProductsRepository.getAll()
 
   }
 
-  async decreaseStock(
+  async getById(id) {
 
-    productId,
+    return await ProductsRepository.getById(id)
 
-    warehouseId,
+  }
 
-    quantity
+  async getInventory(productId) {
 
-  ) {
+    return await InventoryRepository.getByProduct(
+      productId
+    )
 
-    return await ProductsRepository
-      .decreaseStock(
+  }
 
-        productId,
+  async getWarehouseInventory(warehouseId) {
 
-        warehouseId,
-
-        quantity
-
-      )
+    return await InventoryRepository.getByWarehouse(
+      warehouseId
+    )
 
   }
 

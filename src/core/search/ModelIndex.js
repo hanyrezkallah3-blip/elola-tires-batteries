@@ -111,15 +111,23 @@ class ModelIndex {
 
       ...models.values()
 
-    ].sort((a, b) =>
+    ]
 
-      a.name.localeCompare(
+      .sort((a, b) =>
 
-        b.name
+        a.name.localeCompare(
+
+          b.name
+
+        )
 
       )
 
-    )
+      .map(model =>
+
+        model.name
+
+      )
 
   }
 
@@ -147,9 +155,9 @@ class ModelIndex {
 
     return models
 
-      .map(model => ({
+      .map(name => ({
 
-        model,
+        name,
 
         score:
 
@@ -157,7 +165,7 @@ class ModelIndex {
 
             query,
 
-            model.name
+            name
 
           )
 
@@ -177,7 +185,7 @@ class ModelIndex {
 
       .map(item =>
 
-        item.model
+        item.name
 
       )
 

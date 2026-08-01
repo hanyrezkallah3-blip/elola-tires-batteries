@@ -9,33 +9,87 @@ from './VehicleCache'
 import OnlineVehicleSource
 from './OnlineVehicleSource'
 
+import CarQueryProvider
+from './providers/CarQueryProvider'
+
+import NHTSAProvider
+from './providers/NHTSAProvider'
+
+// ======================================================
+// REGISTER PROVIDERS (مرة واحدة)
+// ======================================================
+
+let registered = false
+
+function registerProviders() {
+
+  if (registered)
+
+    return
+
+  OnlineVehicleSource.register(
+
+    CarQueryProvider
+
+  )
+
+  OnlineVehicleSource.register(
+
+    NHTSAProvider
+
+  )
+
+  registered = true
+
+}
+
 export default class VehicleSyncService {
 
   // ====================================================
-  // UPDATE CACHE
+  // START
   // ====================================================
 
-  static updateCache(key, data) {
+  static async start() {
+
+    registerProviders()
+
+  }
+
+  // ====================================================
+  // CACHE
+  // ====================================================
+
+  static updateCache(key, value) {
 
     if (
 
-      Array.isArray(data)
-
-        ? data.length
-
-        : data
+      value == null
 
     ) {
 
-      VehicleCache.set(
-
-        key,
-
-        data
-
-      )
+      return
 
     }
+
+    if (
+
+      Array.isArray(value) &&
+
+      value.length === 0
+
+    ) {
+
+      return
+
+    }
+
+    VehicleCache.set(
+
+      key,
+
+      value
+
+    )
 
   }
 
@@ -45,33 +99,19 @@ export default class VehicleSyncService {
 
   static async syncVehicleTypes() {
 
-    try {
+    registerProviders()
 
-      const data =
+    const data =
 
-        await OnlineVehicleSource.getVehicleTypes()
+      await OnlineVehicleSource.getVehicleTypes()
 
-      this.updateCache(
+    this.updateCache(
 
-        'vehicleTypes',
+      'vehicleTypes',
 
-        data
+      data
 
-      )
-
-    }
-
-    catch (error) {
-
-      console.error(
-
-        '[VehicleSyncService] syncVehicleTypes',
-
-        error
-
-      )
-
-    }
+    )
 
   }
 
@@ -81,37 +121,23 @@ export default class VehicleSyncService {
 
   static async syncBrands(vehicleType) {
 
-    try {
+    registerProviders()
 
-      const data =
+    const data =
 
-        await OnlineVehicleSource.getBrands(
+      await OnlineVehicleSource.getBrands(
 
-          vehicleType
-
-        )
-
-      this.updateCache(
-
-        `brands:${vehicleType || '__all__'}`,
-
-        data
+        vehicleType
 
       )
 
-    }
+    this.updateCache(
 
-    catch (error) {
+      `brands:${vehicleType || '__all__'}`,
 
-      console.error(
+      data
 
-        '[VehicleSyncService] syncBrands',
-
-        error
-
-      )
-
-    }
+    )
 
   }
 
@@ -121,37 +147,23 @@ export default class VehicleSyncService {
 
   static async syncModels(params) {
 
-    try {
+    registerProviders()
 
-      const data =
+    const data =
 
-        await OnlineVehicleSource.getModels(
+      await OnlineVehicleSource.getModels(
 
-          params
-
-        )
-
-      this.updateCache(
-
-        `models:${JSON.stringify(params)}`,
-
-        data
+        params
 
       )
 
-    }
+    this.updateCache(
 
-    catch (error) {
+      `models:${JSON.stringify(params)}`,
 
-      console.error(
+      data
 
-        '[VehicleSyncService] syncModels',
-
-        error
-
-      )
-
-    }
+    )
 
   }
 
@@ -161,37 +173,23 @@ export default class VehicleSyncService {
 
   static async syncYears(params) {
 
-    try {
+    registerProviders()
 
-      const data =
+    const data =
 
-        await OnlineVehicleSource.getYears(
+      await OnlineVehicleSource.getYears(
 
-          params
-
-        )
-
-      this.updateCache(
-
-        `years:${JSON.stringify(params)}`,
-
-        data
+        params
 
       )
 
-    }
+    this.updateCache(
 
-    catch (error) {
+      `years:${JSON.stringify(params)}`,
 
-      console.error(
+      data
 
-        '[VehicleSyncService] syncYears',
-
-        error
-
-      )
-
-    }
+    )
 
   }
 
@@ -201,37 +199,23 @@ export default class VehicleSyncService {
 
   static async syncVehicle(params) {
 
-    try {
+    registerProviders()
 
-      const data =
+    const data =
 
-        await OnlineVehicleSource.findVehicle(
+      await OnlineVehicleSource.findVehicle(
 
-          params
-
-        )
-
-      this.updateCache(
-
-        `vehicle:${JSON.stringify(params)}`,
-
-        data
+        params
 
       )
 
-    }
+    this.updateCache(
 
-    catch (error) {
+      `vehicle:${JSON.stringify(params)}`,
 
-      console.error(
+      data
 
-        '[VehicleSyncService] syncVehicle',
-
-        error
-
-      )
-
-    }
+    )
 
   }
 

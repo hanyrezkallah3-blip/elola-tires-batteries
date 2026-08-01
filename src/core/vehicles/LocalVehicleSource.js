@@ -1,11 +1,11 @@
 // ======================================================
 // EL OLA ERP
 // Local Vehicle Source
-// Single Source Reader
+// Repository Adapter
 // ======================================================
 
-import { vehicleDatabase }
-from '../../data/vehicleDatabase'
+import VehicleRepository
+from '../../data/vehicles/VehicleRepository'
 
 export default class LocalVehicleSource {
 
@@ -15,7 +15,7 @@ export default class LocalVehicleSource {
 
   static getAll() {
 
-    return vehicleDatabase
+    return VehicleRepository.getAllVehicles()
 
   }
 
@@ -25,27 +25,7 @@ export default class LocalVehicleSource {
 
   static getVehicleTypes() {
 
-    const map = new Map()
-
-    vehicleDatabase.forEach(vehicle => {
-
-      if (!map.has(vehicle.type)) {
-
-        map.set(vehicle.type, {
-
-          id: vehicle.type,
-
-          name: vehicle.typeName,
-
-          image: ''
-
-        })
-
-      }
-
-    })
-
-    return [...map.values()]
+    return VehicleRepository.getVehicleTypes()
 
   }
 
@@ -53,37 +33,24 @@ export default class LocalVehicleSource {
   // BRANDS
   // ====================================================
 
-  static getBrands(vehicleType) {
+  static getBrands(
 
-    return [
+    vehicleType
 
-      ...new Set(
+  ) {
 
-        vehicleDatabase
+    return VehicleRepository.getBrands(
 
-          .filter(vehicle =>
+      vehicleType
 
-            !vehicleType ||
-
-            vehicle.type === vehicleType
-
-          )
-
-          .map(vehicle => vehicle.make)
-
-      )
-
-    ]
+    )
 
   }
-
-  // ====================================================
+    // ====================================================
   // MODELS
   // ====================================================
 
   static getModels({
-
-    vehicleType,
 
     brand
 
@@ -93,33 +60,13 @@ export default class LocalVehicleSource {
 
       return []
 
-    return [
+    return VehicleRepository
 
-      ...new Set(
+      .getModels(
 
-        vehicleDatabase
-
-          .filter(vehicle =>
-
-            vehicle.make === brand
-
-            &&
-
-            (
-
-              !vehicleType ||
-
-              vehicle.type === vehicleType
-
-            )
-
-          )
-
-          .map(vehicle => vehicle.model)
+        brand
 
       )
-
-    ]
 
   }
 
@@ -135,43 +82,25 @@ export default class LocalVehicleSource {
 
   }) {
 
-    if (!brand || !model)
+    if (
+
+      !brand ||
+
+      !model
+
+    )
 
       return []
 
-    const years = []
+    return VehicleRepository
 
-    vehicleDatabase
+      .getYears(
 
-      .filter(vehicle =>
+        brand,
 
-        vehicle.make === brand
-
-        &&
-
-        vehicle.model === model
+        model
 
       )
-
-      .forEach(vehicle => {
-
-        for (
-
-          let year = vehicle.yearFrom;
-
-          year <= vehicle.yearTo;
-
-          year++
-
-        ) {
-
-          years.push(year)
-
-        }
-
-      })
-
-    return [...new Set(years)].sort()
 
   }
 
@@ -183,37 +112,120 @@ export default class LocalVehicleSource {
 
     make,
 
-    model,
-
-    year
+    model
 
   }) {
 
-    return (
+    if (
 
-      vehicleDatabase.find(vehicle =>
+      !make ||
 
-        vehicle.make === make
+      !model
 
-        &&
+    )
 
-        vehicle.model === model
+      return null
 
-        &&
+    return VehicleRepository
 
-        Number(year) >= vehicle.yearFrom
+      .findVehicle(
 
-        &&
+        make,
 
-        Number(year) <= vehicle.yearTo
+        model
 
       )
 
-      ||
+  }
+    // ====================================================
+  // SEARCH BY TIRE SIZE
+  // ====================================================
 
-      null
+  static getOEMSizes(
 
-    )
+    brand,
+
+    model
+
+  ) {
+
+    return VehicleRepository
+
+      .getOEMSizes(
+
+        brand,
+
+        model
+
+      )
+
+  }
+
+  static getAlternativeSizes(
+
+    brand,
+
+    model
+
+  ) {
+
+    return VehicleRepository
+
+      .getAlternativeSizes(
+
+        brand,
+
+        model
+
+      )
+
+  }
+
+  // ====================================================
+  // BATTERY
+  // ====================================================
+
+  static getBattery(
+
+    brand,
+
+    model
+
+  ) {
+
+    return VehicleRepository
+
+      .getBattery(
+
+        brand,
+
+        model
+
+      )
+
+  }
+
+  // ====================================================
+  // OIL
+  // ====================================================
+
+  static getOil(
+
+    brand,
+
+    model
+
+  ) {
+
+    return VehicleRepository
+
+      .getOil(
+
+        brand,
+
+        model
+
+      )
 
   }
 

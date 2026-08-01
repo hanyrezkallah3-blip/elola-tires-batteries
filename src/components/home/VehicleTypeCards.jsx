@@ -10,25 +10,35 @@ export default function VehicleTypeCards({
 
 }) {
 
+  const vehicleTypes =
+
+    Array.isArray(types)
+
+      ? types
+
+      : []
+
   return (
 
-    <div className="
+    <div
+      className="
 
-      grid
+        grid
 
-      grid-cols-2
+        grid-cols-2
 
-      md:grid-cols-4
+        md:grid-cols-4
 
-      xl:grid-cols-6
+        xl:grid-cols-6
 
-      gap-5
+        gap-5
 
-    ">
+      "
+    >
 
       {
 
-        types.map(type => (
+        vehicleTypes.map(type => (
 
           <button
 
@@ -64,53 +74,81 @@ export default function VehicleTypeCards({
 
           >
 
-            <div className="
+            <div
 
-              h-36
+              className="
 
-              bg-slate-800
+                h-36
 
-              flex
+                bg-slate-800
 
-              items-center
+                flex
 
-              justify-center
+                items-center
 
-              overflow-hidden
+                justify-center
 
-            ">
+                overflow-hidden
 
-              <img
+              "
 
-                src={type.image}
+            >
 
-                alt={type.name}
+              {
 
-                className="
+                type.image
 
-                  w-full
+                  ? (
 
-                  h-full
+                      <img
 
-                  object-contain
+                        src={type.image}
 
-                  p-4
+                        alt={type.name}
 
-                "
+                        className="
 
-              />
+                          w-full
+
+                          h-full
+
+                          object-contain
+
+                          p-4
+
+                        "
+
+                      />
+
+                    )
+
+                  : (
+
+                      <div className="text-6xl">
+
+                        🚗
+
+                      </div>
+
+                    )
+
+              }
 
             </div>
 
-            <div className="
+            <div
 
-              py-4
+              className="
 
-              font-black
+                py-4
 
-              text-lg
+                font-black
 
-            ">
+                text-lg
+
+              "
+
+            >
 
               {type.name}
 

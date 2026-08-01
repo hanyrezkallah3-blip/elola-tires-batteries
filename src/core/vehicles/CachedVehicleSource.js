@@ -12,12 +12,10 @@ from './LocalVehicleSource'
 export default class CachedVehicleSource {
 
   // ====================================================
-  // TYPES
+  // HELPERS
   // ====================================================
 
-  static getVehicleTypes() {
-
-    const key = 'vehicleTypes'
+  static fromCache(key, fallback) {
 
     if (
 
@@ -25,15 +23,47 @@ export default class CachedVehicleSource {
 
     ) {
 
-      return VehicleCache.get(key)
+      const value =
+
+        VehicleCache.get(key)
+
+      if (
+
+        Array.isArray(value)
+
+      ) {
+
+        if (value.length)
+
+          return value
+
+      }
+
+      else if (value) {
+
+        return value
+
+      }
 
     }
 
-    return VehicleCache.set(
+    return fallback()
 
-      key,
+  }
 
-      LocalVehicleSource.getVehicleTypes()
+  // ====================================================
+  // TYPES
+  // ====================================================
+
+  static getVehicleTypes() {
+
+    return this.fromCache(
+
+      'vehicleTypes',
+
+      () =>
+
+        LocalVehicleSource.getVehicleTypes()
 
     )
 
@@ -49,21 +79,17 @@ export default class CachedVehicleSource {
 
       `brands:${vehicleType || '__all__'}`
 
-    if (
-
-      VehicleCache.has(key)
-
-    ) {
-
-      return VehicleCache.get(key)
-
-    }
-
-    return VehicleCache.set(
+    return this.fromCache(
 
       key,
 
-      LocalVehicleSource.getBrands(vehicleType)
+      () =>
+
+        LocalVehicleSource.getBrands(
+
+          vehicleType
+
+        )
 
     )
 
@@ -79,21 +105,17 @@ export default class CachedVehicleSource {
 
       `models:${JSON.stringify(params)}`
 
-    if (
-
-      VehicleCache.has(key)
-
-    ) {
-
-      return VehicleCache.get(key)
-
-    }
-
-    return VehicleCache.set(
+    return this.fromCache(
 
       key,
 
-      LocalVehicleSource.getModels(params)
+      () =>
+
+        LocalVehicleSource.getModels(
+
+          params
+
+        )
 
     )
 
@@ -109,28 +131,24 @@ export default class CachedVehicleSource {
 
       `years:${JSON.stringify(params)}`
 
-    if (
-
-      VehicleCache.has(key)
-
-    ) {
-
-      return VehicleCache.get(key)
-
-    }
-
-    return VehicleCache.set(
+    return this.fromCache(
 
       key,
 
-      LocalVehicleSource.getYears(params)
+      () =>
+
+        LocalVehicleSource.getYears(
+
+          params
+
+        )
 
     )
 
   }
 
   // ====================================================
-  // FIND VEHICLE
+  // VEHICLE
   // ====================================================
 
   static findVehicle(params) {
@@ -139,21 +157,17 @@ export default class CachedVehicleSource {
 
       `vehicle:${JSON.stringify(params)}`
 
-    if (
-
-      VehicleCache.has(key)
-
-    ) {
-
-      return VehicleCache.get(key)
-
-    }
-
-    return VehicleCache.set(
+    return this.fromCache(
 
       key,
 
-      LocalVehicleSource.findVehicle(params)
+      () =>
+
+        LocalVehicleSource.findVehicle(
+
+          params
+
+        )
 
     )
 
@@ -165,23 +179,13 @@ export default class CachedVehicleSource {
 
   static getAll() {
 
-    const key = 'vehicleDatabase'
+    return this.fromCache(
 
-    if (
+      'vehicleDatabase',
 
-      VehicleCache.has(key)
+      () =>
 
-    ) {
-
-      return VehicleCache.get(key)
-
-    }
-
-    return VehicleCache.set(
-
-      key,
-
-      LocalVehicleSource.getAll()
+        LocalVehicleSource.getAll()
 
     )
 

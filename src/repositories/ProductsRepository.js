@@ -51,16 +51,6 @@ class ProductsRepository extends BaseRepository {
 
       profitMargin: 0,
 
-      minimumStock: 0,
-
-      preferredWarehouseId: null,
-
-      warehouses: [],
-
-      stockByWarehouse: {},
-
-      totalStock: 0,
-
       compatibleVehicles: [],
 
       tire: {},
@@ -81,20 +71,46 @@ class ProductsRepository extends BaseRepository {
 
     }
 
+    delete item.minimumStock
+    delete item.maximumStock
+    delete item.reorderPoint
+    delete item.preferredWarehouseId
+    delete item.warehouses
+    delete item.stockByWarehouse
+    delete item.totalStock
+    delete item.quantity
+
     return await super.create(item)
 
   }
 
   async update(id, data = {}) {
 
-    return await super.update(id, {
+    const item = {
 
       ...data,
 
       updatedAt:
         new Date().toISOString()
 
-    })
+    }
+
+    delete item.minimumStock
+    delete item.maximumStock
+    delete item.reorderPoint
+    delete item.preferredWarehouseId
+    delete item.warehouses
+    delete item.stockByWarehouse
+    delete item.totalStock
+    delete item.quantity
+
+    return await super.update(
+
+      id,
+
+      item
+
+    )
 
   }
 
@@ -103,112 +119,7 @@ class ProductsRepository extends BaseRepository {
     return await super.delete(id)
 
   }
-
-  async increaseStock(
-
-    id,
-
-    warehouseId,
-
-    quantity
-
-  ) {
-
-    const product =
-      await this.getById(id)
-
-    if (!product)
-      return null
-
-    const stock = {
-
-      ...(product.stockByWarehouse || {})
-
-    }
-
-    stock[warehouseId] =
-
-      Number(stock[warehouseId] || 0) +
-
-      Number(quantity || 0)
-
-    const totalStock =
-
-      Object.values(stock).reduce(
-
-        (sum, value) =>
-
-          sum + Number(value || 0),
-
-        0
-
-      )
-
-    return await this.update(id, {
-
-      stockByWarehouse: stock,
-
-      totalStock
-
-    })
-
-  }
-
-  async decreaseStock(
-
-    id,
-
-    warehouseId,
-
-    quantity
-
-  ) {
-
-    const product =
-      await this.getById(id)
-
-    if (!product)
-      return null
-
-    const stock = {
-
-      ...(product.stockByWarehouse || {})
-
-    }
-
-    stock[warehouseId] = Math.max(
-
-      0,
-
-      Number(stock[warehouseId] || 0) -
-
-      Number(quantity || 0)
-
-    )
-
-    const totalStock =
-
-      Object.values(stock).reduce(
-
-        (sum, value) =>
-
-          sum + Number(value || 0),
-
-        0
-
-      )
-
-    return await this.update(id, {
-
-      stockByWarehouse: stock,
-
-      totalStock
-
-    })
-
-  }
-
-  // =====================================================
+    // =====================================================
   // VEHICLE SEARCH
   // =====================================================
 
@@ -230,19 +141,23 @@ class ProductsRepository extends BaseRepository {
 
       const vehicles =
 
-        Array.isArray(product.compatibleVehicles)
-
+        Array.isArray(
+          product.compatibleVehicles
+        )
           ? product.compatibleVehicles
-
           : []
 
       return vehicles.some(vehicle =>
 
-        (!brand || vehicle.brand === brand)
+        (!brand ||
+
+          vehicle.brand === brand)
 
         &&
 
-        (!model || vehicle.model === model)
+        (!model ||
+
+          vehicle.model === model)
 
         &&
 
@@ -252,11 +167,13 @@ class ProductsRepository extends BaseRepository {
 
           (
 
-            Number(year) >= Number(vehicle.yearFrom)
+            Number(year) >=
+            Number(vehicle.yearFrom)
 
             &&
 
-            Number(year) <= Number(vehicle.yearTo)
+            Number(year) <=
+            Number(vehicle.yearTo)
 
           )
 
@@ -347,8 +264,7 @@ class ProductsRepository extends BaseRepository {
     )
 
   }
-
-  // =====================================================
+    // =====================================================
   // OIL SEARCH
   // =====================================================
 

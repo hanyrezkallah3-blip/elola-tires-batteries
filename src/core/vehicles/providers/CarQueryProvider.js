@@ -3,7 +3,117 @@
 // CarQuery Provider
 // ======================================================
 
+import HttpClient
+from '../../network/HttpClient'
+
+import VehicleMapper
+from '../VehicleMapper'
+
 export default class CarQueryProvider {
+
+  static baseUrl =
+
+    'https://www.carqueryapi.com/api/0.3/'
+
+  // ====================================================
+  // REQUEST
+  // ====================================================
+
+  static async request(query = {}) {
+
+    const response = await HttpClient.get(
+
+      this.baseUrl,
+
+      {
+
+        cmd: query.cmd,
+
+        ...query
+
+      }
+
+    )
+
+    if (!response)
+
+      return null
+
+    if (
+
+      typeof response === 'string'
+
+    ) {
+
+      return this.parseJsonp(
+
+        response
+
+      )
+
+    }
+
+    return response
+
+  }
+
+  // ====================================================
+  // PARSE JSONP
+  // ====================================================
+
+  static parseJsonp(text = '') {
+
+    try {
+
+      const start =
+
+        text.indexOf('(')
+
+      const end =
+
+        text.lastIndexOf(')')
+
+      if (
+
+        start === -1 ||
+
+        end === -1
+
+      ) {
+
+        return null
+
+      }
+
+      return JSON.parse(
+
+        text.substring(
+
+          start + 1,
+
+          end
+
+        )
+
+      )
+
+    }
+
+    catch (error) {
+
+      console.error(
+
+        '[CarQueryProvider]',
+
+        error
+
+      )
+
+      return null
+
+    }
+
+  }
 
   // ====================================================
   // TYPES
@@ -19,29 +129,33 @@ export default class CarQueryProvider {
   // BRANDS
   // ====================================================
 
-  static async getBrands(vehicleType) {
+  static async getBrands() {
 
-    try {
+    const result =
 
-      // سيتم ربط CarQuery API هنا
+      await this.request({
 
-      return []
+        cmd: 'getMakes'
 
-    }
+      })
 
-    catch (error) {
+    const makes =
 
-      console.error(
+      result?.Makes || []
 
-        '[CarQueryProvider]',
+    return makes.map(item => ({
 
-        error
+      id:
 
-      )
+        item.make_id ||
 
-      return []
+        item.make_display,
 
-    }
+      name:
+
+        item.make_display
+
+    }))
 
   }
 
@@ -49,29 +163,37 @@ export default class CarQueryProvider {
   // MODELS
   // ====================================================
 
-  static async getModels(params) {
+  static async getModels({
 
-    try {
+    brand
 
-      // سيتم ربط CarQuery API هنا
+  }) {
 
-      return []
-
-    }
-
-    catch (error) {
-
-      console.error(
-
-        '[CarQueryProvider]',
-
-        error
-
-      )
+    if (!brand)
 
       return []
 
-    }
+    const result =
+
+      await this.request({
+
+        cmd: 'getModels',
+
+        make: brand
+
+      })
+
+    const models =
+
+      result?.Models || []
+
+    return VehicleMapper.mapArray(
+
+      models,
+
+      VehicleMapper.fromCarQuery
+
+    )
 
   }
 
@@ -79,27 +201,29 @@ export default class CarQueryProvider {
   // YEARS
   // ====================================================
 
-  static async getYears(params) {
+  static async getYears() {
 
-    try {
+    const years = []
 
-      return []
+    const current =
+
+      new Date().getFullYear()
+
+    for (
+
+      let year = 1980;
+
+      year <= current;
+
+      year++
+
+    ) {
+
+      years.push(year)
 
     }
 
-    catch (error) {
-
-      console.error(
-
-        '[CarQueryProvider]',
-
-        error
-
-      )
-
-      return []
-
-    }
+    return years.reverse()
 
   }
 
@@ -107,25 +231,43 @@ export default class CarQueryProvider {
   // VEHICLE
   // ====================================================
 
-  static async findVehicle(params) {
+  static async findVehicle({
 
-    try {
+    make,
 
-      return null
+    model,
 
-    }
+    year
 
-    catch (error) {
+  }) {
 
-      console.error(
+    const vehicles =
 
-        '[CarQueryProvider]',
+      await this.getModels({
 
-        error
+        brand: make
+
+      })
+
+    const vehicle =
+
+      vehicles.find(item =>
+
+        item.make === make &&
+
+        item.model === model
 
       )
 
+    if (!vehicle)
+
       return null
+
+    return {
+
+      ...vehicle,
+
+      year
 
     }
 

@@ -6,6 +6,9 @@
 import VehicleProvider
 from '../vehicles/VehicleProvider'
 
+import OEMCompatibilityEngine
+from './OEMCompatibilityEngine'
+
 import VehicleCompatibilityEngine
 from './VehicleCompatibilityEngine'
 
@@ -15,7 +18,7 @@ export class VehicleEngine {
   // FIND VEHICLE
   // ======================================================
 
-  static findVehicle({
+  static async findVehicle({
 
     make,
 
@@ -25,7 +28,7 @@ export class VehicleEngine {
 
   }) {
 
-    return VehicleProvider.findVehicle({
+    return await VehicleProvider.findVehicle({
 
       make,
 
@@ -41,7 +44,7 @@ export class VehicleEngine {
   // SEARCH
   // ======================================================
 
-  static search({
+  static async search({
 
     vehicleType,
 
@@ -57,7 +60,19 @@ export class VehicleEngine {
 
     const vehicle =
 
-      this.findVehicle({
+      await this.findVehicle({
+
+        make,
+
+        model,
+
+        year
+
+      })
+
+    const oem =
+
+      await OEMCompatibilityEngine.search({
 
         make,
 
@@ -79,7 +94,9 @@ export class VehicleEngine {
 
         model,
 
-        year
+        year,
+
+        oem
 
       })
 
@@ -95,7 +112,9 @@ export class VehicleEngine {
 
         model,
 
-        year
+        year,
+
+        oem
 
       })
 
@@ -111,13 +130,17 @@ export class VehicleEngine {
 
         model,
 
-        year
+        year,
+
+        oem
 
       })
 
     return {
 
       vehicle,
+
+      oem,
 
       tires,
 
@@ -145,6 +168,17 @@ export class VehicleEngine {
 
   static filterTires(params) {
 
+    if (
+
+      params.oem?.tire
+
+    ) {
+
+      // المرحلة القادمة:
+      // ProductsRepository.findByTireSpecification()
+
+    }
+
     return VehicleCompatibilityEngine.filterProducts({
 
       ...params,
@@ -161,6 +195,17 @@ export class VehicleEngine {
 
   static filterBatteries(params) {
 
+    if (
+
+      params.oem?.battery
+
+    ) {
+
+      // المرحلة القادمة:
+      // ProductsRepository.findByBatterySpecification()
+
+    }
+
     return VehicleCompatibilityEngine.filterProducts({
 
       ...params,
@@ -176,6 +221,17 @@ export class VehicleEngine {
   // ======================================================
 
   static filterOils(params) {
+
+    if (
+
+      params.oem?.oil
+
+    ) {
+
+      // المرحلة القادمة:
+      // ProductsRepository.findByOilSpecification()
+
+    }
 
     return VehicleCompatibilityEngine.filterProducts({
 

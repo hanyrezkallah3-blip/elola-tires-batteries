@@ -8,7 +8,7 @@ export default class OnlineVehicleSource {
   static providers = []
 
   // ====================================================
-  // REGISTER PROVIDER
+  // REGISTER
   // ====================================================
 
   static register(provider) {
@@ -28,36 +28,84 @@ export default class OnlineVehicleSource {
   }
 
   // ====================================================
-  // VEHICLE TYPES
+  // EXECUTE
   // ====================================================
 
-  static async getVehicleTypes() {
+  static async execute(method, ...args) {
 
     for (const provider of this.providers) {
 
-      if (!provider.getVehicleTypes)
-
-        continue
-
-      const result =
-
-        await provider.getVehicleTypes()
-
       if (
 
-        result &&
-
-        result.length
+        typeof provider?.[method] !== 'function'
 
       ) {
 
-        return result
+        continue
+
+      }
+
+      try {
+
+        const result = await provider[method](
+
+          ...args
+
+        )
+
+        if (
+
+          Array.isArray(result)
+
+            ? result.length > 0
+
+            : result
+
+        ) {
+
+          return result
+
+        }
+
+      }
+
+      catch (error) {
+
+        console.error(
+
+          `[OnlineVehicleSource] ${provider.constructor?.name || 'Provider'} ${method}`,
+
+          error
+
+        )
 
       }
 
     }
 
-    return []
+    return Array.isArray(
+
+      await Promise.resolve([])
+
+    )
+
+      ? []
+
+      : null
+
+  }
+
+  // ====================================================
+  // TYPES
+  // ====================================================
+
+  static getVehicleTypes() {
+
+    return this.execute(
+
+      'getVehicleTypes'
+
+    )
 
   }
 
@@ -65,33 +113,15 @@ export default class OnlineVehicleSource {
   // BRANDS
   // ====================================================
 
-  static async getBrands(vehicleType) {
+  static getBrands(vehicleType) {
 
-    for (const provider of this.providers) {
+    return this.execute(
 
-      if (!provider.getBrands)
+      'getBrands',
 
-        continue
+      vehicleType
 
-      const result =
-
-        await provider.getBrands(vehicleType)
-
-      if (
-
-        result &&
-
-        result.length
-
-      ) {
-
-        return result
-
-      }
-
-    }
-
-    return []
+    )
 
   }
 
@@ -99,33 +129,15 @@ export default class OnlineVehicleSource {
   // MODELS
   // ====================================================
 
-  static async getModels(params) {
+  static getModels(params) {
 
-    for (const provider of this.providers) {
+    return this.execute(
 
-      if (!provider.getModels)
+      'getModels',
 
-        continue
+      params
 
-      const result =
-
-        await provider.getModels(params)
-
-      if (
-
-        result &&
-
-        result.length
-
-      ) {
-
-        return result
-
-      }
-
-    }
-
-    return []
+    )
 
   }
 
@@ -133,69 +145,31 @@ export default class OnlineVehicleSource {
   // YEARS
   // ====================================================
 
-  static async getYears(params) {
+  static getYears(params) {
 
-    for (const provider of this.providers) {
+    return this.execute(
 
-      if (!provider.getYears)
+      'getYears',
 
-        continue
+      params
 
-      const result =
-
-        await provider.getYears(params)
-
-      if (
-
-        result &&
-
-        result.length
-
-      ) {
-
-        return result
-
-      }
-
-    }
-
-    return []
+    )
 
   }
 
   // ====================================================
-  // FIND VEHICLE
+  // VEHICLE
   // ====================================================
 
-  static async findVehicle(params) {
+  static findVehicle(params) {
 
-    for (const provider of this.providers) {
+    return this.execute(
 
-      if (!provider.findVehicle)
+      'findVehicle',
 
-        continue
+      params
 
-      const result =
-
-        await provider.findVehicle(params)
-
-      if (result)
-
-        return result
-
-    }
-
-    return null
-
-  }
-
-  // ====================================================
-  // SYNC
-  // ====================================================
-
-  static async sync() {
-
-    return true
+    )
 
   }
 

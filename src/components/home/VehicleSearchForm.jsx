@@ -57,6 +57,10 @@ export default function VehicleSearchForm({
 
     <div className="grid lg:grid-cols-5 gap-4">
 
+      {/* ==================================================== */}
+      {/* VEHICLE TYPE */}
+      {/* ==================================================== */}
+
       <select
 
         value={form.vehicleType || ''}
@@ -91,6 +95,10 @@ export default function VehicleSearchForm({
 
       </select>
 
+      {/* ==================================================== */}
+      {/* BRAND */}
+      {/* ==================================================== */}
+
       <select
 
         value={form.brand || ''}
@@ -105,25 +113,45 @@ export default function VehicleSearchForm({
 
         {
 
-          brands.map(item => (
+          brands.map(item => {
 
-            <option
+            const value =
 
-              key={item.id}
+              typeof item === 'object'
+                ? item.name
+                : item
 
-              value={item.id}
+            const key =
 
-            >
+              typeof item === 'object'
+                ? item.id
+                : item
 
-              {item.name}
+            return (
 
-            </option>
+              <option
 
-          ))
+                key={key}
+
+                value={value}
+
+              >
+
+                {value}
+
+              </option>
+
+            )
+
+          })
 
         }
 
       </select>
+
+      {/* ==================================================== */}
+      {/* MODEL */}
+      {/* ==================================================== */}
 
       <select
 
@@ -139,25 +167,45 @@ export default function VehicleSearchForm({
 
         {
 
-          models.map(item => (
+          models.map(item => {
 
-            <option
+            const value =
 
-              key={item}
+              typeof item === 'object'
+                ? item.name
+                : item
 
-              value={item}
+            const key =
 
-            >
+              typeof item === 'object'
+                ? item.id
+                : item
 
-              {item}
+            return (
 
-            </option>
+              <option
 
-          ))
+                key={key}
+
+                value={value}
+
+              >
+
+                {value}
+
+              </option>
+
+            )
+
+          })
 
         }
 
       </select>
+
+      {/* ==================================================== */}
+      {/* YEAR */}
+      {/* ==================================================== */}
 
       <select
 
@@ -173,25 +221,45 @@ export default function VehicleSearchForm({
 
         {
 
-          years.map(item => (
+          years.map(item => {
 
-            <option
+            const value =
 
-              key={item}
+              typeof item === 'object'
+                ? item.name
+                : item
 
-              value={item}
+            const key =
 
-            >
+              typeof item === 'object'
+                ? item.id
+                : item
 
-              {item}
+            return (
 
-            </option>
+              <option
 
-          ))
+                key={key}
+
+                value={value}
+
+              >
+
+                {value}
+
+              </option>
+
+            )
+
+          })
 
         }
 
       </select>
+
+      {/* ==================================================== */}
+      {/* SEARCH */}
+      {/* ==================================================== */}
 
       <button
 

@@ -25,10 +25,17 @@ export class VehicleCompatibilityEngine {
 
     const vehicles =
 
-      product.compatibleVehicles || []
+      Array.isArray(product.compatibleVehicles)
 
-    if (vehicles.length === 0)
+        ? product.compatibleVehicles
+
+        : []
+
+    if (vehicles.length === 0) {
+
       return false
+
+    }
 
     return vehicles.some(vehicle =>
 
@@ -68,37 +75,47 @@ export class VehicleCompatibilityEngine {
 
   }) {
 
+    const vehicleTypeValue =
+
+      vehicle.vehicleType ||
+
+      vehicle.type ||
+
+      ''
+
     if (
 
       vehicleType &&
 
-      vehicle.vehicleType &&
+      vehicleTypeValue &&
 
-      String(vehicle.vehicleType)
-        .toLowerCase()
+      vehicleTypeValue.toLowerCase() !==
 
-      !==
-
-      String(vehicleType)
-        .toLowerCase()
+      String(vehicleType).toLowerCase()
 
     ) {
 
       return false
 
     }
+
+    const vehicleBrand =
+
+      vehicle.brand ||
+
+      vehicle.make ||
+
+      ''
 
     if (
 
       make &&
 
-      String(vehicle.brand)
-        .toLowerCase()
+      vehicleBrand &&
 
-      !==
+      vehicleBrand.toLowerCase() !==
 
-      String(make)
-        .toLowerCase()
+      String(make).toLowerCase()
 
     ) {
 
@@ -106,17 +123,21 @@ export class VehicleCompatibilityEngine {
 
     }
 
+    const vehicleModel =
+
+      vehicle.model ||
+
+      ''
+
     if (
 
       model &&
 
-      String(vehicle.model)
-        .toLowerCase()
+      vehicleModel &&
 
-      !==
+      vehicleModel.toLowerCase() !==
 
-      String(model)
-        .toLowerCase()
+      String(model).toLowerCase()
 
     ) {
 
@@ -146,28 +167,35 @@ export class VehicleCompatibilityEngine {
 
   }) {
 
-    if (!year)
+    if (!year) {
+
       return true
 
-    const from =
+    }
 
-      Number(vehicle.yearFrom || 0)
+    const from = Number(
 
-    const to =
+      vehicle.yearFrom ||
 
-      Number(
+      vehicle.from ||
 
-        vehicle.yearTo ||
+      0
 
-        vehicle.yearFrom ||
+    )
 
-        9999
+    const to = Number(
 
-      )
+      vehicle.yearTo ||
 
-    const value =
+      vehicle.to ||
 
-      Number(year)
+      vehicle.yearFrom ||
+
+      new Date().getFullYear()
+
+    )
+
+    const value = Number(year)
 
     return (
 
@@ -199,11 +227,15 @@ export class VehicleCompatibilityEngine {
 
   }) {
 
-    return products.filter(product =>
+    return products.filter(product => {
 
-      product.type === type &&
+      if (product.type !== type) {
 
-      this.matchVehicle({
+        return false
+
+      }
+
+      return this.matchVehicle({
 
         product,
 
@@ -217,7 +249,7 @@ export class VehicleCompatibilityEngine {
 
       })
 
-    )
+    })
 
   }
 

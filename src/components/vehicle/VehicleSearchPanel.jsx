@@ -83,10 +83,6 @@ export default function VehicleSearchPanel({
 
     >
 
-      {/* =====================================================
-          SMART SEARCH
-      ====================================================== */}
-
       <SmartVehicleSearch
 
         onSelect={
@@ -136,10 +132,6 @@ export default function VehicleSearchPanel({
         <div className="h-px flex-1 bg-slate-700" />
 
       </div>
-
-      {/* =====================================================
-          MANUAL SEARCH
-      ====================================================== */}
 
       <div
 
@@ -319,13 +311,13 @@ export default function VehicleSearchPanel({
 
               <option
 
-                key={item}
+                key={item.id}
 
-                value={item}
+                value={item.name}
 
               >
 
-                {item}
+                {item.name}
 
               </option>
 
@@ -379,13 +371,13 @@ export default function VehicleSearchPanel({
 
               <option
 
-                key={item}
+                key={item.id}
 
-                value={item}
+                value={item.name}
 
               >
 
-                {item}
+                {item.name}
 
               </option>
 

@@ -1,183 +1,82 @@
-// ======================================================
-// EL OLA ERP
-// Vehicle Database
-// Single Source Of Truth
-// ======================================================
-
-
-export const vehicleDatabase = [
-
+const vehicleDatabase = [
 
   {
-    id: 1,
+    brand: 'Toyota',
 
-    type: 'car',
-
-    typeName: 'سيارات',
-
-    make: 'Toyota',
-
-    model: 'Corolla',
-
-    yearFrom: 2019,
-
-    yearTo: 2022,
-
-    engine: '1.6',
-
-
-    tires: [
+    models: [
 
       {
-        width: 205,
+        name: 'Corolla',
 
-        profile: 55,
+        years: [
+          2018,
+          2019,
+          2020,
+          2021,
+          2022,
+          2023,
+          2024
+        ],
 
-        rim: 16
-      }
+        tireSizes: [
 
-    ],
+          '195/65R15',
 
+          '205/55R16'
 
-    batteries: [
+        ]
+
+      },
+
 
       {
-        capacity: 70,
+        name: 'Camry',
 
-        cca: 620,
+        years: [
 
-        voltage: 12
-      }
+          2018,
+          2019,
+          2020,
+          2021,
+          2022,
+          2023,
+          2024
 
-    ],
+        ],
 
+        tireSizes: [
 
-    oils: [
+          '215/55R17',
+
+          '235/45R18'
+
+        ]
+
+      },
+
 
       {
-        viscosity: '5W-30',
+        name: 'RAV4',
 
-        quantity: 4.2
-      }
+        years: [
 
-    ]
+          2019,
+          2020,
+          2021,
+          2022,
+          2023,
+          2024
 
-  },
+        ],
 
+        tireSizes: [
 
+          '225/65R17',
 
-  {
-    id: 2,
+          '235/55R19'
 
-    type: 'car',
+        ]
 
-    typeName: 'سيارات',
-
-    make: 'Hyundai',
-
-    model: 'Elantra',
-
-    yearFrom: 2021,
-
-    yearTo: 2024,
-
-    engine: '1.6',
-
-
-    tires: [
-
-      {
-        width: 205,
-
-        profile: 55,
-
-        rim: 16
-      }
-
-    ],
-
-
-    batteries: [
-
-      {
-        capacity: 60,
-
-        cca: 540,
-
-        voltage: 12
-      }
-
-    ],
-
-
-    oils: [
-
-      {
-        viscosity: '5W-30',
-
-        quantity: 4.5
-      }
-
-    ]
-
-  },
-  // ======================================================
-// EL OLA ERP
-// Vehicle Database
-// Single Source Of Truth
-// ======================================================
-
-
-  {
-    id: 3,
-
-    type: 'car',
-
-    typeName: 'سيارات',
-
-    make: 'Kia',
-
-    model: 'Cerato',
-
-    yearFrom: 2020,
-
-    yearTo: 2025,
-
-    engine: '1.6',
-
-
-    tires: [
-
-      {
-        width: 205,
-
-        profile: 55,
-
-        rim: 16
-      }
-
-    ],
-
-
-    batteries: [
-
-      {
-        capacity: 60,
-
-        cca: 540,
-
-        voltage: 12
-      }
-
-    ],
-
-
-    oils: [
-
-      {
-        viscosity: '5W-30',
-
-        quantity: 4.0
       }
 
     ]
@@ -186,56 +85,117 @@ export const vehicleDatabase = [
 
 
   {
+    brand: 'Hyundai',
 
-    id: 4,
-
-    type: 'suv',
-
-    typeName: 'SUV',
-
-    make: 'Hyundai',
-
-    model: 'Tucson',
-
-    yearFrom: 2021,
-
-    yearTo: 2025,
-
-    engine: '2.0',
-
-
-    tires: [
+    models: [
 
       {
-        width: 225,
+        name: 'Elantra',
 
-        profile: 55,
+        years: [
 
-        rim: 18
+          2017,
+          2018,
+          2019,
+          2020,
+          2021,
+          2022,
+          2023
+
+        ],
+
+        tireSizes: [
+
+          '195/65R15',
+
+          '205/55R16'
+
+        ]
+
+      },
+
+
+      {
+        name: 'Tucson',
+
+        years: [
+
+          2019,
+          2020,
+          2021,
+          2022,
+          2023,
+          2024
+
+        ],
+
+        tireSizes: [
+
+          '225/60R17',
+
+          '235/55R18'
+
+        ]
+
       }
 
-    ],
+        ]
 
+  },
 
-    batteries: [
+  {
+    brand: 'Kia',
 
-      {
-        capacity: 70,
-
-        cca: 620,
-
-        voltage: 12
-      }
-
-    ],
-
-
-    oils: [
+    models: [
 
       {
-        viscosity: '5W-30',
+        name: 'Cerato',
 
-        quantity: 5.0
+        years: [
+
+          2018,
+          2019,
+          2020,
+          2021,
+          2022,
+          2023,
+          2024
+
+        ],
+
+        tireSizes: [
+
+          '195/65R15',
+
+          '205/55R16'
+
+        ]
+
+      },
+
+
+      {
+        name: 'Sportage',
+
+        years: [
+
+          2019,
+          2020,
+          2021,
+          2022,
+          2023,
+          2024
+
+        ],
+
+        tireSizes: [
+
+          '225/55R18',
+
+          '235/55R19'
+
+        ]
+
       }
 
     ]
@@ -244,124 +204,110 @@ export const vehicleDatabase = [
 
 
   {
+    brand: 'Nissan',
 
-    id: 5,
-
-    type: 'truck',
-
-    typeName: 'شاحنات',
-
-    make: 'Isuzu',
-
-    model: 'NPR',
-
-    yearFrom: 2018,
-
-    yearTo: 2025,
-
-    engine: '3.0',
-
-
-    tires: [
+    models: [
 
       {
-        width: 215,
+        name: 'Sunny',
 
-        profile: 75,
+        years: [
 
-        rim: 17.5
-      }
+          2016,
+          2017,
+          2018,
+          2019,
+          2020,
+          2021,
+          2022,
+          2023
 
-    ],
+        ],
 
+        tireSizes: [
 
-    batteries: [
+          '185/65R15',
+
+          '195/65R15'
+
+        ]
+
+      },
+
 
       {
-        capacity: 100,
+        name: 'Qashqai',
 
-        cca: 850,
+        years: [
 
-        voltage: 12
-      }
+          2018,
+          2019,
+          2020,
+          2021,
+          2022,
+          2023
 
-    ],
+        ],
 
+        tireSizes: [
 
-    oils: [
+          '215/60R17',
 
-      {
-        viscosity: '15W-40',
+          '225/45R19'
 
-        quantity: 7.0
+        ]
+
       }
 
     ]
 
   },
-  // ======================================================
-// EL OLA ERP
-// Vehicle Database
-// Single Source Of Truth
-// ======================================================
 
 
   {
+    brand: 'Mitsubishi',
 
-    id: 6,
-
-    type: 'bus',
-
-    typeName: 'حافلات',
-
-    make: 'Mercedes',
-
-    model: 'Sprinter',
-
-    yearFrom: 2019,
-
-    yearTo: 2025,
-
-    engine: '2.2',
-
-
-    tires: [
+    models: [
 
       {
+        name: 'Lancer',
 
-        width: 225,
+        years: [
 
-        profile: 75,
+          2015,
+          2016,
+          2017
 
-        rim: 16
+        ],
 
-      }
+        tireSizes: [
 
-    ],
+          '195/60R16',
 
+          '205/55R16'
 
-    batteries: [
+        ]
+
+      },
+
 
       {
+        name: 'Pajero',
 
-        capacity: 100,
+        years: [
 
-        cca: 900,
+          2015,
+          2016,
+          2017,
+          2018
 
-        voltage: 12
+        ],
 
-      }
+        tireSizes: [
 
-    ],
+          '265/65R17'
 
-
-    oils: [
-
-      {
-
-        viscosity: '10W-40',
-
-        quantity: 8.0
+        ]
 
       }
 
@@ -369,5 +315,191 @@ export const vehicleDatabase = [
 
   }
 
-
 ]
+
+export default vehicleDatabase
+
+const getAllBrands = () => {
+
+  return vehicleDatabase.map(
+
+    vehicle => vehicle.brand
+
+  )
+
+}
+
+
+
+const getModelsByBrand = (
+
+  brand
+
+) => {
+
+
+  const vehicle =
+
+    vehicleDatabase.find(
+
+      item =>
+
+        item.brand === brand
+
+    )
+
+
+  return (
+
+    vehicle?.models || []
+
+  )
+
+}
+
+
+
+const getVehicleCompatibility = (
+
+  tireSize
+
+) => {
+
+
+  const results = []
+
+
+  vehicleDatabase.forEach(
+
+    brand => {
+
+
+      brand.models.forEach(
+
+        model => {
+
+
+          if (
+
+            model.tireSizes.includes(
+
+              tireSize
+
+            )
+
+          ) {
+
+
+            results.push({
+
+              brand:
+
+                brand.brand,
+
+
+              model:
+
+                model.name,
+
+
+              years:
+
+                model.years
+
+
+            })
+
+          }
+
+
+        }
+
+      )
+
+
+    }
+
+  )
+
+
+  return results
+
+}
+
+
+
+const getCompatibleSizes = (
+
+  vehicleName
+
+) => {
+
+
+  const sizes = []
+
+
+  vehicleDatabase.forEach(
+
+    brand => {
+
+
+      brand.models.forEach(
+
+        model => {
+
+
+          if (
+
+            model.name === vehicleName
+
+          ) {
+
+
+            sizes.push(
+
+              ...model.tireSizes
+
+            )
+
+
+          }
+
+
+        }
+
+      )
+
+
+    }
+
+  )
+
+
+  return [
+
+    ...new Set(sizes)
+
+  ]
+
+}
+
+
+
+export {
+
+  getAllBrands,
+
+  getModelsByBrand,
+
+  getVehicleCompatibility,
+
+  getCompatibleSizes
+
+}
+
+
+export {
+
+  vehicleDatabase
+
+}
