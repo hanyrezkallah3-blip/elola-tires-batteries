@@ -30,13 +30,17 @@ export default function removeWarehouseProduct(
 
           (warehouse.products || [])
 
-            .filter(
+            .filter(product => {
 
-              product =>
+              if (!product) {
 
-                product.productId !== productId
+                return true
 
-            )
+              }
+
+              return product.productId !== productId
+
+            })
 
       }
 

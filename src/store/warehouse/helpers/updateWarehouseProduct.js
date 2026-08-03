@@ -32,9 +32,15 @@ export default function updateWarehouseProduct(
 
           (warehouse.products || [])
 
-            .map(product =>
+            .map(product => {
 
-              product.productId === productId
+              if (!product) {
+
+                return product
+
+              }
+
+              return product.productId === productId
 
                 ? {
 

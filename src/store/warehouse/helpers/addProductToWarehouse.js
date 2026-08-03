@@ -10,6 +10,12 @@ export default function addProductToWarehouse(
 
 ) {
 
+  if (!product || !product.productId) {
+
+    return warehouses
+
+  }
+
   return warehouses.map(
 
     warehouse => {
