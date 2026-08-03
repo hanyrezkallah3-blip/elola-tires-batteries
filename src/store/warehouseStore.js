@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import createWarehouse from './warehouse/helpers/createWarehouse'
 import addProductToWarehouseHelper from './warehouse/helpers/addProductToWarehouse'
+import addWarehouseTransaction from './warehouse/helpers/addWarehouseTransaction'
 
 
 const STORAGE_KEY = 'elola_warehouses'
@@ -832,81 +833,15 @@ export const useWarehouseStore = create(
         set(state => ({
 
 
-          warehouses:
+          warehouses: addWarehouseTransaction(
 
-            state.warehouses.map(
+            state.warehouses,
 
-              warehouse => {
+            warehouseId,
 
+            transaction
 
-                if (
-
-                  warehouse.id !== warehouseId
-
-                )
-
-                  return warehouse
-
-
-
-                return {
-
-
-                  ...warehouse,
-
-
-                  transactions: [
-
-                    ...(warehouse.transactions || []),
-
-                    {
-
-                      id:
-
-                        generateId(),
-
-
-                      type:
-
-                        transaction.type || 'in',
-
-
-                      productId:
-
-                        transaction.productId || '',
-
-
-                      productName:
-
-                        transaction.productName || '',
-
-
-                      quantity:
-
-                        Number(
-
-                          transaction.quantity || 0
-
-                        ),
-
-
-                      createdAt:
-
-                        new Date()
-
-                          .toISOString()
-
-                    }
-
-                  ]
-
-
-                }
-
-
-              }
-
-            )
+          )
 
 
         })),
