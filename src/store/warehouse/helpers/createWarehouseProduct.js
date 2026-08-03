@@ -178,7 +178,9 @@ export default function createWarehouseProduct(product = {}) {
       new Date().toISOString(),
 
     updatedAt:
-      new Date().toISOString()
+      new Date().toISOString(),
+
+    ...product
 
   }
 

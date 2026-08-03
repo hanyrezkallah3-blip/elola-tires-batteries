@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import createWarehouse from './warehouse/helpers/createWarehouse'
 
 
 const STORAGE_KEY = 'elola_warehouses'
@@ -151,64 +152,7 @@ export const useWarehouseStore = create(
       addWarehouse: (warehouse = {}) => {
 
 
-        const newWarehouse = {
-
-
-          id:
-
-            warehouse.id ||
-
-            generateId(),
-
-
-          name:
-
-            warehouse.name || '',
-
-
-          type:
-
-            warehouse.type ||
-
-            'main',
-
-
-          location:
-
-            warehouse.location || '',
-
-
-          phone:
-
-            warehouse.phone || '',
-
-
-          manager:
-
-            warehouse.manager || '',
-
-
-          active:
-
-            true,
-
-
-          products:
-
-            [],
-
-
-          transactions:
-
-            [],
-
-
-          createdAt:
-
-            new Date().toISOString()
-
-
-        }
+        const newWarehouse = createWarehouse(warehouse)
 
 
 
