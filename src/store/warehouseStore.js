@@ -706,64 +706,63 @@ export const useWarehouseStore = create(
       // GET ALL PRODUCTS
       // ==========================================
 
+getAllProducts: () => {
 
-      getAllProducts: () => {
+  const products = []
 
+  get()
+    .warehouses
+    .forEach(warehouse => {
 
-        const products = []
+      (warehouse.products || [])
+        .forEach(product => {
 
+          products.push({
 
+            ...product,
 
-        get()
+            warehouseId:
+              warehouse.id,
 
-          .warehouses
+            warehouseName:
+              warehouse.name,
 
-          .forEach(
+            stock:
+              Number(
+                product.quantity || 0
+              ),
 
-            warehouse => {
+            quantity:
+              Number(
+                product.quantity || 0
+              ),
 
+            price:
+              Number(
+                product.salePrice || 0
+              ),
 
-              (warehouse.products || [])
+            hidden:
+              product.hidden ?? false,
 
-                .forEach(
+            publishedToHome:
+              product.publishedToHome ?? false,
 
-                  product => {
+            publishedToProducts:
+              product.publishedToProducts ?? false,
 
+            publishedToOffers:
+              product.publishedToOffers ?? false
 
-                    products.push({
+          })
 
+        })
 
-                      ...product,
+    })
 
+  return products
 
-                      warehouseId:
-
-                        warehouse.id,
-
-
-                      warehouseName:
-
-                        warehouse.name
-
-
-                    })
-
-
-                  }
-
-                )
-
-
-            }
-
-          )
-
-
-
-        return products
-
-
-      },
+},
 
 
 

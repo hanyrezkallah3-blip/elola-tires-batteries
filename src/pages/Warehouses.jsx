@@ -12,6 +12,8 @@ import {
   useNavigate
 } from 'react-router-dom'
 
+import WarehouseProductForm from '../components/warehouses/WarehouseProductForm'
+
 
 export default function Warehouses() {
 
@@ -65,35 +67,128 @@ export default function Warehouses() {
 
 
   const [productForm, setProductForm] =
-    useState({
+  useState({
 
-      warehouseId: '',
+    // =====================
+    // المخزن
+    // =====================
 
-      productName: '',
+    warehouseId: '',
 
-      image: '',
+    // =====================
+    // البيانات الأساسية
+    // =====================
 
-      description: '',
+    name: '',
+    image: '',
+    description: '',
 
-      specifications: '',
+    type: 'tire',
 
-      category: '',
+    category: '',
+    brand: '',
+    model: '',
 
-      brand: '',
+    sku: '',
+    barcode: '',
 
-      barcode: '',
+    // =====================
+    // الكميات
+    // =====================
 
-      quantity: 0,
+    quantity: 0,
 
-      purchasePrice: 0,
+    minimumStock: 0,
+    maximumStock: 0,
+    reorderPoint: 0,
 
-      salePrice: 0,
+    unit: 'piece',
 
-      minimumStock: 0,
+    // =====================
+    // الأسعار
+    // =====================
 
-      maximumStock: 0
+    purchasePrice: 0,
+    salePrice: 0,
+    wholesalePrice: 0,
 
-    })
+    // =====================
+    // التكاليف
+    // =====================
+
+    shippingCost: 0,
+    customsCost: 0,
+    transportCost: 0,
+    otherCosts: 0,
+
+    // =====================
+    // المورد
+    // =====================
+
+    supplierId: '',
+    supplierName: '',
+
+    // =====================
+    // بلد المنشأ
+    // =====================
+
+    countryOfOrigin: '',
+
+    // =====================
+    // الموقع داخل المخزن
+    // =====================
+
+    location: '',
+    shelf: '',
+    rack: '',
+    bin: '',
+
+    // =====================
+    // الدفعات
+    // =====================
+
+    batchNumber: '',
+    lotNumber: '',
+
+    // =====================
+    // التواريخ
+    // =====================
+
+    productionDate: '',
+    expiryDate: '',
+
+    warranty: '',
+
+    // =====================
+    // الأرقام التسلسلية
+    // =====================
+
+    serialNumbers: [],
+
+    // =====================
+    // المواصفات
+    // =====================
+
+    specifications: {},
+
+    // =====================
+    // الملاحظات
+    // =====================
+
+    notes: '',
+
+    // =====================
+    // النشر
+    // =====================
+
+    publishToHome: true,
+    publishToProducts: true,
+    publishToOffers: false,
+
+    featured: false,
+    hidden: false
+
+  })
 
 
   const filteredWarehouses =
@@ -180,128 +275,135 @@ export default function Warehouses() {
 
     addProductToWarehouse(
 
-      productForm.warehouseId,
+  productForm.warehouseId,
 
-      {
+  productForm
 
-        productId:
-
-          crypto.randomUUID(),
-
-
-        productName:
-
-          productForm.productName,
-
-
-        image:
-
-          productForm.image,
-
-
-        description:
-
-          productForm.description,
-
-
-        specifications:
-
-          productForm.specifications,
-
-
-        category:
-
-          productForm.category,
-
-
-        brand:
-
-          productForm.brand,
-
-
-        barcode:
-
-          productForm.barcode,
-
-
-        quantity:
-
-          Number(
-
-            productForm.quantity
-
-          ),
-
-
-        purchasePrice:
-
-          Number(
-
-            productForm.purchasePrice
-
-          ),
-
-
-        salePrice:
-
-          Number(
-
-            productForm.salePrice
-
-          ),
-
-
-        minimumStock:
-
-          Number(
-
-            productForm.minimumStock
-
-          ),
-
-
-        maximumStock:
-
-          Number(
-
-            productForm.maximumStock
-
-          )
-
-      }
-
-    )
+)
 
 
     setProductForm({
 
-      warehouseId: '',
+      // =====================
+    // المخزن
+    // =====================
 
-      productName: '',
+    warehouseId: '',
 
-      image: '',
+    // =====================
+    // البيانات الأساسية
+    // =====================
 
-      description: '',
+    name: '',
+    image: '',
+    description: '',
 
-      specifications: '',
+    type: 'tire',
 
-      category: '',
+    category: '',
+    brand: '',
+    model: '',
 
-      brand: '',
+    sku: '',
+    barcode: '',
 
-      barcode: '',
+    // =====================
+    // الكميات
+    // =====================
 
-      quantity: 0,
+    quantity: 0,
 
-      purchasePrice: 0,
+    minimumStock: 0,
+    maximumStock: 0,
+    reorderPoint: 0,
 
-      salePrice: 0,
+    unit: 'piece',
 
-      minimumStock: 0,
+    // =====================
+    // الأسعار
+    // =====================
 
-      maximumStock: 0
+    purchasePrice: 0,
+    salePrice: 0,
+    wholesalePrice: 0,
 
-    })
+    // =====================
+    // التكاليف
+    // =====================
+
+    shippingCost: 0,
+    customsCost: 0,
+    transportCost: 0,
+    otherCosts: 0,
+
+    // =====================
+    // المورد
+    // =====================
+
+    supplierId: '',
+    supplierName: '',
+
+    // =====================
+    // بلد المنشأ
+    // =====================
+
+    countryOfOrigin: '',
+
+    // =====================
+    // الموقع داخل المخزن
+    // =====================
+
+    location: '',
+    shelf: '',
+    rack: '',
+    bin: '',
+
+    // =====================
+    // الدفعات
+    // =====================
+
+    batchNumber: '',
+    lotNumber: '',
+
+    // =====================
+    // التواريخ
+    // =====================
+
+    productionDate: '',
+    expiryDate: '',
+
+    warranty: '',
+
+    // =====================
+    // الأرقام التسلسلية
+    // =====================
+
+    serialNumbers: [],
+
+    // =====================
+    // المواصفات
+    // =====================
+
+    specifications: {},
+
+    // =====================
+    // الملاحظات
+    // =====================
+
+    notes: '',
+
+    // =====================
+    // النشر
+    // =====================
+
+    publishToHome: true,
+    publishToProducts: true,
+    publishToOffers: false,
+
+    featured: false,
+    hidden: false
+
+  })
 
 
   }
@@ -619,553 +721,37 @@ export default function Warehouses() {
           ADD PRODUCT TO WAREHOUSE
       ====================================== */}
 
+<div
+  className="
+    bg-slate-900
+    rounded-3xl
+    p-6
+    mb-10
+  "
+>
 
-      <div
+  <WarehouseProductForm
 
-        className="
-          bg-slate-900
-          rounded-3xl
-          p-6
-          mb-10
-          space-y-4
-        "
+  warehouses={warehouses}
 
-      >
+  onSubmit={(product) => {
 
-        <h2
+    addProductToWarehouse(
 
-          className="
-            text-3xl
-            font-black
-            text-yellow-400
-          "
+      product.warehouseId,
 
-        >
+      product
 
-          إضافة منتج إلى مخزن
+    )
 
-        </h2>
+  }}
 
+  onCancel={() => {}}
 
+/>
 
-        <select
-
-          value={
-            productForm.warehouseId
-          }
-
-          onChange={(e)=>
-
-            setProductForm({
-
-              ...productForm,
-
-              warehouseId:e.target.value
-
-            })
-
-          }
-
-          className="
-            w-full
-            p-4
-            rounded-2xl
-            text-white
-            font-bold
-          "
-
-        >
-
-          <option value="">
-
-            اختر المخزن
-
-          </option>
-
-
-          {
-
-            warehouses.map(warehouse=>(
-
-              <option
-
-                key={warehouse.id}
-
-                value={warehouse.id}
-
-              >
-
-                {warehouse.name}
-
-              </option>
-
-            ))
-
-          }
-
-
-        </select>
-                <input
-
-          value={
-            productForm.productName
-          }
-
-          onChange={(e)=>
-
-            setProductForm({
-
-              ...productForm,
-
-              productName:
-
-                e.target.value
-
-            })
-
-          }
-
-          placeholder="اسم المنتج"
-
-          className="
-            w-full
-            p-4
-            rounded-2xl
-            text-white
-            font-bold
-          "
-
-        />
-
-
-
-        <input
-
-          value={
-            productForm.image
-          }
-
-          onChange={(e)=>
-
-            setProductForm({
-
-              ...productForm,
-
-              image:
-
-                e.target.value
-
-            })
-
-          }
-
-          placeholder="رابط صورة المنتج"
-
-          className="
-            w-full
-            p-4
-            rounded-2xl
-            text-white
-            font-bold
-          "
-
-        />
-
-
-
-        <textarea
-
-          value={
-            productForm.description
-          }
-
-          onChange={(e)=>
-
-            setProductForm({
-
-              ...productForm,
-
-              description:
-
-                e.target.value
-
-            })
-
-          }
-
-          placeholder="وصف المنتج"
-
-          className="
-            w-full
-            p-4
-            rounded-2xl
-            text-white
-            font-bold
-          "
-
-        />
-
-
-
-        <textarea
-
-          value={
-            productForm.specifications
-          }
-
-          onChange={(e)=>
-
-            setProductForm({
-
-              ...productForm,
-
-              specifications:
-
-                e.target.value
-
-            })
-
-          }
-
-          placeholder="مواصفات المنتج"
-
-          className="
-            w-full
-            p-4
-            rounded-2xl
-            text-white
-            font-bold
-          "
-
-        />
-
-
-
-        <div
-
-          className="
-            grid
-            md:grid-cols-2
-            gap-4
-          "
-
-        >
-
-
-          <input
-
-            value={
-              productForm.category
-            }
-
-            onChange={(e)=>
-
-              setProductForm({
-
-                ...productForm,
-
-                category:
-
-                  e.target.value
-
-              })
-
-            }
-
-            placeholder="التصنيف"
-
-            className="
-              p-4
-              rounded-2xl
-              text-white
-              font-bold
-            "
-
-          />
-
-
-
-          <input
-
-            value={
-              productForm.brand
-            }
-
-            onChange={(e)=>
-
-              setProductForm({
-
-                ...productForm,
-
-                brand:
-
-                  e.target.value
-
-              })
-
-            }
-
-            placeholder="العلامة التجارية"
-
-            className="
-              p-4
-              rounded-2xl
-              text-white
-              font-bold
-            "
-
-          />
-
-
-
-        </div>
-
-
-
-
-        <input
-
-          value={
-            productForm.barcode
-          }
-
-          onChange={(e)=>
-
-            setProductForm({
-
-              ...productForm,
-
-              barcode:
-
-                e.target.value
-
-            })
-
-          }
-
-          placeholder="الباركود"
-
-          className="
-            w-full
-            p-4
-            rounded-2xl
-            text-white
-            font-bold
-          "
-
-        />
-
-
-
-
-        <div
-
-          className="
-            grid
-            md:grid-cols-2
-            xl:grid-cols-4
-            gap-4
-          "
-
-        >
-
-
-          <input
-
-            type="number"
-
-            value={
-              productForm.quantity
-            }
-
-            onChange={(e)=>
-
-              setProductForm({
-
-                ...productForm,
-
-                quantity:
-
-                  e.target.value
-
-              })
-
-            }
-
-            placeholder="الكمية"
-
-            className="
-              p-4
-              rounded-2xl
-              text-white
-              font-bold
-            "
-
-          />
-
-
-
-          <input
-
-            type="number"
-
-            value={
-              productForm.purchasePrice
-            }
-
-            onChange={(e)=>
-
-              setProductForm({
-
-                ...productForm,
-
-                purchasePrice:
-
-                  e.target.value
-
-              })
-
-            }
-
-            placeholder="سعر الشراء"
-
-            className="
-              p-4
-              rounded-2xl
-              text-white
-              font-bold
-            "
-
-          />
-
-
-
-          <input
-
-            type="number"
-
-            value={
-              productForm.salePrice
-            }
-
-            onChange={(e)=>
-
-              setProductForm({
-
-                ...productForm,
-
-                salePrice:
-
-                  e.target.value
-
-              })
-
-            }
-
-            placeholder="سعر البيع"
-
-            className="
-              p-4
-              rounded-2xl
-              text-white
-              font-bold
-            "
-
-          />
-
-
-          <input
-
-            type="number"
-
-            value={
-              productForm.minimumStock
-            }
-
-            onChange={(e)=>
-
-              setProductForm({
-
-                ...productForm,
-
-                minimumStock:
-
-                  e.target.value
-
-              })
-
-            }
-
-            placeholder="الحد الأدنى"
-
-            className="
-              p-4
-              rounded-2xl
-              text-white
-              font-bold
-            "
-
-          />
-
-
-        </div>
-                <input
-
-          type="number"
-
-          value={
-            productForm.maximumStock
-          }
-
-          onChange={(e)=>
-
-            setProductForm({
-
-              ...productForm,
-
-              maximumStock:
-
-                e.target.value
-
-            })
-
-          }
-
-          placeholder="الحد الأقصى"
-
-          className="
-            w-full
-            p-4
-            rounded-2xl
-            text-white
-            font-bold
-          "
-
-        />
-
-
-
-        <button
-
-          onClick={submitProduct}
-
-          className="
-            w-full
-            bg-green-600
-            hover:bg-green-700
-            p-4
-            rounded-2xl
-            font-white
-            text-xl
-          "
-
-        >
-
-          ➕ إضافة المنتج إلى المخزن
-
-        </button>
-
-      </div>
+</div>
+        
 
 
 

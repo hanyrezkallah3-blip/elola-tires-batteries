@@ -154,7 +154,7 @@ export default function InventoryDashboard() {
 
       <div className="bg-slate-900 p-6 rounded-2xl">
 
-        <h2 className="text-xl font-yellow mb-4">
+        <h2 className="text-xl font-black mb-4">
           🏭 حالة المخازن
         </h2>
 

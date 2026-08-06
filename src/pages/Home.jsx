@@ -15,34 +15,42 @@ import HomeOffers from '../components/home/HomeOffers'
 import HomeServices from '../components/home/HomeServices'
 import HomeVideos from '../components/home/HomeVideos'
 import HomeFooter from '../components/home/HomeFooter'
-
+import { useWarehouseStore } from '../store/warehouseStore'
 
 export default function Home() {
 
-  const {
+  const slides = useWebsiteStore(state => state.slides || [])
+const products = useWebsiteStore(state => state.products || [])
+const offers = useWebsiteStore(state => state.offers || [])
+const services = useWebsiteStore(state => state.services || [])
+const videos = useWebsiteStore(state => state.videos || [])
 
-    slides = [],
-    products = [],
-    offers = [],
-    services = [],
-    videos = [],
+const companyName = useWebsiteStore(state => state.companyName)
+const logo = useWebsiteStore(state => state.logo)
+const companyPhone = useWebsiteStore(state => state.companyPhone)
+const companyWhatsapp = useWebsiteStore(state => state.companyWhatsapp)
+const companyAddress = useWebsiteStore(state => state.companyAddress)
+const companyFacebook = useWebsiteStore(state => state.companyFacebook)
+const companyInstagram = useWebsiteStore(state => state.companyInstagram)
+const companyYoutube = useWebsiteStore(state => state.companyYoutube)
+const companyEmail = useWebsiteStore(state => state.companyEmail)
 
-    companyName,
-    logo,
-    companyPhone,
-    companyWhatsapp,
-    companyAddress,
-    companyFacebook,
-    companyInstagram,
-    companyYoutube,
-    companyEmail,
+const addToCart = useWebsiteStore(state => state.addToCart)
+const cart = useWebsiteStore(state => state.cart || [])
+const hydrated = useWebsiteStore(state => state.hydrated)
+const warehouses = useWarehouseStore(
+  state => state.warehouses
+)
 
-    addToCart,
-    cart = [],
+const warehouseProducts = useMemo(() => {
 
-    hydrated
+  return warehouses.flatMap(
 
-  } = useWebsiteStore()
+    warehouse => warehouse.products || []
+
+  )
+
+}, [warehouses])
 
   // ====================================================
   // UI
@@ -150,23 +158,25 @@ export default function Home() {
 
   const visibleProducts = useMemo(
 
-    () =>
+  () =>
 
-      products.filter(
+    warehouseProducts.filter(
 
-        product =>
+      product =>
 
-          !product.hidden
+        !product.hidden &&
 
-      ),
+        product.publishedToHome
 
-    [
+    ),
 
-      products
+  [
 
-    ]
+    warehouseProducts
 
-  )
+  ]
+
+)
 
     // ====================================================
   // SCROLL

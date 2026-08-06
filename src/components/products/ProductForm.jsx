@@ -59,7 +59,7 @@ export default function ProductForm({
     resetForm
 
   } = useProductForm()
-    const submit = useCallback(() => {
+    const submit = useCallback(async () => {
 
 
     if (!form.name.trim()) {
@@ -184,12 +184,7 @@ export default function ProductForm({
 
 
     const createdProduct =
-
-      onAddProduct(
-
-        product
-
-      )
+  await onAddProduct(product)
 
 
 

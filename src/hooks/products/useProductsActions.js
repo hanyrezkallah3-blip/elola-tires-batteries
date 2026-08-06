@@ -41,7 +41,7 @@ export default function useProductsActions() {
           result.errors.join('\n')
         )
 
-        return
+        return null
 
       }
 
@@ -56,9 +56,11 @@ export default function useProductsActions() {
         warehouseId:
           product.warehouseId,
 
-        quantity: 0,
+        quantity:
+          Number(product.quantity || 0),
 
-        minQuantity: 0,
+        minQuantity:
+          Number(product.minimumStock || 0),
 
         price:
           Number(
@@ -66,6 +68,8 @@ export default function useProductsActions() {
           )
 
       })
+
+      return newProduct
 
     }, [
 

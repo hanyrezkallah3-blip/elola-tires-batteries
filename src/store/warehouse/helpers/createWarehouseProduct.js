@@ -12,8 +12,10 @@ export default function createWarehouseProduct(product = {}) {
       product.productId ||
       generateWarehouseId(),
 
-    productName:
-      product.productName || '',
+    name:
+  product.name ||
+  product.productName ||
+  '',
 
     image:
       product.image || '',
@@ -24,11 +26,22 @@ export default function createWarehouseProduct(product = {}) {
     specifications:
       product.specifications || {},
 
+    typeData:
+  product.typeData || {},
 
     // ================= PRODUCT INFO =================
 
     brand:
       product.brand || '',
+    
+    model:
+  product.model || '',
+
+type:
+  product.type || 'tire',
+
+sku:
+  product.sku || '',
 
     category:
       product.category || '',
@@ -65,6 +78,21 @@ export default function createWarehouseProduct(product = {}) {
 
     wholesalePrice:
       Number(product.wholesalePrice || 0),
+    
+    publishToHome:
+  product.publishToHome ?? true,
+
+publishToProducts:
+  product.publishToProducts ?? true,
+
+publishToOffers:
+  product.publishToOffers ?? false,
+
+featured:
+  product.featured ?? false,
+
+hidden:
+  product.hidden ?? false,
 
 
     // ================= EXTRA COST =================
@@ -102,6 +130,9 @@ export default function createWarehouseProduct(product = {}) {
       Number(
         product.otherCosts || 0
       ),
+
+      availableQuantity:
+  Number(product.quantity || 0),
 
 
     // ================= CONTROL =================
@@ -167,7 +198,23 @@ export default function createWarehouseProduct(product = {}) {
 
     notes:
       product.notes || '',
+    
+    // ================= PUBLISHING =================
 
+hidden:
+  product.hidden ?? false,
+
+publishedToHome:
+  product.publishedToHome ?? true,
+
+publishedToProducts:
+  product.publishedToProducts ?? true,
+
+publishedToOffers:
+  product.publishedToOffers ?? false,
+
+featured:
+  product.featured ?? false,  
 
     active:
       product.active !== false,

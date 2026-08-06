@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { useInventoryStore } from './inventoryStore'
 import { useWalletStore } from './walletStore'
+import appendListItemWithId from './helpers/appendListItemWithId'
 
 const generateId = () =>
   Date.now().toString() + Math.random().toString(36).slice(2)
@@ -96,22 +97,10 @@ export const useWebsiteStore = create(
 
         set((state) => ({
 
-          services: [
-
-            {
-
-              id: generateId(),
-
-              createdAt:
-                new Date().toISOString(),
-
-              ...service
-
-            },
-
-            ...state.services
-
-          ]
+          services: appendListItemWithId(
+            state.services,
+            service
+          )
 
         })),
 
@@ -149,22 +138,10 @@ export const useWebsiteStore = create(
 
         set((state) => ({
 
-          videos: [
-
-            {
-
-              id: generateId(),
-
-              createdAt:
-                new Date().toISOString(),
-
-              ...video
-
-            },
-
-            ...state.videos
-
-          ]
+          videos: appendListItemWithId(
+            state.videos,
+            video
+          )
 
         })),
 
@@ -803,22 +780,10 @@ export const useWebsiteStore = create(
 
         set((state) => ({
 
-          transfers: [
-
-            {
-
-              id: generateId(),
-
-              createdAt:
-                new Date().toISOString(),
-
-              ...transfer
-
-            },
-
-            ...state.transfers
-
-          ]
+          transfers: appendListItemWithId(
+            state.transfers,
+            transfer
+          )
 
         })),
 
@@ -856,22 +821,10 @@ export const useWebsiteStore = create(
 
         set((state) => ({
 
-          slides: [
-
-            {
-
-              id: generateId(),
-
-              createdAt:
-                new Date().toISOString(),
-
-              ...slide
-
-            },
-
-            ...state.slides
-
-          ]
+          slides: appendListItemWithId(
+            state.slides,
+            slide
+          )
 
         })),
 
@@ -936,22 +889,10 @@ export const useWebsiteStore = create(
 
         set((state) => ({
 
-          offers: [
-
-            {
-
-              id: generateId(),
-
-              createdAt:
-                new Date().toISOString(),
-
-              ...offer
-
-            },
-
-            ...state.offers
-
-          ]
+          offers: appendListItemWithId(
+            state.offers,
+            offer
+          )
 
         })),
 
