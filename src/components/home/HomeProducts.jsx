@@ -16,6 +16,7 @@ export default function HomeProducts({
 
     )
 
+
   return (
 
     <section
@@ -48,206 +49,261 @@ export default function HomeProducts({
 
       </h2>
 
+
       {
 
         visibleProducts.length === 0
 
-        ?
+          ?
 
-        (
+          (
 
-          <div
+            <div
 
-            className="
-              text-center
-              text-3xl
-              text-gray-400
-            "
+              className="
+                text-center
+                text-3xl
+                text-gray-400
+              "
 
-          >
+            >
 
-            لا توجد منتجات حالياً
+              لا توجد منتجات حالياً
 
-          </div>
+            </div>
 
-        )
+          )
 
-        :
+          :
 
-        (
+          (
 
-          <div
+            <div
 
-            className="
-              grid
-              grid-cols-1
-              sm:grid-cols-2
-              lg:grid-cols-3
-              xl:grid-cols-4
-              gap-8
-            "
+              className="
+                grid
+                grid-cols-1
+                sm:grid-cols-2
+                lg:grid-cols-3
+                xl:grid-cols-4
+                gap-8
+              "
 
-          >
+            >
 
-            {
+              {
 
-              visibleProducts.map(product => (
+                visibleProducts.map(product => {
 
-                <div
+                  const salePrice =
 
-                  key={product.id}
+                    Number(
 
-                  className="
-                    bg-slate-900
-                    rounded-3xl
-                    overflow-hidden
-                    border
-                    border-slate-700
-                    shadow-xl
-                    hover:-translate-y-1
-                    transition-all
-                  "
+                      product.salePrice ??
 
-                >
+                      product.price ??
 
-                  <div
+                      0
 
-                    className="
-                      aspect-square
-                      overflow-hidden
-                    "
+                    )
 
-                  >
 
-                    <img
-
-                      src={product.image}
-
-                      alt={product.name}
-
-                      className="
-                        w-full
-                        h-full
-                        object-cover
-                        hover:scale-105
-                        transition
-                      "
-
-                    />
-
-                  </div>
-
-                  <div className="p-5">
-
-                    <h3
-
-                      className="
-                        text-xl
-                        font-black
-                        min-h-[60px]
-                      "
-
-                    >
-
-                      {product.name}
-
-                    </h3>
-
-                    {
-
-                      product.brand && (
-
-                        <div
-
-                          className="
-                            text-gray-400
-                            mt-2
-                          "
-
-                        >
-
-                          {product.brand}
-
-                        </div>
-
-                      )
-
-                    }
-
-                    {
-
-                      product.model && (
-
-                        <div
-
-                          className="
-                            text-gray-500
-                          "
-
-                        >
-
-                          {product.model}
-
-                        </div>
-
-                      )
-
-                    }
+                  return (
 
                     <div
 
+                      key={product.id}
+
                       className="
-                        mt-5
-                        text-yellow-400
-                        text-3xl
-                        font-black
+                        bg-slate-900
+                        rounded-3xl
+                        overflow-hidden
+                        border
+                        border-slate-700
+                        shadow-xl
+                        hover:-translate-y-1
+                        transition-all
                       "
 
                     >
 
-                      {product.price} ج
+                      <div
+
+                        className="
+                          aspect-square
+                          overflow-hidden
+                        "
+
+                      >
+
+                        <img
+
+                          src={product.image}
+
+                          alt={
+                            product.name ||
+                            product.productName ||
+                            ''
+                          }
+
+                          className="
+                            w-full
+                            h-full
+                            object-cover
+                            hover:scale-105
+                            transition
+                          "
+
+                        />
+
+                      </div>
+
+
+                      <div className="p-5">
+
+                        <h3
+
+                          className="
+                            text-xl
+                            font-black
+                            min-h-[60px]
+                          "
+
+                        >
+
+                          {
+
+                            product.name ||
+
+                            product.productName ||
+
+                            ''
+
+                          }
+
+                        </h3>
+
+
+                        {
+
+                          product.brand && (
+
+                            <div
+
+                              className="
+                                text-gray-400
+                                mt-2
+                              "
+
+                            >
+
+                              {product.brand}
+
+                            </div>
+
+                          )
+
+                        }
+
+
+                        {
+
+                          product.model && (
+
+                            <div
+
+                              className="
+                                text-gray-500
+                              "
+
+                            >
+
+                              {product.model}
+
+                            </div>
+
+                          )
+
+                        }
+
+
+                        <div
+
+                          className="
+                            mt-5
+                            text-yellow-400
+                            text-3xl
+                            font-black
+                          "
+
+                        >
+
+                          {
+
+                            salePrice.toLocaleString()
+
+                          }
+
+                          {' '}
+
+                          ج
+
+                        </div>
+
+
+                        <button
+
+                          type="button"
+
+                          onClick={() =>
+
+                            addToCart({
+
+                              ...product,
+
+                              price:
+
+                                salePrice,
+
+                              salePrice:
+
+                                salePrice
+
+                            })
+
+                          }
+
+                          className="
+                            w-full
+                            mt-5
+                            bg-yellow-500
+                            hover:bg-yellow-600
+                            text-black
+                            py-4
+                            rounded-2xl
+                            font-black
+                            transition
+                          "
+
+                        >
+
+                          إضافة للسلة
+
+                        </button>
+
+                      </div>
 
                     </div>
 
-                    <button
+                  )
 
-                      type="button"
+                })
 
-                      onClick={()=>
+              }
 
-                        addToCart(product)
+            </div>
 
-                      }
-
-                      className="
-                        w-full
-                        mt-5
-                        bg-yellow-500
-                        hover:bg-yellow-600
-                        text-black
-                        py-4
-                        rounded-2xl
-                        font-black
-                        transition
-                      "
-
-                    >
-
-                      إضافة للسلة
-
-                    </button>
-
-                  </div>
-
-                </div>
-
-              ))
-
-            }
-
-          </div>
-
-        )
+          )
 
       }
 
