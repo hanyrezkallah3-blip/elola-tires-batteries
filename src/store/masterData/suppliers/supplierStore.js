@@ -1,6 +1,33 @@
 import { create } from 'zustand'
 
-const defaultSuppliers = []
+const defaultSuppliers = [
+
+  {
+    id: 'michelin-eg',
+    name: 'Michelin Egypt'
+  },
+
+  {
+    id: 'bridgestone-eg',
+    name: 'Bridgestone Egypt'
+  },
+
+  {
+    id: 'goodyear-eg',
+    name: 'Goodyear Egypt'
+  },
+
+  {
+    id: 'continental-eg',
+    name: 'Continental Egypt'
+  },
+
+  {
+    id: 'pirelli-eg',
+    name: 'Pirelli Egypt'
+  }
+
+]
 
 export const useSupplierStore = create(
 
@@ -21,6 +48,8 @@ export const useSupplierStore = create(
             id: crypto.randomUUID(),
 
             code: '',
+
+            name: '',
 
             companyName: '',
 
@@ -58,7 +87,15 @@ export const useSupplierStore = create(
 
               new Date().toISOString(),
 
-            ...supplier
+            ...supplier,
+
+            name:
+
+              supplier.name ||
+
+              supplier.companyName ||
+
+              ''
 
           }
 
@@ -88,7 +125,15 @@ export const useSupplierStore = create(
 
                     ...supplier,
 
-                    ...data
+                    ...data,
+
+                    name:
+
+                      data.name ||
+
+                      data.companyName ||
+
+                      supplier.name
 
                   }
 

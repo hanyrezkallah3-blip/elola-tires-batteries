@@ -1,6 +1,8 @@
-import { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 
-import { loadSuppliers } from "../../../store/masterData/suppliers/supplierService";
+import SmartInput from '../../common/SmartInput'
+
+import { loadSuppliers } from '../../../store/masterData/suppliers/supplierService'
 
 export default function SupplierSection({
 
@@ -12,59 +14,41 @@ export default function SupplierSection({
 
   const suppliers = useMemo(
 
-    () =>
-
-      loadSuppliers(),
+    () => loadSuppliers(),
 
     []
 
   )
 
-  useEffect(() => {
+  const handleSupplierChange = (value) => {
 
-    if (!form.supplierId) {
+    updateField(
 
-      return
+      'supplierName',
 
-    }
+      value
+
+    )
 
     const supplier = suppliers.find(
 
       item =>
 
-        item.id === form.supplierId
+        item.name === value ||
+
+        item.companyName === value
 
     )
 
-    if (
+    updateField(
 
-      supplier &&
+      'supplierId',
 
-      supplier.name !== form.supplierName
+      supplier?.id || ''
 
-    ) {
+    )
 
-      updateField(
-
-        'supplierName',
-
-        supplier.name
-
-      )
-
-    }
-
-  }, [
-
-    form.supplierId,
-
-    form.supplierName,
-
-    suppliers,
-
-    updateField
-
-  ])
+  }
 
   return (
 
@@ -100,99 +84,19 @@ export default function SupplierSection({
         "
       >
 
-        <div>
+        <SmartInput
 
-          <label className="block mb-2 font-bold">
+          label="المورد"
 
-            المورد
+          value={form.supplierName}
 
-          </label>
+          options={suppliers}
 
-          <select
+          placeholder="اختر أو اكتب اسم المورد"
 
-            value={form.supplierId}
+          onChange={handleSupplierChange}
 
-            onChange={(e)=>
-
-              updateField(
-
-                'supplierId',
-
-                e.target.value
-
-              )
-
-            }
-
-            className="
-              w-full
-              p-4
-              rounded-2xl
-              bg-slate-800
-              text-white
-            "
-
-          >
-
-            <option value="">
-
-              اختر المورد
-
-            </option>
-
-            {
-
-              suppliers.map(
-
-                supplier => (
-
-                  <option
-
-                    key={supplier.id}
-
-                    value={supplier.id}
-
-                  >
-
-                    {supplier.name}
-
-                  </option>
-
-                )
-
-              )
-
-            }
-
-          </select>
-
-        </div>
-
-        <div>
-
-          <label className="block mb-2 font-bold">
-
-            اسم المورد
-
-          </label>
-
-          <input
-
-            value={form.supplierName}
-
-            readOnly
-
-            className="
-              w-full
-              p-4
-              rounded-2xl
-              bg-slate-800
-              text-white
-            "
-
-          />
-
-        </div>
+        />
 
         <div>
 
@@ -206,7 +110,7 @@ export default function SupplierSection({
 
             value={form.location}
 
-            onChange={(e)=>
+            onChange={(e) =>
 
               updateField(
 
@@ -244,7 +148,7 @@ export default function SupplierSection({
 
             value={form.shelf}
 
-            onChange={(e)=>
+            onChange={(e) =>
 
               updateField(
 
@@ -280,7 +184,7 @@ export default function SupplierSection({
 
             value={form.rack}
 
-            onChange={(e)=>
+            onChange={(e) =>
 
               updateField(
 
@@ -316,7 +220,7 @@ export default function SupplierSection({
 
             value={form.bin}
 
-            onChange={(e)=>
+            onChange={(e) =>
 
               updateField(
 

@@ -1,3 +1,7 @@
+import { useMemo } from 'react'
+import SmartInput from "../../common/SmartInput";
+import { loadUnits } from "../../../store/masterData/units/unitService";
+
 export default function InventorySection({
 
   form,
@@ -5,6 +9,16 @@ export default function InventorySection({
   updateField
 
 }) {
+
+  const units = useMemo(
+
+    () =>
+
+      loadUnits(),
+
+    []
+
+  )
 
   return (
 
@@ -73,45 +87,29 @@ export default function InventorySection({
 
         </div>
 
-        <div>
+        <SmartInput
 
-          <label className="block mb-2 font-bold">
+          label="الوحدة"
 
-            الوحدة
+          value={form.unit}
 
-          </label>
+          options={units}
 
-          <select
-            value={form.unit}
-            onChange={(e)=>
+          placeholder="اختر أو اكتب الوحدة"
 
-              updateField(
+          onChange={(value)=>
 
-                'unit',
+            updateField(
 
-                e.target.value
+              'unit',
 
-              )
+              value
 
-            }
-            className="
-              w-full
-              p-4
-              rounded-2xl
-              bg-slate-800
-              text-white
-            "
-          >
+            )
 
-            <option value="piece">قطعة</option>
-            <option value="box">علبة</option>
-            <option value="set">طقم</option>
-            <option value="liter">لتر</option>
-            <option value="kg">كيلوجرام</option>
+          }
 
-          </select>
-
-        </div>
+        />
 
         <div>
 

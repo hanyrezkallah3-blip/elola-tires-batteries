@@ -2,7 +2,12 @@ import generateWarehouseId from './generateWarehouseId'
 
 export default function createWarehouseProduct(product = {}) {
 
+  const now =
+    new Date().toISOString()
+
   return {
+
+    // ================= ID =================
 
     id:
       product.id ||
@@ -12,102 +17,158 @@ export default function createWarehouseProduct(product = {}) {
       product.productId ||
       generateWarehouseId(),
 
-    name:
-  product.name ||
-  product.productName ||
-  '',
-
-    image:
-      product.image || '',
-
-    description:
-      product.description || '',
-
-    specifications:
-      product.specifications || {},
-
-    typeData:
-  product.typeData || {},
 
     // ================= PRODUCT INFO =================
 
+    name:
+      product.name ||
+      product.productName ||
+      '',
+
+    image:
+      product.image ||
+      '',
+
+    description:
+      product.description ||
+      '',
+
+    specifications:
+      product.specifications ||
+      {},
+
+    typeData:
+      product.typeData ||
+      {},
+
+
     brand:
-      product.brand || '',
-    
+      product.brand ||
+      '',
+
     model:
-  product.model || '',
+      product.model ||
+      '',
 
-type:
-  product.type || 'tire',
+    type:
+      product.type ||
+      'tire',
 
-sku:
-  product.sku || '',
+    sku:
+      product.sku ||
+      '',
 
     category:
-      product.category || '',
+      product.category ||
+      '',
 
     barcode:
-      product.barcode || '',
+      product.barcode ||
+      '',
 
     countryOfOrigin:
-      product.countryOfOrigin || '',
+      product.countryOfOrigin ||
+      '',
 
 
     // ================= STOCK =================
 
     quantity:
-      Number(product.quantity || 0),
+      Number(
+        product.quantity || 0
+      ),
 
     incoming:
-      Number(product.incoming || 0),
+      Number(
+        product.incoming || 0
+      ),
 
     outgoing:
-      Number(product.outgoing || 0),
+      Number(
+        product.outgoing || 0
+      ),
 
     reserved:
-      Number(product.reserved || 0),
+      Number(
+        product.reserved || 0
+      ),
+
+    availableQuantity:
+      Number(
+        product.availableQuantity ??
+        product.quantity ??
+        0
+      ),
 
 
     // ================= PRICES =================
 
     purchasePrice:
-      Number(product.purchasePrice || 0),
+      Number(
+        product.purchasePrice || 0
+      ),
 
     salePrice:
-      Number(product.salePrice || 0),
+      Number(
+        product.salePrice || 0
+      ),
 
     wholesalePrice:
-      Number(product.wholesalePrice || 0),
-    
+      Number(
+        product.wholesalePrice || 0
+      ),
+
+
+    // ================= PUBLISHING =================
+    // المخزن لا يقوم بالنشر تلقائياً.
+    // إدارة المنتجات هي المسؤولة عن النشر.
+
     publishToHome:
-  product.publishToHome ?? true,
+      product.publishToHome ?? false,
 
-publishToProducts:
-  product.publishToProducts ?? true,
+    publishToProducts:
+      product.publishToProducts ?? false,
 
-publishToOffers:
-  product.publishToOffers ?? false,
+    publishToOffers:
+      product.publishToOffers ?? false,
 
-featured:
-  product.featured ?? false,
+    publishedToHome:
+      product.publishedToHome ?? false,
 
-hidden:
-  product.hidden ?? false,
+    publishedToProducts:
+      product.publishedToProducts ?? false,
+
+    publishedToOffers:
+      product.publishedToOffers ?? false,
+
+    featured:
+      product.featured ?? false,
+
+    hidden:
+      product.hidden ?? false,
 
 
     // ================= EXTRA COST =================
 
     shippingCost:
-      Number(product.shippingCost || 0),
+      Number(
+        product.shippingCost || 0
+      ),
 
     customsCost:
-      Number(product.customsCost || 0),
+      Number(
+        product.customsCost || 0
+      ),
 
     transportCost:
-      Number(product.transportCost || 0),
+      Number(
+        product.transportCost || 0
+      ),
 
     otherCosts:
-      Number(product.otherCosts || 0),
+      Number(
+        product.otherCosts || 0
+      ),
 
 
     realCost:
@@ -131,103 +192,138 @@ hidden:
         product.otherCosts || 0
       ),
 
-      availableQuantity:
-  Number(product.quantity || 0),
-
 
     // ================= CONTROL =================
 
     minimumStock:
-      Number(product.minimumStock || 0),
+      Number(
+        product.minimumStock || 0
+      ),
 
     maximumStock:
-      Number(product.maximumStock || 0),
+      Number(
+        product.maximumStock || 0
+      ),
 
     reorderPoint:
-      Number(product.reorderPoint || 0),
+      Number(
+        product.reorderPoint || 0
+      ),
 
 
     // ================= BATCH =================
 
     batchNumber:
-      product.batchNumber || '',
+      product.batchNumber ||
+      '',
 
     lotNumber:
-      product.lotNumber || '',
+      product.lotNumber ||
+      '',
 
     serialNumbers:
-      product.serialNumbers || [],
-
+      product.serialNumbers ||
+      [],
 
     productionDate:
-      product.productionDate || '',
+      product.productionDate ||
+      '',
 
     expiryDate:
-      product.expiryDate || '',
-
+      product.expiryDate ||
+      '',
 
     warranty:
-      product.warranty || '',
+      product.warranty ||
+      '',
 
 
     // ================= LOCATION =================
 
     location:
-      product.location || '',
+      product.location ||
+      '',
 
     shelf:
-      product.shelf || '',
+      product.shelf ||
+      '',
 
     rack:
-      product.rack || '',
+      product.rack ||
+      '',
 
     bin:
-      product.bin || '',
+      product.bin ||
+      '',
 
+
+    // ================= SUPPLIER =================
 
     supplierId:
-      product.supplierId || '',
+      product.supplierId ||
+      '',
 
     supplierName:
-      product.supplierName || '',
+      product.supplierName ||
+      '',
 
+
+    // ================= UNIT =================
 
     unit:
-      product.unit || 'piece',
+      product.unit ||
+      'piece',
 
+
+    // ================= NOTES =================
 
     notes:
-      product.notes || '',
-    
-    // ================= PUBLISHING =================
+      product.notes ||
+      '',
 
-hidden:
-  product.hidden ?? false,
 
-publishedToHome:
-  product.publishedToHome ?? true,
-
-publishedToProducts:
-  product.publishedToProducts ?? true,
-
-publishedToOffers:
-  product.publishedToOffers ?? false,
-
-featured:
-  product.featured ?? false,  
+    // ================= CONTROL =================
 
     active:
       product.active !== false,
 
 
+    // ================= DATES =================
+
     createdAt:
       product.createdAt ||
-      new Date().toISOString(),
+      now,
 
     updatedAt:
-      new Date().toISOString(),
+      now,
 
-    ...product
+
+    // ================= PRESERVE EXTRA DATA =================
+
+    ...product,
+
+
+    // ================= FINAL PUBLISHING SAFETY =================
+    // يمنع ...product من إعادة القيم القديمة
+    // التي قد تجعل المنتج منشوراً تلقائياً.
+
+    publishToHome:
+      product.publishToHome ?? false,
+
+    publishToProducts:
+      product.publishToProducts ?? false,
+
+    publishToOffers:
+      product.publishToOffers ?? false,
+
+    publishedToHome:
+      product.publishedToHome ?? false,
+
+    publishedToProducts:
+      product.publishedToProducts ?? false,
+
+    publishedToOffers:
+      product.publishedToOffers ?? false
 
   }
 

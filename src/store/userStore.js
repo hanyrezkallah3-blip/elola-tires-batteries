@@ -1,5 +1,3 @@
-// src/store/userStore.js
-
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
@@ -16,13 +14,14 @@ import {
   contains
 } from './helpers'
 
+import { useWarehouseStore } from './warehouseStore'
+
 
 export const useUserStore = create(
 
   persist(
 
     (set, get) => ({
-
 
       // ==================================================
       // STATE
@@ -48,29 +47,158 @@ export const useUserStore = create(
 
       login: (username, password) => {
 
-        const user = get().users.find(
+        const cleanUsername =
+          String(username || '').trim()
 
-          u =>
-
-            u.username === username &&
-
-            u.password === password &&
-
-            u.active !== false
-
-        )
+        const cleanPassword =
+          String(password || '').trim()
 
 
-        if (!user) {
+        if (
+          !cleanUsername ||
+          !cleanPassword
+        ) {
 
           return false
 
         }
 
 
+        // ==================================================
+        // 1. NORMAL USERS / OWNER
+        // ==================================================
+
+        const user = get().users.find(
+
+          u =>
+
+            u.username === cleanUsername &&
+
+            u.password === cleanPassword &&
+
+            u.active !== false
+
+        )
+
+
+        if (user) {
+
+          set({
+
+            currentUser: user
+
+          })
+
+
+          return true
+
+        }
+
+
+        // ==================================================
+        // 2. WAREHOUSE LOGIN
+        // ==================================================
+
+        let warehouses = []
+
+
+        try {
+
+          warehouses =
+            useWarehouseStore.getState().warehouses || []
+
+        } catch (error) {
+
+          console.error(
+            'Warehouse Store Error:',
+            error
+          )
+
+          return false
+
+        }
+
+
+        const warehouse =
+          warehouses.find(
+
+            item =>
+
+              String(item.username || '').trim() ===
+                cleanUsername &&
+
+              String(item.password || '').trim() ===
+                cleanPassword &&
+
+              item.active !== false
+
+          )
+
+
+        if (!warehouse) {
+
+          return false
+
+        }
+
+
+        // ==================================================
+        // CREATE WAREHOUSE SESSION USER
+        // ==================================================
+
+        const warehouseUser = {
+
+          id:
+            `warehouse-user-${warehouse.id}`,
+
+          username:
+            warehouse.username,
+
+          password:
+            warehouse.password,
+
+          fullName:
+            warehouse.manager ||
+            warehouse.name ||
+            'مستخدم المخزن',
+
+          role:
+            'warehouse',
+
+          active:
+            warehouse.active !== false,
+
+          warehouseId:
+            warehouse.id,
+
+          warehouseName:
+            warehouse.name || '',
+
+          warehouseType:
+            warehouse.type || 'main',
+
+          financeAccess:
+            false,
+
+          walletAccess:
+            false,
+
+          permissions:
+            ROLE_PERMISSIONS.warehouse || [],
+
+          ownerControlled:
+            warehouse.ownerControlled !== false,
+
+          createdAt:
+            warehouse.createdAt || now()
+
+        }
+
+
         set({
 
-          currentUser: user
+          currentUser:
+            warehouseUser
 
         })
 
@@ -112,6 +240,52 @@ export const useUserStore = create(
         ) || null,
 
 
+      getCurrentWarehouse: () => {
+
+        const currentUser =
+          get().currentUser
+
+
+        if (
+          !currentUser ||
+          !currentUser.warehouseId
+        ) {
+
+          return null
+
+        }
+
+
+        try {
+
+          return (
+
+            useWarehouseStore
+              .getState()
+              .warehouses || []
+
+          ).find(
+
+            warehouse =>
+              warehouse.id ===
+              currentUser.warehouseId
+
+          ) || null
+
+        } catch (error) {
+
+          console.error(
+            'Get Current Warehouse Error:',
+            error
+          )
+
+          return null
+
+        }
+
+      },
+
+
 
       // ==================================================
       // SETTERS
@@ -121,7 +295,8 @@ export const useUserStore = create(
 
         set({
 
-          users: ensureArray(users)
+          users:
+            ensureArray(users)
 
         }),
 
@@ -133,14 +308,18 @@ export const useUserStore = create(
 
       addUser: (user) => {
 
-        const users = get().users
+        const users =
+          get().users
 
 
-        const exists = users.some(
+        const exists =
+          users.some(
 
-          u => u.username === user.username
+            u =>
+              u.username ===
+              user.username
 
-        )
+          )
 
 
         if (exists) {
@@ -149,7 +328,8 @@ export const useUserStore = create(
 
             success: false,
 
-            message: 'اسم المستخدم موجود بالفعل'
+            message:
+              'اسم المستخدم موجود بالفعل'
 
           }
 
@@ -158,31 +338,41 @@ export const useUserStore = create(
 
         const newUser = {
 
-          id: generateId(),
+          id:
+            generateId(),
 
-          username: '',
+          username:
+            '',
 
-          password: '',
+          password:
+            '',
 
-          fullName: '',
+          fullName:
+            '',
 
-          role: 'employee',
+          role:
+            'employee',
 
-          active: true,
+          active:
+            true,
 
-          warehouseId: null,
+          warehouseId:
+            null,
 
-          warehouseName: '',
+          warehouseName:
+            '',
 
-          financeAccess: false,
+          financeAccess:
+            false,
 
-          walletAccess: false,
+          walletAccess:
+            false,
 
           permissions:
-
             ROLE_PERMISSIONS[user.role] || [],
 
-          createdAt: now(),
+          createdAt:
+            now(),
 
           ...user
 
@@ -204,9 +394,11 @@ export const useUserStore = create(
 
         return {
 
-          success: true,
+          success:
+            true,
 
-          user: newUser
+          user:
+            newUser
 
         }
 
@@ -222,31 +414,35 @@ export const useUserStore = create(
 
         set(state => ({
 
-          users: state.users.map(user => {
+          users:
+            state.users.map(user => {
+
+              if (
+                user.id !== id
+              )
+
+                return user
 
 
-            if (user.id !== id)
+              return {
 
-              return user
+                ...user,
 
+                ...updates,
 
-            return {
+                permissions:
 
-              ...user,
+                  updates.role
 
-              ...updates,
+                    ? ROLE_PERMISSIONS[
+                        updates.role
+                      ] || []
 
-              permissions:
+                    : user.permissions
 
-                updates.role
+              }
 
-                  ? ROLE_PERMISSIONS[updates.role] || []
-
-                  : user.permissions
-
-            }
-
-          })
+            })
 
         })),
 
@@ -268,7 +464,8 @@ export const useUserStore = create(
 
                 user.id !== id &&
 
-                user.id !== DEFAULT_OWNER.id
+                user.id !==
+                  DEFAULT_OWNER.id
 
             )
 
@@ -294,7 +491,8 @@ export const useUserStore = create(
 
                     ...user,
 
-                    active: true
+                    active:
+                      true
 
                   }
 
@@ -324,7 +522,8 @@ export const useUserStore = create(
 
                     ...user,
 
-                    active: false
+                    active:
+                      false
 
                   }
 
@@ -349,9 +548,15 @@ export const useUserStore = create(
 
         return get().users.filter(user =>
 
-          contains(user.username, keyword) ||
+          contains(
+            user.username,
+            keyword
+          ) ||
 
-          contains(user.fullName, keyword)
+          contains(
+            user.fullName,
+            keyword
+          )
 
         )
 
@@ -365,18 +570,21 @@ export const useUserStore = create(
 
       getStatistics: () => {
 
-        const users = get().users
+        const users =
+          get().users
 
 
         return {
 
-          totalUsers: users.length,
+          totalUsers:
+            users.length,
 
           activeUsers:
 
             users.filter(
 
-              u => u.active
+              u =>
+                u.active
 
             ).length,
 
@@ -385,7 +593,8 @@ export const useUserStore = create(
 
             users.filter(
 
-              u => !u.active
+              u =>
+                !u.active
 
             ).length
 
@@ -393,25 +602,29 @@ export const useUserStore = create(
 
       }
 
-
     }),
 
 
     {
 
-      name: STORAGE_KEYS.USERS,
+      name:
+        STORAGE_KEYS.USERS,
 
 
-      partialize: state => ({
+      partialize:
+        state => ({
 
-        users: state.users,
+          users:
+            state.users,
 
-        currentUser: state.currentUser
+          currentUser:
+            state.currentUser
 
-      })
+        })
 
     }
 
   )
 
 )
+

@@ -1,54 +1,45 @@
 import ProductBasicSection
-  from './form/ProductBasicSection'
+from './form/ProductBasicSection'
 
 import ProductTypeSection
-  from './form/ProductTypeSection'
+from './form/ProductTypeSection'
 
 import ProductPricingSection
-  from './form/ProductPricingSection'
+from './form/ProductPricingSection'
 
 import ProductWarehouseSection
-  from './form/ProductWarehouseSection'
+from './form/ProductWarehouseSection'
 
 import ProductTireSection
-  from './form/ProductTireSection'
+from './form/ProductTireSection'
 
 import ProductBatterySection
-  from './form/ProductBatterySection'
+from './form/ProductBatterySection'
 
 import ProductOilSection
-  from './form/ProductOilSection'
+from './form/ProductOilSection'
 
 import ProductCompatibilitySection
-  from './form/ProductCompatibilitySection'
+from './form/ProductCompatibilitySection'
 
 import ProductMediaSection
-  from './form/ProductMediaSection'
+from './form/ProductMediaSection'
 
 import ProductSubmitButton
-  from './form/ProductSubmitButton'
-
-
-import {
-  useWarehouseStore
-} from '../../store/warehouseStore'
-
+from './form/ProductSubmitButton'
 
 import useProductForm
-  from '../../hooks/products/useProductForm'
-
+from '../../hooks/products/useProductForm'
 
 import {
   useCallback
 } from 'react'
-
 
 export default function ProductForm({
 
   onAddProduct
 
 }) {
-
 
   const {
 
@@ -59,338 +50,363 @@ export default function ProductForm({
     resetForm
 
   } = useProductForm()
-    const submit = useCallback(async () => {
 
 
-    if (!form.name.trim()) {
+  // ==================================================
+  // SUBMIT
+  // ==================================================
+
+  const submit =
+    useCallback(async () => {
+
+      // ==================================================
+      // PRODUCT MUST BE SELECTED FROM WAREHOUSE
+      // ==================================================
+
+      if (
+        !form.warehouseId
+      ) {
+
+        alert(
+          'اختر المخزن أولاً'
+        )
+
+        return
+
+      }
+
+
+      if (
+        !form.selectedProductId
+      ) {
+
+        alert(
+          'اختر منتجًا موجودًا في المخزن أولاً'
+        )
+
+        return
+
+      }
+
+
+      // ==================================================
+      // NAME
+      // ==================================================
+
+      if (
+        !String(
+          form.name || ''
+        ).trim()
+      ) {
+
+        alert(
+          'اسم المنتج مطلوب'
+        )
+
+        return
+
+      }
+
+
+      // ==================================================
+      // SALE PRICE
+      // ==================================================
+
+      if (
+        Number(
+          form.salePrice || 0
+        ) <= 0
+      ) {
+
+        alert(
+          'سعر البيع غير صحيح'
+        )
+
+        return
+
+      }
+
+
+      // ==================================================
+      // UPDATE EXISTING PRODUCT
+      // ==================================================
+
+      const product = {
+
+        ...form,
+
+        id:
+          form.selectedProductId,
+
+        productId:
+          form.selectedProductId,
+
+        productName:
+          form.name.trim(),
+
+        name:
+          form.name.trim(),
+
+        category:
+          form.category ||
+          form.type,
+
+        purchasePrice:
+          Number(
+            form.purchasePrice || 0
+          ),
+
+        salePrice:
+          Number(
+            form.salePrice || 0
+          ),
+
+        quantity:
+          Number(
+            form.quantity || 0
+          ),
+
+        availableQuantity:
+          Number(
+            form.availableQuantity ??
+            form.quantity ??
+            0
+          ),
+
+        updatedAt:
+          new Date().toISOString()
+
+      }
+
+
+      const updatedProduct =
+        await onAddProduct(
+          product
+        )
+
+
+      if (!updatedProduct) {
+        return
+      }
+
+
+      // ==================================================
+      // RESET
+      // ==================================================
+
+      resetForm()
 
 
       alert(
-
-        'اسم المنتج مطلوب'
-
+        'تم تحديث بيانات المنتج الموجود في المخزن بنجاح'
       )
 
+    }, [
 
-      return
+      form,
 
-    }
+      onAddProduct,
 
+      resetForm
 
+    ])
 
-    if (
 
-      Number(form.salePrice || 0) <= 0
+  // ==================================================
+  // UI
+  // ==================================================
 
-    ) {
-
-
-      alert(
-
-        'سعر البيع غير صحيح'
-
-      )
-
-
-      return
-
-    }
-
-
-
-    if (!form.warehouseId) {
-
-
-      alert(
-
-        'اختر المخزن أولاً'
-
-      )
-
-
-      return
-
-    }
-
-
-
-    const quantity =
-
-      Number(
-
-        form.quantity ||
-
-        form.stock ||
-
-        0
-
-      )
-
-
-
-    const product = {
-
-
-      ...form,
-
-
-      stock: 0,
-
-
-      sold: 0,
-
-
-      quantity: 0,
-
-
-      category:
-
-        form.type,
-
-
-
-      keywords:
-
-
-        [
-
-          form.name,
-
-          form.brand,
-
-          form.model,
-
-          form.sku,
-
-          form.barcode
-
-        ]
-
-        .filter(Boolean)
-
-        .join(' '),
-
-
-
-      createdAt:
-
-
-        new Date()
-
-          .toISOString()
-
-    }
-
-
-
-    const createdProduct =
-  await onAddProduct(product)
-
-
-
-    if (
-
-      quantity > 0 &&
-
-      createdProduct?.id
-
-    ) {
-
-
-      const {
-
-        addTransaction
-
-      } = useWarehouseStore.getState()
-
-
-
-      addTransaction(
-
-
-        form.warehouseId,
-
-
-        {
-
-
-          type: 'in',
-
-
-          quantity,
-
-
-          productId:
-
-            createdProduct.id,
-
-
-          productName:
-
-            createdProduct.name
-
-
-        }
-
-      )
-
-    }
-
-
-
-    resetForm()
-
-
-
-    alert(
-
-      'تم إضافة المنتج بنجاح'
-
-    )
-
-
-  }, [
-
-    form,
-
-    onAddProduct,
-
-    resetForm
-
-  ])
-    return (
+  return (
 
     <div
-
       className="
         space-y-8
         mb-12
       "
-
     >
 
-      <ProductBasicSection
-
-        form={form}
-
-        setForm={setForm}
-
-      />
-
-
-      <ProductTypeSection
-
-        form={form}
-
-        setForm={setForm}
-
-      />
-
-
-      <ProductPricingSection
-
-        form={form}
-
-        setForm={setForm}
-
-      />
-
+      {/* ==================================================
+          WAREHOUSE + EXISTING PRODUCT
+      ================================================== */}
 
       <ProductWarehouseSection
 
-        form={form}
+        form={
+          form
+        }
 
-        setForm={setForm}
+        setForm={
+          setForm
+        }
 
       />
 
 
+      {/* ==================================================
+          BASIC
+      ================================================== */}
+
+      <ProductBasicSection
+
+        form={
+          form
+        }
+
+        setForm={
+          setForm
+        }
+
+      />
+
+
+      {/* ==================================================
+          TYPE
+      ================================================== */}
+
+      <ProductTypeSection
+
+        form={
+          form
+        }
+
+        setForm={
+          setForm
+        }
+
+      />
+
+
+      {/* ==================================================
+          PRICING
+      ================================================== */}
+
+      <ProductPricingSection
+
+        form={
+          form
+        }
+
+        setForm={
+          setForm
+        }
+
+      />
+
+
+      {/* ==================================================
+          TIRE
+      ================================================== */}
+
       {
-
-        form.type === 'tire' &&
-
-        (
+        form.type === 'tire' && (
 
           <ProductTireSection
 
-            form={form}
+            form={
+              form
+            }
 
-            setForm={setForm}
+            setForm={
+              setForm
+            }
 
           />
 
         )
-
       }
 
 
+      {/* ==================================================
+          BATTERY
+      ================================================== */}
 
       {
-
-        form.type === 'battery' &&
-
-        (
+        form.type === 'battery' && (
 
           <ProductBatterySection
 
-            form={form}
+            form={
+              form
+            }
 
-            setForm={setForm}
+            setForm={
+              setForm
+            }
 
           />
 
         )
-
       }
 
 
+      {/* ==================================================
+          OIL
+      ================================================== */}
 
       {
-
-        form.type === 'oil' &&
-
-        (
+        form.type === 'oil' && (
 
           <ProductOilSection
 
-            form={form}
+            form={
+              form
+            }
 
-            setForm={setForm}
+            setForm={
+              setForm
+            }
 
           />
 
         )
-
       }
 
 
+      {/* ==================================================
+          COMPATIBILITY
+      ================================================== */}
 
       <ProductCompatibilitySection
 
-        form={form}
+        form={
+          form
+        }
 
-        setForm={setForm}
+        setForm={
+          setForm
+        }
 
       />
 
 
+      {/* ==================================================
+          MEDIA
+      ================================================== */}
 
       <ProductMediaSection
 
-        form={form}
+        form={
+          form
+        }
 
-        setForm={setForm}
+        setForm={
+          setForm
+        }
 
       />
 
 
+      {/* ==================================================
+          SUBMIT
+      ================================================== */}
 
       <ProductSubmitButton
 
-        onSubmit={submit}
+        onSubmit={
+          submit
+        }
 
       />
-
 
     </div>
 

@@ -1,7 +1,9 @@
 import { useMemo } from 'react'
+import SmartInput from "../../common/SmartInput";
 
 import { loadCategories } from "../../../store/masterData/categories/categoryService";
 import { loadBrands } from "../../../store/masterData/brands/brandService";
+import { loadProductTypes } from "../../../store/masterData/productTypes/productTypeService";
 
 export default function BasicInfoSection({
 
@@ -26,6 +28,16 @@ export default function BasicInfoSection({
     () =>
 
       loadBrands(),
+
+    []
+
+  )
+
+  const productTypes = useMemo(
+
+    () =>
+
+      loadProductTypes(),
 
     []
 
@@ -137,178 +149,77 @@ export default function BasicInfoSection({
 
         </div>
 
-        <div>
+        <SmartInput
 
-          <label className="block mb-2 font-bold">
+          label="الفئة"
 
-            الفئة
+          value={form.category}
 
-          </label>
+          options={categories}
 
-          <select
+          placeholder="اختر أو اكتب الفئة"
 
-            value={form.category}
+          onChange={(value)=>
 
-            onChange={(e)=>
+            updateField(
 
-              updateField(
+              'category',
 
-                'category',
+              value
 
-                e.target.value
+            )
 
-              )
+          }
 
-            }
+        />
 
-            className="
-              w-full
-              p-4
-              rounded-2xl
-              bg-slate-800
-              text-white
-            "
+        <SmartInput
 
-          >
+          label="نوع المنتج"
 
-            <option value="">
+          value={form.type}
 
-              اختر التصنيف
+          options={productTypes}
 
-            </option>
+          placeholder="اختر أو اكتب نوع المنتج"
 
-            {
+          onChange={(value)=>
 
-              categories.map(category => (
+            updateField(
 
-                <option
+              'type',
 
-                  key={category.id}
+              value
 
-                  value={category.id}
+            )
 
-                >
+          }
 
-                  {category.name}
+        />
 
-                </option>
+        <SmartInput
 
-              ))
+          label="العلامة التجارية"
 
-            }
+          value={form.brand}
 
-          </select>
+          options={brands}
 
-        </div>
+          placeholder="اختر أو اكتب العلامة التجارية"
 
-        <div>
+          onChange={(value)=>
 
-          <label className="block mb-2 font-bold">
+            updateField(
 
-            نوع المنتج
+              'brand',
 
-          </label>
+              value
 
-          <select
+            )
 
-            value={form.type}
+          }
 
-            onChange={(e)=>
-
-              updateField(
-
-                'type',
-
-                e.target.value
-
-              )
-
-            }
-
-            className="
-              w-full
-              p-4
-              rounded-2xl
-              bg-slate-800
-              text-white
-            "
-
-          >
-
-            <option value="">اختر النوع</option>
-            <option value="tire">إطار</option>
-            <option value="battery">بطارية</option>
-            <option value="oil">زيت</option>
-            <option value="spare-part">قطعة غيار</option>
-            <option value="service">خدمة</option>
-
-          </select>
-
-        </div>
-
-        <div>
-
-          <label className="block mb-2 font-bold">
-
-            العلامة التجارية
-
-          </label>
-
-          <select
-
-            value={form.brand}
-
-            onChange={(e)=>
-
-              updateField(
-
-                'brand',
-
-                e.target.value
-
-              )
-
-            }
-
-            className="
-              w-full
-              p-4
-              rounded-2xl
-              bg-slate-800
-              text-white
-            "
-
-          >
-
-            <option value="">
-
-              اختر العلامة التجارية
-
-            </option>
-
-            {
-
-              brands.map(brand => (
-
-                <option
-
-                  key={brand.id}
-
-                  value={brand.id}
-
-                >
-
-                  {brand.name}
-
-                </option>
-
-              ))
-
-            }
-
-          </select>
-
-        </div>
+        />
 
         <div>
 

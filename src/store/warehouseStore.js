@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+
 import createWarehouse from './warehouse/helpers/createWarehouse'
 import addProductToWarehouseHelper from './warehouse/helpers/addProductToWarehouse'
 import addWarehouseTransaction from './warehouse/helpers/addWarehouseTransaction'
@@ -8,127 +9,137 @@ import addWarehouseTransaction from './warehouse/helpers/addWarehouseTransaction
 const STORAGE_KEY = 'elola_warehouses'
 
 
-const generateId = () =>
+// ==========================================
+// GENERATE ID
+// ==========================================
 
-  crypto.randomUUID
-    ? crypto.randomUUID()
-    : Date.now().toString() +
-      Math.random().toString(36).slice(2)
+const generateId = () => {
+
+  if (
+    typeof crypto !== 'undefined' &&
+    typeof crypto.randomUUID === 'function'
+  ) {
+    return crypto.randomUUID()
+  }
+
+  return (
+    Date.now().toString() +
+    Math.random()
+      .toString(36)
+      .slice(2)
+  )
+}
 
 
+// ==========================================
+// CREATE PRODUCT
+// ==========================================
 
 const createProduct = (product = {}) => ({
 
   id:
-
     product.id ||
-
     generateId(),
-
 
   productId:
-
     product.productId ||
-
     generateId(),
 
-
   productName:
-
     product.productName ||
-
+    product.name ||
     '',
-
 
   image:
-
     product.image ||
-
     '',
-
 
   description:
-
     product.description ||
-
     '',
-
 
   specifications:
-
     product.specifications ||
-
     {},
 
-
   category:
-
     product.category ||
-
     '',
-
 
   brand:
-
     product.brand ||
-
     '',
-
 
   barcode:
-
     product.barcode ||
-
     '',
 
-
   quantity:
-
-    Number(product.quantity || 0),
-
+    Number(
+      product.quantity || 0
+    ),
 
   purchasePrice:
-
-    Number(product.purchasePrice || 0),
-
+    Number(
+      product.purchasePrice || 0
+    ),
 
   salePrice:
-
-    Number(product.salePrice || 0),
-
+    Number(
+      product.salePrice || 0
+    ),
 
   minimumStock:
-
-    Number(product.minimumStock || 0),
-
+    Number(
+      product.minimumStock || 0
+    ),
 
   maximumStock:
+    Number(
+      product.maximumStock || 0
+    ),
 
-    Number(product.maximumStock || 0),
-
+  reorderPoint:
+    Number(
+      product.reorderPoint || 0
+    ),
 
   unit:
-
     product.unit ||
-
     'piece',
 
+  incoming:
+    Number(
+      product.incoming || 0
+    ),
+
+  outgoing:
+    Number(
+      product.outgoing || 0
+    ),
+
+  availableQuantity:
+    Number(
+      product.availableQuantity ??
+      product.quantity ??
+      0
+    ),
 
   createdAt:
-
+    product.createdAt ||
     new Date().toISOString(),
-
 
   updatedAt:
-
     new Date().toISOString(),
-
 
   ...product
 
 })
 
 
+// ==========================================
+// STORE
+// ==========================================
 
 export const useWarehouseStore = create(
 
@@ -136,30 +147,27 @@ export const useWarehouseStore = create(
 
     (set, get) => ({
 
-
       // ==========================================
       // CORE
       // ==========================================
 
-
       warehouses: [],
-
 
 
       // ==========================================
       // ADD WAREHOUSE
       // ==========================================
 
+      addWarehouse: (
+        warehouse = {}
+      ) => {
 
-      addWarehouse: (warehouse = {}) => {
-
-
-        const newWarehouse = createWarehouse(warehouse)
-
-
+        const newWarehouse =
+          createWarehouse(
+            warehouse
+          )
 
         set(state => ({
-
 
           warehouses: [
 
@@ -169,42 +177,32 @@ export const useWarehouseStore = create(
 
           ]
 
-
         }))
 
-
-
         return newWarehouse
-
-
       },
-
 
 
       // ==========================================
       // UPDATE WAREHOUSE
       // ==========================================
 
-
       updateWarehouse: (
-
         id,
-
         data
-
       ) =>
 
-
         set(state => ({
-
 
           warehouses:
 
             state.warehouses.map(
-
               warehouse =>
 
-                warehouse.id === id
+                String(
+                  warehouse.id
+                ) ===
+                String(id)
 
                   ? {
 
@@ -214,646 +212,1097 @@ export const useWarehouseStore = create(
 
                     }
 
-                  :
-
-                    warehouse
-
+                  : warehouse
             )
 
-
         })),
-
 
 
       // ==========================================
       // DELETE WAREHOUSE
       // ==========================================
 
-
-      deleteWarehouse: (id) =>
-
+      deleteWarehouse: (
+        id
+      ) =>
 
         set(state => ({
-
 
           warehouses:
 
             state.warehouses.filter(
-
               warehouse =>
 
-                warehouse.id !== id
-
+                String(
+                  warehouse.id
+                ) !==
+                String(id)
             )
 
-
         })),
-
 
 
       // ==========================================
       // GET WAREHOUSE
       // ==========================================
 
-
-      getWarehouse: (id) =>
-
+      getWarehouse: (
+        id
+      ) =>
 
         get()
-
           .warehouses
-
           .find(
-
             warehouse =>
 
-              warehouse.id === id
-
+              String(
+                warehouse.id
+              ) ===
+              String(id)
           ) || null,
-
 
 
       // ==========================================
       // ADD PRODUCT TO WAREHOUSE
       // ==========================================
 
-
       addProductToWarehouse: (
-
         warehouseId,
-
         product
-
       ) =>
-
 
         set(state => ({
 
+          warehouses:
 
-          warehouses: addProductToWarehouseHelper(
+            addProductToWarehouseHelper(
 
-            state.warehouses,
+              state.warehouses,
 
-            warehouseId,
+              warehouseId,
 
-            product
+              createProduct(product)
 
-          )
+            )
 
         })),
-              // ==========================================
+
+
+      // ==========================================
       // UPDATE WAREHOUSE PRODUCT
       // ==========================================
 
-
       updateWarehouseProduct: (
-
         warehouseId,
-
         productId,
-
         data = {}
-
       ) =>
 
-
         set(state => ({
-
 
           warehouses:
 
             state.warehouses.map(
-
               warehouse => {
 
-
                 if (
-
-                  warehouse.id !== warehouseId
-
-                )
+                  String(
+                    warehouse.id
+                  ) !==
+                  String(
+                    warehouseId
+                  )
+                ) {
 
                   return warehouse
 
-
+                }
 
                 return {
 
-
                   ...warehouse,
-
 
                   products:
 
-                    (warehouse.products || [])
+                    (
+                      warehouse.products ||
+                      []
+                    ).map(
+                      product => {
 
-                      .map(
+                        const matches =
+                          String(
+                            product.productId
+                          ) ===
+                          String(
+                            productId
+                          ) ||
+                          String(
+                            product.id
+                          ) ===
+                          String(
+                            productId
+                          )
 
-                        product =>
+                        if (!matches) {
+
+                          return product
+
+                        }
+
+                        return {
+
+                          ...product,
+
+                          ...data,
+
+                          updatedAt:
+                            new Date()
+                              .toISOString()
+
+                        }
+
+                      }
+                    )
+
+                }
+
+              }
+            )
+
+        })),
 
 
-                          product.productId === productId
+      // ==========================================
+      // PROCESS INVENTORY TRANSACTION
+      // ==========================================
 
-                            ? {
+      processInventoryTransaction: (
+        warehouseId,
+        productId,
+        type,
+        quantity,
+        transactionData = {}
+      ) => {
 
-                                ...product,
+        const amount =
+          Number(
+            quantity || 0
+          )
 
-                                ...data,
 
-                                updatedAt:
+        // ==========================================
+        // VALIDATE QUANTITY
+        // ==========================================
 
-                                  new Date()
+        if (
+          !Number.isFinite(
+            amount
+          ) ||
+          amount <= 0
+        ) {
 
-                                    .toISOString()
+          return {
 
-                              }
+            success: false,
 
-                            :
+            message:
+              'الكمية يجب أن تكون أكبر من صفر'
 
-                              product
+          }
 
-                      )
+        }
 
+
+        // ==========================================
+        // VALIDATE TYPE
+        // ==========================================
+
+        if (
+          type !== 'in' &&
+          type !== 'out'
+        ) {
+
+          return {
+
+            success: false,
+
+            message:
+              'نوع الحركة غير صحيح'
+
+          }
+
+        }
+
+
+        // ==========================================
+        // FIND WAREHOUSE
+        // ==========================================
+
+        const warehouse =
+          get()
+            .warehouses
+            .find(
+              item =>
+
+                String(
+                  item.id
+                ) ===
+                String(
+                  warehouseId
+                )
+            )
+
+
+        if (!warehouse) {
+
+          return {
+
+            success: false,
+
+            message:
+              'المخزن غير موجود'
+
+          }
+
+        }
+
+
+        // ==========================================
+        // FIND PRODUCT
+        // ==========================================
+
+        const product =
+          (
+            warehouse.products ||
+            []
+          ).find(
+            item =>
+
+              String(
+                item.productId
+              ) ===
+              String(
+                productId
+              ) ||
+
+              String(
+                item.id
+              ) ===
+              String(
+                productId
+              )
+          )
+
+
+        if (!product) {
+
+          return {
+
+            success: false,
+
+            message:
+              'المنتج غير موجود في المخزن'
+
+          }
+
+        }
+
+
+        // ==========================================
+        // CURRENT VALUES
+        // ==========================================
+
+        const currentQuantity =
+          Number(
+            product.quantity || 0
+          )
+
+        const currentIncoming =
+          Number(
+            product.incoming || 0
+          )
+
+        const currentOutgoing =
+          Number(
+            product.outgoing || 0
+          )
+
+
+        let newQuantity =
+          currentQuantity
+
+        let newIncoming =
+          currentIncoming
+
+        let newOutgoing =
+          currentOutgoing
+
+
+        // ==========================================
+        // INCOMING
+        // ==========================================
+
+        if (
+          type === 'in'
+        ) {
+
+          newQuantity =
+            currentQuantity +
+            amount
+
+          newIncoming =
+            currentIncoming +
+            amount
+
+        }
+
+
+        // ==========================================
+        // OUTGOING
+        // ==========================================
+
+        if (
+          type === 'out'
+        ) {
+
+          if (
+            amount >
+            currentQuantity
+          ) {
+
+            return {
+
+              success: false,
+
+              message:
+                'الكمية المطلوبة أكبر من المخزون المتاح'
+
+            }
+
+          }
+
+
+          newQuantity =
+            currentQuantity -
+            amount
+
+          newOutgoing =
+            currentOutgoing +
+            amount
+
+        }
+
+
+        // ==========================================
+        // TIMESTAMP
+        // ==========================================
+
+        const now =
+          new Date()
+            .toISOString()
+
+
+        // ==========================================
+        // UNIT PRICE
+        // ==========================================
+
+        const defaultUnitPrice =
+          type === 'in'
+            ? Number(
+                product.purchasePrice || 0
+              )
+            : Number(
+                product.salePrice || 0
+              )
+
+
+        const unitPrice =
+          Number(
+            transactionData.unitPrice ??
+            defaultUnitPrice
+          )
+
+
+        // ==========================================
+        // TRANSACTION OBJECT
+        // ==========================================
+
+        const transaction = {
+
+          id:
+            generateId(),
+
+          type,
+
+          warehouseId:
+            warehouse.id,
+
+          warehouseName:
+            warehouse.name ||
+            '',
+
+          productId:
+            product.productId ||
+            product.id ||
+            productId,
+
+          productName:
+            product.productName ||
+            product.name ||
+            '',
+
+          quantity:
+            amount,
+
+          previousQuantity:
+            currentQuantity,
+
+          beforeQuantity:
+            currentQuantity,
+
+          newQuantity:
+            newQuantity,
+
+          afterQuantity:
+            newQuantity,
+
+          incoming:
+            type === 'in'
+              ? amount
+              : 0,
+
+          outgoing:
+            type === 'out'
+              ? amount
+              : 0,
+
+          unitPrice:
+            unitPrice,
+
+          purchasePrice:
+            Number(
+              transactionData.purchasePrice ??
+              product.purchasePrice ??
+              0
+            ),
+
+          salePrice:
+            Number(
+              transactionData.salePrice ??
+              product.salePrice ??
+              0
+            ),
+
+          totalValue:
+            amount *
+            unitPrice,
+
+          userId:
+            transactionData.userId ||
+            '',
+
+          userName:
+            transactionData.userName ||
+            '',
+
+          notes:
+            transactionData.notes ||
+            '',
+
+          reference:
+            transactionData.reference ||
+            '',
+
+          source:
+            transactionData.source ||
+            'warehouse',
+
+          createdAt:
+            now,
+
+          updatedAt:
+            now
+
+        }
+
+
+        // ==========================================
+        // UPDATE WAREHOUSE
+        // ==========================================
+
+        set(state => ({
+
+          warehouses:
+
+            state.warehouses.map(
+              warehouseItem => {
+
+                if (
+                  String(
+                    warehouseItem.id
+                  ) !==
+                  String(
+                    warehouseId
+                  )
+                ) {
+
+                  return warehouseItem
 
                 }
 
 
-              }
+                return {
 
+                  ...warehouseItem,
+
+
+                  // ==================================
+                  // UPDATE PRODUCT
+                  // ==================================
+
+                  products:
+
+                    (
+                      warehouseItem.products ||
+                      []
+                    ).map(
+                      productItem => {
+
+                        const matches =
+                          String(
+                            productItem.productId
+                          ) ===
+                          String(
+                            productId
+                          ) ||
+
+                          String(
+                            productItem.id
+                          ) ===
+                          String(
+                            productId
+                          )
+
+
+                        if (!matches) {
+
+                          return productItem
+
+                        }
+
+
+                        return {
+
+                          ...productItem,
+
+                          quantity:
+                            newQuantity,
+
+                          incoming:
+                            newIncoming,
+
+                          outgoing:
+                            newOutgoing,
+
+                          availableQuantity:
+                            newQuantity,
+
+                          updatedAt:
+                            now
+
+                        }
+
+                      }
+                    ),
+
+
+                  // ==================================
+                  // TRANSACTION HISTORY
+                  // ==================================
+
+                  transactions: [
+
+                    ...(
+                      warehouseItem.transactions ||
+                      []
+                    ),
+
+                    transaction
+
+                  ]
+
+                }
+
+              }
             )
 
+        }))
 
-        })),
 
+        // ==========================================
+        // RETURN RESULT
+        // ==========================================
+
+        return {
+
+          success: true,
+
+          newQuantity,
+
+          incoming:
+            newIncoming,
+
+          outgoing:
+            newOutgoing,
+
+          transaction
+
+        }
+
+      },
 
 
       // ==========================================
       // REMOVE PRODUCT
       // ==========================================
 
-
       removeProductFromWarehouse: (
-
         warehouseId,
-
         productId
-
       ) =>
 
-
         set(state => ({
-
 
           warehouses:
 
             state.warehouses.map(
-
               warehouse => {
 
-
                 if (
-
-                  warehouse.id !== warehouseId
-
-                )
+                  String(
+                    warehouse.id
+                  ) !==
+                  String(
+                    warehouseId
+                  )
+                ) {
 
                   return warehouse
-
-
-
-                return {
-
-
-                  ...warehouse,
-
-
-                  products:
-
-                    (warehouse.products || [])
-
-                      .filter(
-
-                        product =>
-
-                          product.productId !== productId
-
-                      )
-
 
                 }
 
 
-              }
+                return {
 
+                  ...warehouse,
+
+                  products:
+
+                    (
+                      warehouse.products ||
+                      []
+                    ).filter(
+                      product =>
+
+                        String(
+                          product.productId
+                        ) !==
+                        String(
+                          productId
+                        ) &&
+
+                        String(
+                          product.id
+                        ) !==
+                        String(
+                          productId
+                        )
+                    )
+
+                }
+
+              }
             )
 
-
         })),
-
 
 
       // ==========================================
       // GET PRODUCTS BY WAREHOUSE
       // ==========================================
 
-
       getWarehouseProducts: (
-
         warehouseId
-
       ) => {
 
-
         const warehouse =
-
           get()
-
             .warehouses
-
             .find(
-
               item =>
 
-                item.id === warehouseId
-
+                String(
+                  item.id
+                ) ===
+                String(
+                  warehouseId
+                )
             )
 
 
-
         return (
-
           warehouse?.products ||
-
           []
-
         )
 
-
       },
-
 
 
       // ==========================================
       // GET PRODUCT FROM ALL WAREHOUSES
       // ==========================================
 
-
       getProductAvailability: (
-
         productId
-
       ) => {
-
 
         const results = []
 
 
-
         get()
-
           .warehouses
-
           .forEach(
-
             warehouse => {
 
-
               const product =
+                (
+                  warehouse.products ||
+                  []
+                ).find(
+                  item =>
 
-                (warehouse.products || [])
+                    String(
+                      item.productId
+                    ) ===
+                    String(
+                      productId
+                    ) ||
 
-                  .find(
-
-                    item =>
-
-                      item.productId === productId
-
-                  )
-
+                    String(
+                      item.id
+                    ) ===
+                    String(
+                      productId
+                    )
+                )
 
 
               if (product) {
 
-
                 results.push({
 
-
                   warehouseId:
-
                     warehouse.id,
 
-
                   warehouseName:
-
                     warehouse.name,
 
-
                   quantity:
-
-                    product.quantity,
-
+                    Number(
+                      product.quantity ||
+                      0
+                    ),
 
                   salePrice:
-
-                    product.salePrice,
-
+                    Number(
+                      product.salePrice ||
+                      0
+                    ),
 
                   purchasePrice:
-
-                    product.purchasePrice,
-
+                    Number(
+                      product.purchasePrice ||
+                      0
+                    ),
 
                   product
 
                 })
 
-
               }
 
-
             }
-
           )
-
 
 
         return results
 
-
       },
-
 
 
       // ==========================================
       // SEARCH PRODUCTS
       // ==========================================
 
-
       searchProducts: (
-
         query = ''
-
       ) => {
 
-
         const value =
-
-          query
-
+          String(query)
             .toLowerCase()
-
             .trim()
 
 
-
-        if (!value)
+        if (!value) {
 
           return []
 
+        }
 
 
         const results = []
 
 
-
         get()
-
           .warehouses
-
           .forEach(
-
             warehouse => {
 
+              (
+                warehouse.products ||
+                []
+              ).forEach(
+                product => {
 
-              (warehouse.products || [])
-
-                .forEach(
-
-                  product => {
-
-
-                    if (
-
-
-                      product.productName
-
-                        .toLowerCase()
-
-                        .includes(value)
+                  const productName =
+                    String(
+                      product.productName ||
+                      product.name ||
+                      ''
+                    )
+                      .toLowerCase()
 
 
-                      ||
+                  const barcode =
+                    String(
+                      product.barcode ||
+                      ''
+                    )
+                      .toLowerCase()
 
 
-                      product.barcode
-
-                        .toLowerCase()
-
-                        .includes(value)
-
-
-                      ||
+                  const brand =
+                    String(
+                      product.brand ||
+                      ''
+                    )
+                      .toLowerCase()
 
 
-                      product.brand
+                  if (
+                    productName.includes(
+                      value
+                    ) ||
 
-                        .toLowerCase()
+                    barcode.includes(
+                      value
+                    ) ||
 
-                        .includes(value)
+                    brand.includes(
+                      value
+                    )
+                  ) {
 
+                    results.push({
 
-                    ) {
+                      ...product,
 
+                      warehouseId:
+                        warehouse.id,
 
-                      results.push({
+                      warehouseName:
+                        warehouse.name
 
-
-                        ...product,
-
-
-                        warehouseId:
-
-                          warehouse.id,
-
-
-                        warehouseName:
-
-                          warehouse.name
-
-
-                      })
-
-
-                    }
-
+                    })
 
                   }
 
-                )
-
+                }
+              )
 
             }
-
           )
-
 
 
         return results
 
-
       },
-            // ==========================================
+
+
+      // ==========================================
       // GET ALL PRODUCTS
       // ==========================================
 
-getAllProducts: () => {
+      getAllProducts: () => {
 
-  const products = []
+        const products = []
 
-  get()
-    .warehouses
-    .forEach(warehouse => {
 
-      (warehouse.products || [])
-        .forEach(product => {
+        get()
+          .warehouses
+          .forEach(
+            warehouse => {
 
-          products.push({
+              (
+                warehouse.products ||
+                []
+              ).forEach(
+                product => {
 
-            ...product,
+                  products.push({
 
-            warehouseId:
-              warehouse.id,
+                    ...product,
 
-            warehouseName:
-              warehouse.name,
+                    warehouseId:
+                      warehouse.id,
 
-            stock:
-              Number(
-                product.quantity || 0
-              ),
+                    warehouseName:
+                      warehouse.name,
 
-            quantity:
-              Number(
-                product.quantity || 0
-              ),
+                    stock:
+                      Number(
+                        product.quantity ||
+                        0
+                      ),
 
-            price:
-              Number(
-                product.salePrice || 0
-              ),
+                    quantity:
+                      Number(
+                        product.quantity ||
+                        0
+                      ),
 
-            hidden:
-              product.hidden ?? false,
+                    price:
+                      Number(
+                        product.salePrice ||
+                        0
+                      ),
 
-            publishedToHome:
-              product.publishedToHome ?? false,
+                    hidden:
+                      product.hidden ??
+                      false,
 
-            publishedToProducts:
-              product.publishedToProducts ?? false,
+                    publishedToHome:
+                      product.publishedToHome ??
+                      product.publishToHome ??
+                      false,
 
-            publishedToOffers:
-              product.publishedToOffers ?? false
+                    publishedToProducts:
+                      product.publishedToProducts ??
+                      product.publishToProducts ??
+                      false,
 
-          })
+                    publishedToOffers:
+                      product.publishedToOffers ??
+                      product.publishToOffers ??
+                      false
 
-        })
+                  })
 
-    })
+                }
+              )
 
-  return products
+            }
+          )
 
-},
 
+        return products
+
+      },
 
 
       // ==========================================
       // PRODUCT EXISTS
       // ==========================================
 
-
       productExistsInWarehouse: (
-
         warehouseId,
-
         productId
-
       ) => {
 
-
         const warehouse =
-
           get()
-
             .warehouses
-
             .find(
-
               item =>
 
-                item.id === warehouseId
-
+                String(
+                  item.id
+                ) ===
+                String(
+                  warehouseId
+                )
             )
-
 
 
         return Boolean(
 
           warehouse?.products
-
             ?.some(
-
               product =>
 
-                product.productId === productId
+                String(
+                  product.productId
+                ) ===
+                String(
+                  productId
+                ) ||
 
+                String(
+                  product.id
+                ) ===
+                String(
+                  productId
+                )
             )
 
         )
 
-
       },
-
 
 
       // ==========================================
       // TRANSACTIONS
       // ==========================================
 
-
       addTransaction: (
-
         warehouseId,
-
         transaction = {}
-
       ) =>
-
 
         set(state => ({
 
+          warehouses:
 
-          warehouses: addWarehouseTransaction(
+            addWarehouseTransaction(
 
-            state.warehouses,
+              state.warehouses,
 
-            warehouseId,
+              warehouseId,
 
-            transaction
+              transaction
 
-          )
-
+            )
 
         })),
-
 
 
       // ==========================================
       // CLEAR
       // ==========================================
 
-
       clearWarehouses: () =>
-
 
         set({
 
@@ -861,13 +1310,12 @@ getAllProducts: () => {
 
         })
 
-
     }),
-
 
     {
 
-      name: STORAGE_KEY
+      name:
+        STORAGE_KEY
 
     }
 

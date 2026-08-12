@@ -1,11 +1,25 @@
 import { useMemo, useState } from 'react'
+
 import { warehouseProductDefaults } from '../config/warehouseProductDefaults'
 
-export default function useWarehouseProductForm(onSubmit) {
+const createInitialForm = () => ({
+  ...warehouseProductDefaults
+})
 
-  const [form, setForm] = useState(warehouseProductDefaults)
+export default function useWarehouseProductForm() {
 
-  const updateField = (key, value) =>
+  const [initialForm] = useState(
+    createInitialForm
+  )
+
+  const [form, setForm] = useState(
+    createInitialForm
+  )
+
+  const updateField = (
+    key,
+    value
+  ) => {
 
     setForm(previous => ({
 
@@ -15,20 +29,34 @@ export default function useWarehouseProductForm(onSubmit) {
 
     }))
 
-  const realCost = useMemo(() => (
+  }
 
-    Number(form.purchasePrice || 0) +
-    Number(form.shippingCost || 0) +
-    Number(form.transportCost || 0) +
-    Number(form.customsCost || 0) +
-    Number(form.otherCosts || 0)
+  const realCost = useMemo(() => {
 
-  ), [
+    return (
+
+      Number(form.purchasePrice || 0) +
+
+      Number(form.shippingCost || 0) +
+
+      Number(form.transportCost || 0) +
+
+      Number(form.customsCost || 0) +
+
+      Number(form.otherCosts || 0)
+
+    )
+
+  }, [
 
     form.purchasePrice,
+
     form.shippingCost,
+
     form.transportCost,
+
     form.customsCost,
+
     form.otherCosts
 
   ])
@@ -43,7 +71,7 @@ export default function useWarehouseProductForm(onSubmit) {
 
     }
 
-    if (!form.name.trim()) {
+    if (!String(form.name || '').trim()) {
 
       alert('اسم المنتج مطلوب')
 
@@ -59,7 +87,7 @@ export default function useWarehouseProductForm(onSubmit) {
 
     }
 
-    onSubmit({
+    const preparedForm = {
 
       ...form,
 
@@ -67,17 +95,33 @@ export default function useWarehouseProductForm(onSubmit) {
 
       serialNumbers:
 
-        form.serialNumbers
+        typeof form.serialNumbers === 'string'
 
-          .split(',')
+          ? form.serialNumbers
 
-          .map(item => item.trim())
+              .split(',')
 
-          .filter(Boolean)
+              .map(item => item.trim())
 
-    })
+              .filter(Boolean)
 
-    setForm(warehouseProductDefaults)
+          : Array.isArray(form.serialNumbers)
+
+            ? form.serialNumbers
+
+            : []
+
+    }
+
+    return preparedForm
+
+  }
+
+  const reset = () => {
+
+    setForm(
+      createInitialForm()
+    )
 
   }
 
@@ -85,11 +129,17 @@ export default function useWarehouseProductForm(onSubmit) {
 
     form,
 
+    setForm,
+
     updateField,
 
     realCost,
 
-    submit
+    submit,
+
+    reset,
+
+    initialForm
 
   }
 

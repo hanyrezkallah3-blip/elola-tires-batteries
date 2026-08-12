@@ -10,7 +10,6 @@ import {
   contains
 } from './helpers'
 
-
 export const useProductStore = create(
   persist(
 
@@ -78,6 +77,17 @@ export const useProductStore = create(
           profit: 0,
 
           profitMargin: 0,
+
+
+          // ================= PRICE VISIBILITY =================
+
+          purchasePriceVisible:
+            product.purchasePriceVisible ??
+            false,
+
+          salePriceVisible:
+            product.salePriceVisible ??
+            true,
 
 
           // ================= STATUS =================
@@ -166,7 +176,26 @@ export const useProductStore = create(
           tags: [],
 
 
-          ...product
+          ...product,
+
+          // ==========================================
+          // NORMALIZE PRICE VISIBILITY AFTER SPREAD
+          // ==========================================
+
+          purchasePriceVisible:
+            product.purchasePriceVisible ??
+            false,
+
+          salePriceVisible:
+            product.salePriceVisible ??
+            true,
+
+          createdAt:
+            product.createdAt ||
+            now(),
+
+          updatedAt:
+            now()
 
         }
 
@@ -193,7 +222,10 @@ export const useProductStore = create(
       // UPDATE
       // ==================================================
 
-      updateProduct: (id, updates) =>
+      updateProduct: (
+        id,
+        updates = {}
+      ) =>
 
         set(state => ({
 
@@ -221,7 +253,207 @@ export const useProductStore = create(
             )
 
         })),
-              // ==================================================
+
+
+      // ==================================================
+      // UPDATE SELLING PRICE
+      // ==================================================
+
+      updateProductPrice: (
+        id,
+        salePrice
+      ) => {
+
+        const value =
+          Number(salePrice)
+
+        if (
+          !Number.isFinite(value) ||
+          value < 0
+        ) {
+
+          return {
+
+            success: false,
+
+            message:
+              'سعر البيع غير صحيح'
+
+          }
+
+        }
+
+
+        set(state => ({
+
+          products:
+
+            state.products.map(product => {
+
+              if (
+                product.id !== id
+              ) {
+
+                return product
+
+              }
+
+
+              const purchase =
+                Number(
+                  product.purchasePrice || 0
+                )
+
+              const profit =
+                value -
+                purchase
+
+              const profitMargin =
+                value > 0
+                  ? (
+                      profit /
+                      value
+                    ) * 100
+                  : 0
+
+
+              return {
+
+                ...product,
+
+                salePrice:
+                  value,
+
+                profit,
+
+                profitMargin,
+
+                updatedAt:
+                  now()
+
+              }
+
+            })
+
+        }))
+
+
+        return {
+
+          success: true
+
+        }
+
+      },
+
+
+      // ==================================================
+      // TOGGLE PURCHASE PRICE VISIBILITY
+      // ==================================================
+
+      togglePurchasePriceVisibility: (
+        id
+      ) => {
+
+        let updatedProduct = null
+
+
+        set(state => ({
+
+          products:
+
+            state.products.map(product => {
+
+              if (
+                product.id !== id
+              ) {
+
+                return product
+
+              }
+
+
+              updatedProduct = {
+
+                ...product,
+
+                purchasePriceVisible:
+                  product.purchasePriceVisible !== false
+                    ? false
+                    : true,
+
+                updatedAt:
+                  now()
+
+              }
+
+
+              return updatedProduct
+
+            })
+
+        }))
+
+
+        return updatedProduct
+
+      },
+
+
+      // ==================================================
+      // TOGGLE SALE PRICE VISIBILITY
+      // ==================================================
+
+      toggleSalePriceVisibility: (
+        id
+      ) => {
+
+        let updatedProduct = null
+
+
+        set(state => ({
+
+          products:
+
+            state.products.map(product => {
+
+              if (
+                product.id !== id
+              ) {
+
+                return product
+
+              }
+
+
+              updatedProduct = {
+
+                ...product,
+
+                salePriceVisible:
+                  product.salePriceVisible === false
+                    ? true
+                    : false,
+
+                updatedAt:
+                  now()
+
+              }
+
+
+              return updatedProduct
+
+            })
+
+        }))
+
+
+        return updatedProduct
+
+      },
+
+
+      // ==================================================
       // DELETE
       // ==================================================
 
@@ -246,7 +478,9 @@ export const useProductStore = create(
       // SEARCH
       // ==================================================
 
-      searchProducts: (keyword) => {
+      searchProducts: (
+        keyword
+      ) => {
 
         if (!keyword)
 
@@ -297,7 +531,9 @@ export const useProductStore = create(
       // HELPERS
       // ==================================================
 
-      getProduct: (id) =>
+      getProduct: (
+        id
+      ) =>
 
         get().products.find(
 
@@ -325,12 +561,10 @@ export const useProductStore = create(
 
     }),
 
-
     {
 
       name:
         STORAGE_KEYS.PRODUCTS,
-
 
       partialize: state => ({
 
@@ -342,5 +576,4 @@ export const useProductStore = create(
     }
 
   )
-
 )

@@ -164,19 +164,20 @@ const permissions =
     []),
 
     ...(isOwner ?
-    [
-    '/slides',
-    '/warehouses',
-    '/transfers',
-    '/users',
-    '/permissions',
-    '/finance',
-    '/wallets',
-    '/demand-analytics',
-    '/company',
-    '/home'] :
-
-    [])];
+[
+'/slides',
+'/warehouses',
+'/suppliers',
+'/transfers',
+'/users',
+'/permissions',
+'/finance',
+'/wallets',
+'/demand-analytics',
+'/company',
+'/home'
+] :
+[])];
 
 
 
@@ -192,32 +193,50 @@ useEffect(() => {
 
       navigate('/login', {
         replace: true
-      });
+      })
 
     }
 
-    return;
-
+    return
   }
 
   const currentPath =
-    location.pathname;
+    location.pathname
+
+  const isWarehouseDetailsRoute =
+    currentPath.startsWith('/warehouses/')
+
+  const canAccessWarehouseDetails =
+    isWarehouseDetailsRoute &&
+    (
+      isOwner ||
+      (
+        isWarehouse &&
+        currentUser?.warehouseId ===
+          currentPath.split('/')[2]
+      )
+    )
 
   if (
     currentPath !== '/dashboard' &&
-    !allowedRoutes.includes(currentPath)
+    !allowedRoutes.includes(currentPath) &&
+    !canAccessWarehouseDetails
   ) {
 
     navigate('/dashboard', {
       replace: true
-    });
+    })
 
   }
 
 }, [
   currentUser,
-  location.pathname
-]);
+  location.pathname,
+  allowedRoutes,
+  isOwner,
+  isWarehouse,
+  navigate
+])
 
   // ================= LINKS =================
 
@@ -299,6 +318,12 @@ useEffect(() => {
     path: '/warehouses',
     title: '🏭 إدارة المخازن',
     visible: isOwner
+  },
+  
+  {
+  path: '/suppliers',
+  title: '🚚 الموردون',
+  visible: isOwner
   },
 
   {
