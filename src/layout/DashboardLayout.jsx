@@ -1,10 +1,13 @@
-import { useUserStore } from "../store/userStore";import { useOrderStore } from "../store/orderStore";import { useProductStore } from "../store/productStore";import { useMemo, useState, useEffect } from 'react';
+import { useUserStore } from "../store/userStore";
+import { useOrderStore } from "../store/orderStore";
+import { useProductStore } from "../store/productStore";
+import { useMemo, useState, useEffect } from 'react';
 
 import {
   NavLink,
   useLocation,
-  useNavigate } from
-'react-router-dom';
+  useNavigate
+} from 'react-router-dom';
 
 import { useWebsiteStore } from '../store/websiteStore';
 
@@ -20,22 +23,22 @@ export default function DashboardLayout({ children }) {
   // ================= STORE =================
 
   const currentUser =
-  useUserStore((s) => s.currentUser);
+    useUserStore((s) => s.currentUser);
 
   const logout =
-  useUserStore((s) => s.logout);
+    useUserStore((s) => s.logout);
 
   const notifications =
-  useWebsiteStore((s) => s.notifications || []);
+    useWebsiteStore((s) => s.notifications || []);
 
   const products =
-  useProductStore((s) => s.products || []);
+    useProductStore((s) => s.products || []);
 
   const orders =
-  useOrderStore((s) => s.orders || []);
+    useOrderStore((s) => s.orders || []);
 
   const transfers =
-  useWebsiteStore((s) => s.transfers || []);
+    useWebsiteStore((s) => s.transfers || []);
 
   // ================= SIDEBAR =================
 
@@ -44,48 +47,48 @@ export default function DashboardLayout({ children }) {
   // ================= USER =================
 
   const isOwner =
-  currentUser?.role === 'owner';
+    currentUser?.role === 'owner';
 
   const isWarehouse =
-  currentUser?.role === 'warehouse';
+    currentUser?.role === 'warehouse';
 
   const isBranch =
-  currentUser?.role === 'branch';
+    currentUser?.role === 'branch';
 
   const isShop =
-  currentUser?.role === 'shop';
+    currentUser?.role === 'shop';
 
   const username =
-  currentUser?.username || 'مستخدم';
+    currentUser?.username || 'مستخدم';
 
   const warehouseName =
-  currentUser?.warehouseName || '';
+    currentUser?.warehouseName || '';
 
-const permissions =
-  currentUser?.permissions || [];
+  const permissions =
+    currentUser?.permissions || [];
 
   // ================= ERP AI STATUS =================
 
   const aiStatus = useMemo(() => {
 
     const totalSales =
-    orders.reduce(
-      (acc, o) =>
-      acc + Number(o.total || 0),
-      0
-    );
+      orders.reduce(
+        (acc, o) =>
+          acc + Number(o.total || 0),
+        0
+      );
 
     if (totalSales > 1000000)
-    return {
-      text: 'نشط بقوة',
-      color: 'text-green-400'
-    };
+      return {
+        text: 'نشط بقوة',
+        color: 'text-green-400'
+      };
 
     if (totalSales > 200000)
-    return {
-      text: 'مستقر',
-      color: 'text-yellow-400'
-    };
+      return {
+        text: 'مستقر',
+        color: 'text-yellow-400'
+      };
 
     return {
       text: 'يحتاج تحسين',
@@ -99,16 +102,16 @@ const permissions =
   const getRoleName = () => {
 
     if (isOwner)
-    return '👑 مالك النظام';
+      return '👑 مالك النظام';
 
     if (isWarehouse)
-    return '🏭 إدارة مخزن';
+      return '🏭 إدارة مخزن';
 
     if (isBranch)
-    return '🏢 إدارة فرع';
+      return '🏢 إدارة فرع';
 
     if (isShop)
-    return '🏪 إدارة معرض';
+      return '🏪 إدارة معرض';
 
     return 'مستخدم';
 
@@ -121,7 +124,7 @@ const permissions =
     if (isOwner) return true;
 
     if (permissions.includes('all'))
-    return true;
+      return true;
 
     return permissions.includes(permission);
 
@@ -133,242 +136,255 @@ const permissions =
 
     return [
 
-    '/dashboard',
+      '/dashboard',
 
-    ...(hasPermission('bi') ?
-    ['/bi'] :
-    []),
+      ...(hasPermission('bi')
+        ? ['/bi']
+        : []),
 
-    ...(hasPermission('ai') ?
-    ['/ai'] :
-    []),
+      ...(hasPermission('ai')
+        ? ['/ai']
+        : []),
 
-    ...(hasPermission('products') ?
-    ['/products'] :
-    []),
+      ...(hasPermission('products')
+        ? ['/products']
+        : []),
 
-    ...(hasPermission('orders') ?
-    ['/orders'] :
-    []),
+      ...(hasPermission('orders')
+        ? ['/orders']
+        : []),
 
-    ...(hasPermission('offers') ?
-    ['/offers'] :
-    []),
+      ...(hasPermission('offers')
+        ? ['/offers']
+        : []),
 
-    ...(hasPermission('services') ?
-    ['/services'] :
-    []),
+      ...(hasPermission('services')
+        ? ['/services']
+        : []),
 
-    ...(hasPermission('videos') ?
-    ['/videos'] :
-    []),
+      ...(hasPermission('videos')
+        ? ['/videos']
+        : []),
 
-    ...(isOwner ?
-[
-'/slides',
-'/warehouses',
-'/suppliers',
-'/transfers',
-'/users',
-'/permissions',
-'/finance',
-'/wallets',
-'/demand-analytics',
-'/company',
-'/home'
-] :
-[])];
+      ...(hasPermission('tenders')
+        ? ['/tenders']
+        : []),
 
+      ...(isOwner
+        ? [
+            '/slides',
+            '/warehouses',
+            '/suppliers',
+            '/transfers',
+            '/users',
+            '/permissions',
+            '/finance',
+            '/wallets',
+            '/demand-analytics',
+            '/company',
+            '/home'
+          ]
+        : [])
 
+    ];
 
   }, [currentUser]);
 
- // ================= AUTO BLOCK =================
+  // ================= AUTO BLOCK =================
 
-useEffect(() => {
+  useEffect(() => {
 
-  if (!currentUser) {
+    if (!currentUser) {
 
-    if (location.pathname !== '/login') {
+      if (location.pathname !== '/login') {
 
-      navigate('/login', {
-        replace: true
-      })
+        navigate('/login', {
+          replace: true
+        });
+
+      }
+
+      return;
 
     }
 
-    return
-  }
+    const currentPath =
+      location.pathname;
 
-  const currentPath =
-    location.pathname
+    const isWarehouseDetailsRoute =
+      currentPath.startsWith('/warehouses/');
 
-  const isWarehouseDetailsRoute =
-    currentPath.startsWith('/warehouses/')
-
-  const canAccessWarehouseDetails =
-    isWarehouseDetailsRoute &&
-    (
-      isOwner ||
+    const canAccessWarehouseDetails =
+      isWarehouseDetailsRoute &&
       (
-        isWarehouse &&
-        currentUser?.warehouseId ===
-          currentPath.split('/')[2]
-      )
-    )
+        isOwner ||
+        (
+          isWarehouse &&
+          currentUser?.warehouseId ===
+            currentPath.split('/')[2]
+        )
+      );
 
-  if (
-    currentPath !== '/dashboard' &&
-    !allowedRoutes.includes(currentPath) &&
-    !canAccessWarehouseDetails
-  ) {
+    if (
+      currentPath !== '/dashboard' &&
+      !allowedRoutes.includes(currentPath) &&
+      !canAccessWarehouseDetails
+    ) {
 
-    navigate('/dashboard', {
-      replace: true
-    })
+      navigate('/dashboard', {
+        replace: true
+      });
 
-  }
+    }
 
-}, [
-  currentUser,
-  location.pathname,
-  allowedRoutes,
-  isOwner,
-  isWarehouse,
-  navigate
-])
+  }, [
+    currentUser,
+    location.pathname,
+    allowedRoutes,
+    isOwner,
+    isWarehouse,
+    navigate
+  ]);
 
   // ================= LINKS =================
 
   const links = useMemo(() => [
 
-  {
-    path: '/dashboard',
-    title: '📊 لوحة التحكم',
-    visible: true
-  },
-  
-  {
-  path: '/demand-analytics',
-  title: '🧠 تحليل طلبات السوق',
-  visible: isOwner
-  },
+    {
+      path: '/dashboard',
+      title: '📊 لوحة التحكم',
+      visible: true
+    },
 
-  {
-    path: '/bi',
-    title: '📈 التحليلات الذكية',
-    visible: hasPermission('bi')
-  },
+    {
+      path: '/demand-analytics',
+      title: '🧠 تحليل طلبات السوق',
+      visible: isOwner
+    },
 
-  {
-    path: '/ai',
-    title: '🤖 الذكاء الاصطناعي',
-    visible: hasPermission('ai')
-  },
+    {
+      path: '/bi',
+      title: '📈 التحليلات الذكية',
+      visible: hasPermission('bi')
+    },
 
-  {
-    path: '/finance',
-    title: '💰 الإدارة المالية',
-    visible: isOwner
-  },
+    {
+      path: '/ai',
+      title: '🤖 الذكاء الاصطناعي',
+      visible: hasPermission('ai')
+    },
 
-  {
-    path: '/wallets',
-    title: '💳 المحافظ',
-    visible: isOwner
-  },
+    {
+      path: '/finance',
+      title: '💰 الإدارة المالية',
+      visible: isOwner
+    },
 
-  {
-    path: '/products',
-    title: '📦 إدارة المنتجات',
-    visible: hasPermission('products')
-  },
+    {
+      path: '/wallets',
+      title: '💳 المحافظ',
+      visible: isOwner
+    },
 
-  {
-    path: '/orders',
-    title: '🛒 إدارة الطلبات',
-    visible: hasPermission('orders')
-  },
+    {
+      path: '/products',
+      title: '📦 إدارة المنتجات',
+      visible: hasPermission('products')
+    },
 
-  {
-    path: '/offers',
-    title: '🏷 إدارة العروض',
-    visible: hasPermission('offers')
-  },
+    {
+      path: '/orders',
+      title: '🛒 إدارة الطلبات',
+      visible: hasPermission('orders')
+    },
 
-  {
-    path: '/services',
-    title: '🛠 إدارة الخدمات',
-    visible: hasPermission('services')
-  },
+    {
+      path: '/tenders',
+      title: '📋 المناقصات',
+      visible: hasPermission('tenders')
+    },
 
-  {
-    path: '/videos',
-    title: '🎬 إدارة الفيديوهات',
-    visible: hasPermission('videos')
-  },
+    {
+      path: '/offers',
+      title: '🏷 إدارة العروض',
+      visible: hasPermission('offers')
+    },
 
-  {
-    path: '/slides',
-    title: '🖼 إدارة السلايدر',
-    visible: isOwner
-  },
+    {
+      path: '/services',
+      title: '🛠 إدارة الخدمات',
+      visible: hasPermission('services')
+    },
 
-  {
-    path: '/warehouses',
-    title: '🏭 إدارة المخازن',
-    visible: isOwner
-  },
-  
-  {
-  path: '/suppliers',
-  title: '🚚 الموردون',
-  visible: isOwner
-  },
+    {
+      path: '/videos',
+      title: '🎬 إدارة الفيديوهات',
+      visible: hasPermission('videos')
+    },
 
-  {
-    path: '/transfers',
-    title: '🚚 التحويلات',
-    visible: isOwner
-  },
+    {
+      path: '/slides',
+      title: '🖼 إدارة السلايدر',
+      visible: isOwner
+    },
 
-  {
-    path: '/users',
-    title: '👥 المستخدمون',
-    visible: isOwner
-  },
+    {
+      path: '/warehouses',
+      title: '🏭 إدارة المخازن',
+      visible: isOwner
+    },
 
-  {
-    path: '/permissions',
-    title: '🔐 الصلاحيات',
-    visible: isOwner
-  },
+    {
+      path: '/suppliers',
+      title: '🚚 الموردون',
+      visible: isOwner
+    },
 
-  {
-    path: '/company',
-    title: '🏢 بيانات الشركة',
-    visible: isOwner
-  },
+    {
+      path: '/transfers',
+      title: '🚚 التحويلات',
+      visible: isOwner
+    },
 
-  {
-    path: '/home',
-    title: '🌍 الموقع الإلكتروني',
-    visible: true
-  }],
+    {
+      path: '/users',
+      title: '👥 المستخدمون',
+      visible: isOwner
+    },
 
-  [currentUser]);
+    {
+      path: '/permissions',
+      title: '🔐 الصلاحيات',
+      visible: isOwner
+    },
 
-  const filteredLinks = links;
+    {
+      path: '/company',
+      title: '🏢 بيانات الشركة',
+      visible: isOwner
+    },
 
+    {
+      path: '/home',
+      title: '🌍 الموقع الإلكتروني',
+      visible: true
+    }
+
+  ], [currentUser]);
+
+  const filteredLinks =
+    links.filter(
+      link => link.visible
+    );
 
   // ================= LOGOUT =================
 
   const handleLogout = () => {
 
     const ok =
-    window.confirm(
-      'هل تريد تسجيل الخروج؟'
-    );
+      window.confirm(
+        'هل تريد تسجيل الخروج؟'
+      );
 
     if (!ok) return;
 
@@ -392,30 +408,30 @@ useEffect(() => {
     duration-300
 
     ${
-  isActive ?
+      isActive
 
-  'bg-yellow-500 text-black scale-[1.02] shadow-2xl' :
+        ? 'bg-yellow-500 text-black scale-[1.02] shadow-2xl'
 
-  `
+        : `
           bg-slate-900
           hover:bg-yellow-500
           hover:text-black
           hover:translate-x-1
-        `}
+        `
+    }
 
   `;
-
 
   // ================= TOTALS =================
 
   const totalProducts =
-  products.length;
+    products.length;
 
   const totalOrders =
-  orders.length;
+    orders.length;
 
   const totalTransfers =
-  transfers.length;
+    transfers.length;
 
   // ================= UI =================
 
@@ -433,15 +449,16 @@ useEffect(() => {
 
       {open &&
 
-      <div
-        onClick={() => setOpen(false)}
-        className="
+        <div
+          onClick={() => setOpen(false)}
+          className="
             lg:hidden
             fixed
             inset-0
             bg-black/80
             z-40
-          " />
+          "
+        />
 
       }
 
@@ -453,7 +470,7 @@ useEffect(() => {
           lg:hidden
           fixed
           top-4
-          left-4   
+          left-4
           z-50
           bg-yellow-500
           text-black
@@ -463,7 +480,8 @@ useEffect(() => {
           text-2xl
           font-black
           shadow-2xl
-        ">
+        "
+      >
 
         ☰
 
@@ -495,12 +513,12 @@ useEffect(() => {
         duration-300
 
         ${
-      open ?
-      'translate-x-0' :
-      'translate-x-full lg:translate-x-0'}
+          open
+            ? 'translate-x-0'
+            : 'translate-x-full lg:translate-x-0'
+        }
 
-      `
-      }>
+      `}>
 
         {/* HEADER */}
 
@@ -564,7 +582,7 @@ useEffect(() => {
 
             {!!warehouseName &&
 
-            <div className="
+              <div className="
                 text-cyan-400
                 font-bold
               ">
@@ -733,12 +751,12 @@ useEffect(() => {
 
             {filteredLinks.map((link) =>
 
-            <NavLink
-              key={link.path}
-              to={link.path}
-              className={linkClass}
-              onClick={() => setOpen(false)}>
-              
+              <NavLink
+                key={link.path}
+                to={link.path}
+                className={linkClass}
+                onClick={() => setOpen(false)}
+              >
 
                 {link.title}
 
@@ -793,7 +811,8 @@ useEffect(() => {
               rounded-2xl
               font-black
               transition
-            ">
+            "
+          >
 
             🚪 تسجيل الخروج
 
@@ -817,23 +836,29 @@ useEffect(() => {
           mx-auto
         ">
 
-          {children ? children :
+          {children
 
-          <div className="
-              bg-red-900/30
-              border
-              border-red-500
-              p-10
-              rounded-3xl
-              text-center
-              text-red-400
-              text-2xl
-              font-black
-            ">
+            ? children
 
-              ⚠ الصفحة غير متاحة
+            : (
 
-            </div>
+              <div className="
+                bg-red-900/30
+                border
+                border-red-500
+                p-10
+                rounded-3xl
+                text-center
+                text-red-400
+                text-2xl
+                font-black
+              ">
+
+                ⚠ الصفحة غير متاحة
+
+              </div>
+
+            )
 
           }
 
@@ -841,8 +866,8 @@ useEffect(() => {
 
       </main>
 
-    </div>);
+    </div>
 
-
+  );
 
 }

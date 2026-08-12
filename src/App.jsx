@@ -35,6 +35,8 @@ import WalletSettings from "./pages/WalletSettings";
 import Suppliers from "./pages/Suppliers";
 import DemandAnalytics from "./pages/DemandAnalytics";
 
+import Tenders from "./pages/Tenders";
+
 // ================= LOADING =================
 
 function LoadingScreen() {
@@ -161,7 +163,6 @@ export default function App() {
         element={<Home />}
       />
 
-
       {/* ================= DASHBOARD ================= */}
 
       <Route
@@ -174,7 +175,6 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-
 
       {/* ================= BI ================= */}
 
@@ -189,7 +189,6 @@ export default function App() {
         }
       />
 
-
       {/* ================= AI ================= */}
 
       <Route
@@ -202,7 +201,6 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-
 
       {/* ================= ADMIN ================= */}
 
@@ -217,7 +215,6 @@ export default function App() {
         }
       />
 
-
       {/* ================= WAREHOUSE DASHBOARD ================= */}
 
       <Route
@@ -230,7 +227,6 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-
 
       {/* ================= WAREHOUSES ================= */}
 
@@ -245,18 +241,18 @@ export default function App() {
         }
       />
 
-// ================= WAREHOUSE DETAILS =================
+      {/* ================= WAREHOUSE DETAILS ================= */}
 
-<Route
-  path="/warehouses/:id"
-  element={
-    <ProtectedRoute>
-      <DashboardLayout>
-        <WarehouseDetails />
-      </DashboardLayout>
-    </ProtectedRoute>
-  }
-/>
+      <Route
+        path="/warehouses/:id"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <WarehouseDetails />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
 
       {/* ================= TRANSFERS ================= */}
 
@@ -271,7 +267,6 @@ export default function App() {
         }
       />
 
-
       {/* ================= USERS ================= */}
 
       <Route
@@ -284,7 +279,6 @@ export default function App() {
           </OwnerRoute>
         }
       />
-
 
       {/* ================= PERMISSIONS ================= */}
 
@@ -299,7 +293,6 @@ export default function App() {
         }
       />
 
-
       {/* ================= WAREHOUSE ADMIN ================= */}
 
       <Route
@@ -312,7 +305,6 @@ export default function App() {
           </OwnerRoute>
         }
       />
-
 
       {/* ================= PRODUCTS ================= */}
 
@@ -327,6 +319,18 @@ export default function App() {
         }
       />
 
+      {/* ================= TENDERS ================= */}
+
+      <Route
+        path="/tenders"
+        element={
+          <OwnerRoute>
+            <DashboardLayout>
+              <Tenders />
+            </DashboardLayout>
+          </OwnerRoute>
+        }
+      />
 
       {/* ================= SLIDES ================= */}
 
@@ -341,7 +345,6 @@ export default function App() {
         }
       />
 
-
       {/* ================= OFFERS ================= */}
 
       <Route
@@ -354,7 +357,6 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-
 
       {/* ================= SERVICES ================= */}
 
@@ -369,7 +371,6 @@ export default function App() {
         }
       />
 
-
       {/* ================= VIDEOS ================= */}
 
       <Route
@@ -382,7 +383,6 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-
 
       {/* ================= ORDERS ================= */}
 
@@ -397,7 +397,6 @@ export default function App() {
         }
       />
 
-
       {/* ================= COMPANY ================= */}
 
       <Route
@@ -410,7 +409,6 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-
 
       {/* ================= WALLETS ================= */}
 
@@ -425,7 +423,6 @@ export default function App() {
         }
       />
 
-
       {/* ================= FINANCE ================= */}
 
       <Route
@@ -438,7 +435,6 @@ export default function App() {
           </OwnerRoute>
         }
       />
-
 
       {/* ================= DEMAND ANALYTICS ================= */}
 
@@ -453,7 +449,6 @@ export default function App() {
         }
       />
 
-
       {/* ================= SUPPLIERS ================= */}
 
       <Route
@@ -467,7 +462,6 @@ export default function App() {
         }
       />
 
-
       {/* ================= WALLET SETTINGS ================= */}
 
       <Route
@@ -476,7 +470,6 @@ export default function App() {
           <WalletSettings />
         }
       />
-
 
       {/* ================= DEFAULT ================= */}
 
@@ -489,7 +482,6 @@ export default function App() {
           />
         }
       />
-
 
       {/* ================= NOT FOUND ================= */}
 
@@ -507,4 +499,3 @@ export default function App() {
 
   );
 }
-

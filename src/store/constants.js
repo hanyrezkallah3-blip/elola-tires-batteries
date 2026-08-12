@@ -1,9 +1,8 @@
-// src/store/constants.js
-
 /**
  * ==========================================================
  * EL OLA ERP
  * Global Constants
+ *
  * ----------------------------------------------------------
  * This file contains all application constants.
  * Never hard-code values inside stores or components.
@@ -194,6 +193,8 @@ export const PERMISSIONS = {
 
   TRANSFERS: 'transfers',
 
+  TENDERS: 'tenders',
+
   OFFERS: 'offers',
 
   SERVICES: 'services',
@@ -218,11 +219,7 @@ export const PERMISSIONS = {
 
 export const ROLE_PERMISSIONS = {
 
-  [ROLES.OWNER]: ['*'],
-
-  [ROLES.ADMIN]: Object.values(PERMISSIONS),
-
-  [ROLES.MANAGER]: [
+  [ROLES.ADMIN]: [
 
     PERMISSIONS.DASHBOARD,
 
@@ -237,6 +234,8 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.WAREHOUSES,
 
     PERMISSIONS.TRANSFERS,
+
+    PERMISSIONS.TENDERS,
 
     PERMISSIONS.ANALYTICS
 
@@ -268,7 +267,7 @@ export const ROLE_PERMISSIONS = {
 
   ],
 
-  [ROLES.CASHIER]: [
+  [ROLES.SALES]: [
 
     PERMISSIONS.DASHBOARD,
 
@@ -278,7 +277,7 @@ export const ROLE_PERMISSIONS = {
 
   ],
 
-  [ROLES.SALES]: [
+  [ROLES.MANAGER]: [
 
     PERMISSIONS.DASHBOARD,
 
@@ -286,7 +285,9 @@ export const ROLE_PERMISSIONS = {
 
     PERMISSIONS.ORDERS,
 
-    PERMISSIONS.CUSTOMERS
+    PERMISSIONS.CUSTOMERS,
+
+    PERMISSIONS.TENDERS
 
   ],
 
@@ -296,7 +297,11 @@ export const ROLE_PERMISSIONS = {
 
   ],
 
-  [ROLES.CUSTOMER]: []
+  [ROLES.OWNER]: [
+
+    '*'
+
+  ]
 
 }
 
