@@ -1,4 +1,8 @@
-import { initializeApp } from 'firebase/app'
+import {
+  initializeApp,
+  getApps,
+  getApp
+} from 'firebase/app'
 
 import {
   getFirestore
@@ -12,7 +16,10 @@ import {
   getAuth
 } from 'firebase/auth'
 
-// ================= FIREBASE CONFIG =================
+
+// ==================================================
+// FIREBASE CONFIG
+// ==================================================
 
 const firebaseConfig = {
 
@@ -39,12 +46,26 @@ const firebaseConfig = {
 
 }
 
-// ================= INITIALIZE APP =================
+
+// ==================================================
+// INITIALIZE FIREBASE SAFELY
+// ==================================================
+//
+// إذا كان Firebase قد تم تهيئته بالفعل في مكان آخر
+// نستخدم التطبيق الموجود بدلاً من إنشاء DEFAULT APP جديد.
+// هذا يمنع:
+// FirebaseError: app/duplicate-app
+//
 
 const app =
-  initializeApp(firebaseConfig)
+  getApps().length > 0
+    ? getApp()
+    : initializeApp(firebaseConfig)
 
-// ================= FIREBASE SERVICES =================
+
+// ==================================================
+// FIREBASE SERVICES
+// ==================================================
 
 const db =
   getFirestore(app)
@@ -55,16 +76,16 @@ const storage =
 const auth =
   getAuth(app)
 
-// ================= EXPORTS =================
+
+// ==================================================
+// EXPORTS
+// ==================================================
 
 export {
-
+  app,
   db,
-
   storage,
-
   auth
-
 }
 
 export default app

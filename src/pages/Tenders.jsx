@@ -1,129 +1,236 @@
-import { useMemo, useState } from 'react'
-import { useWarehouseStore } from '../store/warehouseStore'
+import {
+  useEffect,
+  useMemo,
+  useState
+} from 'react'
 
-const STORAGE_KEY = 'elola-tenders'
+import { useWarehouseStore } from '../store/warehouseStore'
+import { useTenderStore } from '../store/tenderStore'
+
 
 const EMPTY_FORM = {
+
   name: '',
+
   referenceNumber: '',
+
   description: '',
+
   startDate: '',
+
   endDate: '',
+
   location: '',
+
   authority: '',
+
   status: 'upcoming',
+
   responsiblePerson: '',
+
   responsiblePhone: '',
+
   notes: '',
+
   warehouseId: ''
+
 }
+
+
+// ==================================================
+// HELPERS
+// ==================================================
+
+const generateId = () => {
+
+  if (
+    typeof crypto !== 'undefined' &&
+    crypto.randomUUID
+  ) {
+
+    return crypto.randomUUID()
+
+  }
+
+  return (
+    Date.now().toString() +
+    Math.random()
+      .toString(36)
+      .slice(2)
+  )
+
+}
+
+
+const getDocuments = tender => {
+
+  if (
+    Array.isArray(
+      tender?.documents
+    )
+  ) {
+
+    return tender.documents
+
+  }
+
+  if (
+    Array.isArray(
+      tender?.files
+    )
+  ) {
+
+    return tender.files
+
+  }
+
+  return []
+
+}
+
+
+// ==================================================
+// COMPONENT
+// ==================================================
 
 export default function Tenders() {
 
   const warehouses =
     useWarehouseStore(
-      state => state.warehouses || []
+      state =>
+        state.warehouses || []
     )
 
+
+  const tenders =
+    useTenderStore(
+      state =>
+        state.tenders || []
+    )
+
+
+  const addTender =
+    useTenderStore(
+      state =>
+        state.addTender
+    )
+
+
+  const updateTender =
+    useTenderStore(
+      state =>
+        state.updateTender
+    )
+
+
+  const deleteTender =
+    useTenderStore(
+      state =>
+        state.deleteTender
+    )
+
+
+  const uploadTenderDocument =
+    useTenderStore(
+      state =>
+        state.uploadTenderDocument
+    )
+
+
+  const deleteTenderDocument =
+    useTenderStore(
+      state =>
+        state.deleteTenderDocument
+    )
+
+
+  const getTenderAlerts =
+    useTenderStore(
+      state =>
+        state.getTenderAlerts
+    )
+
+
+  const normalizeAllTenders =
+    useTenderStore(
+      state =>
+        state.normalizeAllTenders
+    )
+
+
   // ==================================================
-  // TENDERS
+  // STATE
   // ==================================================
 
-  const [tenders, setTenders] = useState(() => {
-
-    try {
-
-      const saved =
-        localStorage.getItem(
-          STORAGE_KEY
-        )
-
-      if (!saved) {
-        return []
-      }
-
-      const parsed =
-        JSON.parse(saved)
-
-      return Array.isArray(parsed)
-        ? parsed
-        : []
-
-    } catch (error) {
-
-      console.error(
-        'Failed to load tenders:',
-        error
-      )
-
-      return []
-
-    }
-
+  const [
+    form,
+    setForm
+  ] = useState({
+    ...EMPTY_FORM
   })
 
+
+  const [
+    showForm,
+    setShowForm
+  ] = useState(false)
+
+
+  const [
+    editingId,
+    setEditingId
+  ] = useState(null)
+
+
+  const [
+    search,
+    setSearch
+  ] = useState('')
+
+
+  const [
+    filter,
+    setFilter
+  ] = useState('all')
+
+
+  const [
+    selectedFiles,
+    setSelectedFiles
+  ] = useState([])
+
+
+  const [
+    uploading,
+    setUploading
+  ] = useState(false)
+
+
   // ==================================================
-  // FORM
+  // NORMALIZE OLD DATA
   // ==================================================
 
-  const [form, setForm] =
-    useState({
-      ...EMPTY_FORM
-    })
+  useEffect(() => {
 
-  const [showForm, setShowForm] =
-    useState(false)
+    if (
+      typeof normalizeAllTenders ===
+      'function'
+    ) {
 
-  const [search, setSearch] =
-    useState('')
-
-  const [filter, setFilter] =
-    useState('all')
-
-  // ==================================================
-  // FILES
-  // ==================================================
-
-  const [selectedFiles, setSelectedFiles] =
-    useState([])
-
-  // ==================================================
-  // SAVE TENDERS
-  // ==================================================
-
-  const saveTenders = (nextTenders) => {
-
-    setTenders(nextTenders)
-
-    try {
-
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(
-          nextTenders
-        )
-      )
-
-    } catch (error) {
-
-      console.error(
-        'Failed to save tenders:',
-        error
-      )
-
-      alert(
-        'تعذر حفظ المناقصة. قد تكون الملفات المرفوعة كبيرة جداً بالنسبة للتخزين المحلي.'
-      )
+      normalizeAllTenders()
 
     }
 
-  }
+  }, [
+    normalizeAllTenders
+  ])
+
 
   // ==================================================
   // FORM CHANGE
   // ==================================================
 
-  const handleChange = (e) => {
+  const handleChange = e => {
 
     const {
       name,
@@ -132,214 +239,235 @@ export default function Tenders() {
 
     setForm(prev => ({
       ...prev,
-      [name]: value
+      [name]:
+        value
     }))
+
   }
 
-  // ==================================================
-  // FILE TO DATA URL
-  // ==================================================
-
-  const fileToDataUrl = (file) => {
-
-    return new Promise(
-      (resolve, reject) => {
-
-        const reader =
-          new FileReader()
-
-        reader.onload = () =>
-          resolve(
-            reader.result
-          )
-
-        reader.onerror = () =>
-          reject(
-            reader.error
-          )
-
-        reader.readAsDataURL(
-          file
-        )
-
-      }
-    )
-  }
 
   // ==================================================
-  // ADD FILES
+  // FILE SELECT
   // ==================================================
 
-  const handleFilesChange = async (e) => {
+  const handleFilesChange = e => {
 
     const files =
       Array.from(
         e.target.files || []
       )
 
-    if (!files.length) {
+    if (
+      !files.length
+    ) {
+
       return
-    }
-
-    try {
-
-      const convertedFiles =
-        await Promise.all(
-
-          files.map(
-            async file => {
-
-              const dataUrl =
-                await fileToDataUrl(
-                  file
-                )
-
-              return {
-
-                id:
-                  crypto.randomUUID(),
-
-                name:
-                  file.name,
-
-                type:
-                  file.type ||
-                  'application/octet-stream',
-
-                size:
-                  file.size,
-
-                dataUrl
-
-              }
-
-            }
-          )
-
-        )
-
-      setSelectedFiles(
-        prev => [
-          ...prev,
-          ...convertedFiles
-        ]
-      )
-
-    } catch (error) {
-
-      console.error(
-        'File upload error:',
-        error
-      )
-
-      alert(
-        'حدث خطأ أثناء قراءة أحد الملفات.'
-      )
 
     }
+
+    const converted =
+      files.map(file => ({
+
+        id:
+          generateId(),
+
+        file,
+
+        name:
+          file.name,
+
+        type:
+          file.type ||
+          'application/octet-stream',
+
+        size:
+          file.size
+
+      }))
+
+
+    setSelectedFiles(
+      prev => [
+        ...prev,
+        ...converted
+      ]
+    )
+
 
     e.target.value = ''
 
   }
 
+
   // ==================================================
   // REMOVE SELECTED FILE
   // ==================================================
 
-  const removeSelectedFile = (fileId) => {
+  const removeSelectedFile = id => {
 
     setSelectedFiles(
       prev =>
         prev.filter(
           file =>
-            file.id !== fileId
+            file.id !== id
         )
     )
 
   }
 
+
   // ==================================================
-  // REMOVE SAVED TENDER FILE
+  // RESET FORM
   // ==================================================
 
-  const removeTenderFile = (
-    tenderId,
-    fileId
-  ) => {
+  const resetForm = () => {
 
-    const nextTenders =
-      tenders.map(
-        tender => {
+    setForm({
+      ...EMPTY_FORM
+    })
 
-          if (
-            tender.id !== tenderId
-          ) {
-            return tender
-          }
+    setSelectedFiles([])
 
-          return {
+    setEditingId(null)
 
-            ...tender,
-
-            files:
-              (tender.files || [])
-                .filter(
-                  file =>
-                    file.id !== fileId
-                ),
-
-            updatedAt:
-              new Date().toISOString()
-
-          }
-
-        }
-      )
-
-    saveTenders(
-      nextTenders
-    )
+    setShowForm(false)
 
   }
 
+
   // ==================================================
-  // CREATE TENDER
+  // EDIT TENDER
   // ==================================================
 
-  const handleSubmit = (e) => {
+  const handleEdit = tender => {
+
+    setForm({
+
+      name:
+        tender.name ||
+        tender.title ||
+        '',
+
+      referenceNumber:
+        tender.referenceNumber ||
+        '',
+
+      description:
+        tender.description ||
+        '',
+
+      startDate:
+        tender.startDate ||
+        '',
+
+      endDate:
+        tender.endDate ||
+        '',
+
+      location:
+        tender.location ||
+        '',
+
+      authority:
+        tender.authority ||
+        '',
+
+      status:
+        tender.status ||
+        'upcoming',
+
+      responsiblePerson:
+        tender.responsiblePerson ||
+        '',
+
+      responsiblePhone:
+        tender.responsiblePhone ||
+        '',
+
+      notes:
+        tender.notes ||
+        '',
+
+      warehouseId:
+        tender.warehouseId ||
+        ''
+
+    })
+
+
+    setEditingId(
+      tender.id
+    )
+
+
+    setSelectedFiles([])
+
+    setShowForm(true)
+
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    })
+
+  }
+
+
+  // ==================================================
+  // SUBMIT
+  // ==================================================
+
+  const handleSubmit = async e => {
 
     e.preventDefault()
 
-    if (!form.name.trim()) {
+
+    if (
+      !form.name.trim()
+    ) {
 
       alert(
         'اسم المناقصة مطلوب'
       )
 
       return
+
     }
 
-    if (!form.startDate) {
+
+    if (
+      !form.startDate
+    ) {
 
       alert(
         'تاريخ بدء المناقصة مطلوب'
       )
 
       return
+
     }
 
-    if (!form.endDate) {
+
+    if (
+      !form.endDate
+    ) {
 
       alert(
         'تاريخ انتهاء المناقصة مطلوب'
       )
 
       return
+
     }
 
+
     if (
-      new Date(form.endDate) <
-      new Date(form.startDate)
+      new Date(
+        form.endDate
+      ) <
+      new Date(
+        form.startDate
+      )
     ) {
 
       alert(
@@ -347,7 +475,9 @@ export default function Tenders() {
       )
 
       return
+
     }
+
 
     const warehouse =
       warehouses.find(
@@ -356,78 +486,227 @@ export default function Tenders() {
           String(form.warehouseId)
       )
 
-    const tender = {
 
-      id:
-        crypto.randomUUID(),
+    const data = {
 
       ...form,
 
+      title:
+        form.name,
+
+      name:
+        form.name,
+
       warehouseName:
-        warehouse?.name || '',
+        warehouse?.name ||
+        '',
 
-      files:
-        selectedFiles,
+      responsiblePersons:
+        form.responsiblePerson
+          ? [
+              {
 
-      createdAt:
-        new Date().toISOString(),
+                name:
+                  form.responsiblePerson,
 
-      updatedAt:
-        new Date().toISOString()
+                phone:
+                  form.responsiblePhone ||
+                  ''
+
+              }
+            ]
+          : []
 
     }
 
-    const nextTenders = [
-      tender,
-      ...tenders
-    ]
 
-    saveTenders(
-      nextTenders
-    )
+    try {
 
-    setForm({
-      ...EMPTY_FORM
-    })
+      setUploading(true)
 
-    setSelectedFiles([])
 
-    setShowForm(false)
+      let tender
 
-    alert(
-      'تم إنشاء المناقصة بنجاح'
-    )
+
+      // ==================================================
+      // UPDATE
+      // ==================================================
+
+      if (
+        editingId
+      ) {
+
+        tender =
+          updateTender(
+            editingId,
+            data
+          )
+
+      }
+
+
+      // ==================================================
+      // CREATE
+      // ==================================================
+
+      else {
+
+        tender =
+          addTender(
+            data
+          )
+
+      }
+
+
+      // ==================================================
+      // UPLOAD FILES
+      // ==================================================
+
+      if (
+        tender &&
+        selectedFiles.length > 0
+      ) {
+
+        for (
+          const selected
+          of selectedFiles
+        ) {
+
+          await uploadTenderDocument(
+
+            tender.id,
+
+            selected.file
+
+          )
+
+        }
+
+      }
+
+
+      alert(
+        editingId
+          ? 'تم تعديل المناقصة ورفع المستندات بنجاح'
+          : 'تم إنشاء المناقصة ورفع المستندات بنجاح'
+      )
+
+
+      resetForm()
+
+
+    } catch (error) {
+
+      console.error(
+        'Tender save error:',
+        error
+      )
+
+
+      alert(
+        error?.message ||
+        'حدث خطأ أثناء حفظ المناقصة'
+      )
+
+
+    } finally {
+
+      setUploading(false)
+
+    }
 
   }
+
 
   // ==================================================
   // DELETE TENDER
   // ==================================================
 
-  const handleDelete = (id) => {
+  const handleDelete = async id => {
 
     if (
       !window.confirm(
-        'هل تريد حذف هذه المناقصة؟'
+        'هل تريد حذف هذه المناقصة وجميع مستنداتها؟'
       )
     ) {
+
       return
+
     }
 
-    const nextTenders =
-      tenders.filter(
-        tender =>
-          tender.id !== id
+
+    try {
+
+      await deleteTender(id)
+
+    } catch (error) {
+
+      console.error(
+        'Tender delete error:',
+        error
       )
 
-    saveTenders(
-      nextTenders
-    )
+
+      alert(
+        'حدث خطأ أثناء حذف المناقصة'
+      )
+
+    }
 
   }
 
+
   // ==================================================
-  // FILTER
+  // DELETE DOCUMENT
+  // ==================================================
+
+  const handleDeleteDocument = async (
+    tenderId,
+    documentId
+  ) => {
+
+    if (
+      !window.confirm(
+        'هل تريد حذف هذا المستند؟'
+      )
+    ) {
+
+      return
+
+    }
+
+
+    try {
+
+      await deleteTenderDocument(
+
+        tenderId,
+
+        documentId
+
+      )
+
+    } catch (error) {
+
+      console.error(
+        'Document delete error:',
+        error
+      )
+
+
+      alert(
+        error?.message ||
+        'تعذر حذف المستند'
+      )
+
+    }
+
+  }
+
+
+  // ==================================================
+  // SEARCH / FILTER
   // ==================================================
 
   const filteredTenders =
@@ -435,38 +714,58 @@ export default function Tenders() {
 
       const value =
         search
-          .toLowerCase()
           .trim()
+          .toLowerCase()
+
 
       return tenders.filter(
         tender => {
 
           const matchesSearch =
             !value ||
+
             String(
-              tender.name || ''
+              tender.name ||
+              tender.title ||
+              ''
             )
               .toLowerCase()
               .includes(value) ||
+
             String(
-              tender.referenceNumber || ''
+              tender.referenceNumber ||
+              ''
             )
               .toLowerCase()
               .includes(value) ||
+
             String(
-              tender.location || ''
+              tender.location ||
+              ''
             )
               .toLowerCase()
               .includes(value) ||
+
             String(
-              tender.authority || ''
+              tender.authority ||
+              ''
+            )
+              .toLowerCase()
+              .includes(value) ||
+
+            String(
+              tender.warehouseName ||
+              ''
             )
               .toLowerCase()
               .includes(value)
 
+
           const matchesFilter =
             filter === 'all' ||
-            tender.status === filter
+            tender.status ===
+              filter
+
 
           return (
             matchesSearch &&
@@ -482,73 +781,116 @@ export default function Tenders() {
       filter
     ])
 
+
   // ==================================================
-  // UPCOMING ALERT
+  // ALERTS
   // ==================================================
 
   const upcomingTenders =
     useMemo(() => {
 
-      const now =
-        new Date()
+      if (
+        typeof getTenderAlerts !==
+        'function'
+      ) {
 
-      const twoDays =
-        new Date()
+        return []
 
-      twoDays.setDate(
-        twoDays.getDate() + 2
-      )
+      }
 
-      return tenders.filter(
-        tender => {
+      return getTenderAlerts()
 
-          if (
-            !tender.startDate
-          ) {
-            return false
-          }
+    }, [
+      tenders,
+      getTenderAlerts
+    ])
 
-          const start =
-            new Date(
-              tender.startDate
-            )
-
-          return (
-            start >= now &&
-            start <= twoDays
-          )
-
-        }
-      )
-
-    }, [tenders])
 
   // ==================================================
-  // STATUS
+  // DAYS REMAINING
   // ==================================================
 
-  const getStatus = (
-    tender
-  ) => {
+  const getDaysRemaining = tender => {
 
-    const today =
+    if (
+      !tender.startDate
+    ) {
+
+      return null
+
+    }
+
+
+    const now =
       new Date()
+
 
     const start =
       new Date(
         tender.startDate
       )
 
+
+    const difference =
+      start.getTime() -
+      now.getTime()
+
+
+    if (
+      difference < 0
+    ) {
+
+      return null
+
+    }
+
+
+    return Math.ceil(
+
+      difference /
+
+      (
+        1000 *
+        60 *
+        60 *
+        24
+      )
+
+    )
+
+  }
+
+
+  // ==================================================
+  // STATUS
+  // ==================================================
+
+  const getStatus = tender => {
+
+    const today =
+      new Date()
+
+
+    const start =
+      new Date(
+        tender.startDate
+      )
+
+
     const end =
       new Date(
         tender.endDate
       )
 
-    if (today < start) {
+
+    if (
+      today < start
+    ) {
 
       return {
 
-        text: 'قادمة',
+        text:
+          'قادمة',
 
         className:
           'bg-blue-500/20 text-blue-300 border-blue-500/30'
@@ -557,6 +899,7 @@ export default function Tenders() {
 
     }
 
+
     if (
       today >= start &&
       today <= end
@@ -564,7 +907,8 @@ export default function Tenders() {
 
       return {
 
-        text: 'جارية',
+        text:
+          'جارية',
 
         className:
           'bg-green-500/20 text-green-300 border-green-500/30'
@@ -573,9 +917,11 @@ export default function Tenders() {
 
     }
 
+
     return {
 
-      text: 'منتهية',
+      text:
+        'منتهية',
 
       className:
         'bg-red-500/20 text-red-300 border-red-500/30'
@@ -584,48 +930,71 @@ export default function Tenders() {
 
   }
 
+
   // ==================================================
   // FORMAT DATE
   // ==================================================
 
-  const formatDate = (
-    value
-  ) => {
+  const formatDate = value => {
 
-    if (!value) {
+    if (
+      !value
+    ) {
+
       return '-'
+
     }
+
 
     return new Date(
       value
     ).toLocaleDateString(
       'ar-EG',
       {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
+
+        year:
+          'numeric',
+
+        month:
+          'long',
+
+        day:
+          'numeric'
+
       }
     )
 
   }
 
+
   // ==================================================
-  // FORMAT FILE SIZE
+  // FORMAT SIZE
   // ==================================================
 
-  const formatFileSize = (
-    bytes
-  ) => {
+  const formatFileSize = bytes => {
 
-    if (!bytes) {
+    if (
+      !bytes
+    ) {
+
       return '0 KB'
+
     }
 
-    if (bytes < 1024) {
+
+    if (
+      bytes < 1024
+    ) {
+
       return `${bytes} B`
+
     }
 
-    if (bytes < 1024 * 1024) {
+
+    if (
+      bytes <
+      1024 * 1024
+    ) {
 
       return `${(
         bytes / 1024
@@ -633,12 +1002,17 @@ export default function Tenders() {
 
     }
 
+
     return `${(
       bytes /
-      (1024 * 1024)
+      (
+        1024 *
+        1024
+      )
     ).toFixed(1)} MB`
 
   }
+
 
   // ==================================================
   // FILE ICON
@@ -652,48 +1026,116 @@ export default function Tenders() {
     const lowerName =
       String(
         name || ''
-      ).toLowerCase()
+      )
+        .toLowerCase()
+
 
     if (
-      type === 'application/pdf' ||
-      lowerName.endsWith('.pdf')
+      type ===
+        'application/pdf' ||
+      lowerName.endsWith(
+        '.pdf'
+      )
     ) {
+
       return '📕'
+
     }
 
+
     if (
-      type.startsWith('image/')
+      String(
+        type || ''
+      ).startsWith(
+        'image/'
+      )
     ) {
+
       return '🖼️'
+
     }
 
+
     if (
-      type.includes('word') ||
-      lowerName.endsWith('.doc') ||
-      lowerName.endsWith('.docx')
+      String(
+        type || ''
+      ).includes(
+        'word'
+      ) ||
+      lowerName.endsWith(
+        '.doc'
+      ) ||
+      lowerName.endsWith(
+        '.docx'
+      )
     ) {
+
       return '📘'
+
     }
 
+
     if (
-      type.includes('excel') ||
-      type.includes('spreadsheet') ||
-      lowerName.endsWith('.xls') ||
-      lowerName.endsWith('.xlsx')
+      String(
+        type || ''
+      ).includes(
+        'excel'
+      ) ||
+      String(
+        type || ''
+      ).includes(
+        'spreadsheet'
+      ) ||
+      lowerName.endsWith(
+        '.xls'
+      ) ||
+      lowerName.endsWith(
+        '.xlsx'
+      )
     ) {
+
       return '📗'
+
     }
 
+
     if (
-      type.includes('zip') ||
-      type.includes('compressed')
+      String(
+        type || ''
+      ).includes(
+        'zip'
+      ) ||
+      String(
+        type || ''
+      ).includes(
+        'compressed'
+      )
     ) {
+
       return '🗜️'
+
     }
+
 
     return '📄'
 
   }
+
+
+  // ==================================================
+  // DOCUMENT URL
+  // ==================================================
+
+  const getDocumentUrl = document => {
+
+    return (
+      document?.downloadURL ||
+      document?.dataUrl ||
+      ''
+    )
+
+  }
+
 
   // ==================================================
   // UI
@@ -751,13 +1193,24 @@ export default function Tenders() {
 
           </div>
 
+
           <button
             type="button"
-            onClick={() =>
-              setShowForm(
-                prev => !prev
-              )
-            }
+            onClick={() => {
+
+              if (
+                showForm
+              ) {
+
+                resetForm()
+
+              } else {
+
+                setShowForm(true)
+
+              }
+
+            }}
             className="
               bg-yellow-500
               hover:bg-yellow-400
@@ -780,6 +1233,7 @@ export default function Tenders() {
 
       </div>
 
+
       {/* ALERT */}
 
       {upcomingTenders.length > 0 && (
@@ -790,6 +1244,7 @@ export default function Tenders() {
           border-red-500
           rounded-3xl
           p-6
+          shadow-xl
         ">
 
           <div className="
@@ -798,9 +1253,10 @@ export default function Tenders() {
             font-black
           ">
 
-            🔔 تنبيه المناقصات
+            🚨 جهاز إنذار المناقصات
 
           </div>
+
 
           <div className="
             mt-3
@@ -808,16 +1264,109 @@ export default function Tenders() {
             font-bold
           ">
 
-            توجد {upcomingTenders.length}
+            توجد{' '}
+            {upcomingTenders.length}
             {' '}
-            مناقصة تبدأ خلال يومين.
+            مناقصة تبدأ خلال يومين أو أقل.
+
+          </div>
+
+
+          <div className="
+            mt-5
+            space-y-3
+          ">
+
+            {upcomingTenders.map(
+              tender => {
+
+                const days =
+                  getDaysRemaining(
+                    tender
+                  )
+
+
+                return (
+
+                  <div
+                    key={
+                      tender.id
+                    }
+                    className="
+                      bg-red-950/50
+                      border
+                      border-red-500/40
+                      rounded-2xl
+                      p-4
+                      flex
+                      items-center
+                      justify-between
+                      gap-4
+                      flex-wrap
+                    "
+                  >
+
+                    <div>
+
+                      <div className="
+                        font-black
+                        text-white
+                        text-lg
+                      ">
+
+                        {tender.name ||
+                         tender.title ||
+                         '-'}
+
+                      </div>
+
+
+                      <div className="
+                        text-red-200
+                        text-sm
+                        mt-1
+                      ">
+
+                        موعد البدء:
+                        {' '}
+                        {formatDate(
+                          tender.startDate
+                        )}
+
+                      </div>
+
+                    </div>
+
+
+                    <div className="
+                      bg-red-600
+                      text-white
+                      px-4
+                      py-2
+                      rounded-xl
+                      font-black
+                    ">
+
+                      {days === 0
+                        ? 'اليوم'
+                        : days === 1
+                          ? 'باقي يوم واحد'
+                          : `باقي ${days} يوم`}
+
+                    </div>
+
+                  </div>
+
+                )
+
+              }
+            )}
 
           </div>
 
         </div>
 
       )}
-
       {/* FORM */}
 
       {showForm && (
@@ -831,18 +1380,56 @@ export default function Tenders() {
             rounded-[30px]
             p-8
             space-y-6
+            shadow-2xl
           "
         >
 
-          <h2 className="
-            text-3xl
-            font-black
-            text-yellow-400
+          <div className="
+            flex
+            items-center
+            justify-between
+            gap-4
+            flex-wrap
           ">
 
-            بيانات المناقصة
+            <h2 className="
+              text-3xl
+              font-black
+              text-yellow-400
+            ">
 
-          </h2>
+              {editingId
+                ? 'تعديل المناقصة'
+                : 'بيانات المناقصة'}
+
+            </h2>
+
+
+            {editingId && (
+
+              <button
+                type="button"
+                onClick={resetForm}
+                className="
+                  bg-slate-700
+                  hover:bg-slate-600
+                  px-5
+                  py-3
+                  rounded-xl
+                  font-black
+                "
+              >
+
+                إلغاء التعديل
+
+              </button>
+
+            )}
+
+          </div>
+
+
+          {/* BASIC DATA */}
 
           <div className="
             grid
@@ -862,8 +1449,12 @@ export default function Tenders() {
                 bg-white
                 text-black
                 font-bold
+                outline-none
+                focus:ring-2
+                focus:ring-yellow-400
               "
             />
+
 
             <input
               name="referenceNumber"
@@ -878,13 +1469,19 @@ export default function Tenders() {
                 bg-white
                 text-black
                 font-bold
+                outline-none
+                focus:ring-2
+                focus:ring-yellow-400
               "
             />
+
 
             <input
               type="date"
               name="startDate"
-              value={form.startDate}
+              value={
+                form.startDate
+              }
               onChange={handleChange}
               className="
                 p-4
@@ -892,13 +1489,19 @@ export default function Tenders() {
                 bg-white
                 text-black
                 font-bold
+                outline-none
+                focus:ring-2
+                focus:ring-yellow-400
               "
             />
+
 
             <input
               type="date"
               name="endDate"
-              value={form.endDate}
+              value={
+                form.endDate
+              }
               onChange={handleChange}
               className="
                 p-4
@@ -906,12 +1509,18 @@ export default function Tenders() {
                 bg-white
                 text-black
                 font-bold
+                outline-none
+                focus:ring-2
+                focus:ring-yellow-400
               "
             />
 
+
             <input
               name="location"
-              value={form.location}
+              value={
+                form.location
+              }
               onChange={handleChange}
               placeholder="مكان المناقصة"
               className="
@@ -920,12 +1529,18 @@ export default function Tenders() {
                 bg-white
                 text-black
                 font-bold
+                outline-none
+                focus:ring-2
+                focus:ring-yellow-400
               "
             />
 
+
             <input
               name="authority"
-              value={form.authority}
+              value={
+                form.authority
+              }
               onChange={handleChange}
               placeholder="الجهة صاحبة المناقصة"
               className="
@@ -934,8 +1549,12 @@ export default function Tenders() {
                 bg-white
                 text-black
                 font-bold
+                outline-none
+                focus:ring-2
+                focus:ring-yellow-400
               "
             />
+
 
             <input
               name="responsiblePerson"
@@ -950,8 +1569,12 @@ export default function Tenders() {
                 bg-white
                 text-black
                 font-bold
+                outline-none
+                focus:ring-2
+                focus:ring-yellow-400
               "
             />
+
 
             <input
               name="responsiblePhone"
@@ -966,12 +1589,20 @@ export default function Tenders() {
                 bg-white
                 text-black
                 font-bold
+                outline-none
+                focus:ring-2
+                focus:ring-yellow-400
               "
             />
 
+
+            {/* WAREHOUSE */}
+
             <select
               name="warehouseId"
-              value={form.warehouseId}
+              value={
+                form.warehouseId
+              }
               onChange={handleChange}
               className="
                 p-4
@@ -979,12 +1610,16 @@ export default function Tenders() {
                 bg-white
                 text-black
                 font-bold
+                outline-none
+                focus:ring-2
+                focus:ring-yellow-400
               "
             >
 
               <option value="">
                 ربط المناقصة بالمخزن
               </option>
+
 
               {warehouses.map(
                 warehouse => (
@@ -1007,9 +1642,14 @@ export default function Tenders() {
 
             </select>
 
+
+            {/* STATUS */}
+
             <select
               name="status"
-              value={form.status}
+              value={
+                form.status
+              }
               onChange={handleChange}
               className="
                 p-4
@@ -1017,6 +1657,9 @@ export default function Tenders() {
                 bg-white
                 text-black
                 font-bold
+                outline-none
+                focus:ring-2
+                focus:ring-yellow-400
               "
             >
 
@@ -1036,11 +1679,41 @@ export default function Tenders() {
 
           </div>
 
+
+          {/* DESCRIPTION */}
+
           <textarea
             name="description"
-            value={form.description}
+            value={
+              form.description
+            }
             onChange={handleChange}
             placeholder="وصف المناقصة وتفاصيلها"
+            rows={5}
+            className="
+              w-full
+              p-4
+              rounded-2xl
+              bg-white
+              text-black
+              font-bold
+              outline-none
+              resize-y
+              focus:ring-2
+              focus:ring-yellow-400
+            "
+          />
+
+
+          {/* NOTES */}
+
+          <textarea
+            name="notes"
+            value={
+              form.notes
+            }
+            onChange={handleChange}
+            placeholder="ملاحظات إضافية"
             rows={4}
             className="
               w-full
@@ -1049,24 +1722,13 @@ export default function Tenders() {
               bg-white
               text-black
               font-bold
+              outline-none
+              resize-y
+              focus:ring-2
+              focus:ring-yellow-400
             "
           />
 
-          <textarea
-            name="notes"
-            value={form.notes}
-            onChange={handleChange}
-            placeholder="ملاحظات إضافية"
-            rows={3}
-            className="
-              w-full
-              p-4
-              rounded-2xl
-              bg-white
-              text-black
-              font-bold
-            "
-          />
 
           {/* DOCUMENTS */}
 
@@ -1091,17 +1753,23 @@ export default function Tenders() {
 
               </h3>
 
+
               <p className="
                 text-gray-400
                 mt-2
+                leading-7
               ">
 
                 يمكنك رفع كراسة الشروط أو PDF
-                أو الصور أو أي مستندات مرتبطة بالمناقصة.
+                أو الصور أو ملفات Word وExcel
+                أو أي مستندات مرتبطة بالمناقصة.
 
               </p>
 
             </div>
+
+
+            {/* FILE INPUT */}
 
             <label className="
               block
@@ -1110,6 +1778,7 @@ export default function Tenders() {
               border-dashed
               border-yellow-500/50
               hover:border-yellow-400
+              hover:bg-yellow-500/5
               rounded-2xl
               p-8
               text-center
@@ -1123,16 +1792,21 @@ export default function Tenders() {
                   handleFilesChange
                 }
                 className="hidden"
+                disabled={
+                  uploading
+                }
               />
 
+
               <div className="
-                text-4xl
+                text-5xl
                 mb-3
               ">
 
                 📤
 
               </div>
+
 
               <div className="
                 text-xl
@@ -1143,17 +1817,21 @@ export default function Tenders() {
 
               </div>
 
+
               <div className="
                 text-sm
                 text-gray-500
                 mt-2
               ">
 
-                يمكن اختيار أكثر من ملف
+                يمكن اختيار أكثر من ملف في نفس الوقت
 
               </div>
 
             </label>
+
+
+            {/* SELECTED FILES */}
 
             {selectedFiles.length > 0 && (
 
@@ -1164,6 +1842,7 @@ export default function Tenders() {
                 <div className="
                   font-black
                   text-lg
+                  text-white
                 ">
 
                   الملفات المختارة:
@@ -1172,11 +1851,14 @@ export default function Tenders() {
 
                 </div>
 
+
                 {selectedFiles.map(
                   file => (
 
                     <div
-                      key={file.id}
+                      key={
+                        file.id
+                      }
                       className="
                         bg-slate-900
                         border
@@ -1195,9 +1877,12 @@ export default function Tenders() {
                         flex
                         items-center
                         gap-3
+                        min-w-0
                       ">
 
-                        <span className="text-3xl">
+                        <span className="
+                          text-3xl
+                        ">
 
                           {getFileIcon(
                             file.type,
@@ -1206,7 +1891,10 @@ export default function Tenders() {
 
                         </span>
 
-                        <div>
+
+                        <div className="
+                          min-w-0
+                        ">
 
                           <div className="
                             font-bold
@@ -1217,9 +1905,11 @@ export default function Tenders() {
 
                           </div>
 
+
                           <div className="
                             text-sm
                             text-gray-500
+                            mt-1
                           ">
 
                             {formatFileSize(
@@ -1232,8 +1922,12 @@ export default function Tenders() {
 
                       </div>
 
+
                       <button
                         type="button"
+                        disabled={
+                          uploading
+                        }
                         onClick={() =>
                           removeSelectedFile(
                             file.id
@@ -1242,6 +1936,7 @@ export default function Tenders() {
                         className="
                           bg-red-600
                           hover:bg-red-500
+                          disabled:opacity-50
                           px-4
                           py-2
                           rounded-xl
@@ -1264,26 +1959,40 @@ export default function Tenders() {
 
           </div>
 
+
+          {/* SAVE */}
+
           <button
             type="submit"
+            disabled={
+              uploading
+            }
             className="
               w-full
               bg-green-600
               hover:bg-green-500
+              disabled:bg-slate-700
+              disabled:text-gray-400
               py-5
               rounded-2xl
               font-black
               text-xl
+              transition
             "
           >
 
-            حفظ المناقصة
+            {uploading
+              ? '⏳ جارٍ حفظ المناقصة ورفع المستندات...'
+              : editingId
+                ? '💾 حفظ تعديلات المناقصة'
+                : '💾 حفظ المناقصة'}
 
           </button>
 
         </form>
 
       )}
+
 
       {/* SEARCH */}
 
@@ -1299,7 +2008,9 @@ export default function Tenders() {
       ">
 
         <input
-          value={search}
+          value={
+            search
+          }
           onChange={e =>
             setSearch(
               e.target.value
@@ -1314,11 +2025,17 @@ export default function Tenders() {
             bg-white
             text-black
             font-bold
+            outline-none
+            focus:ring-2
+            focus:ring-yellow-400
           "
         />
 
+
         <select
-          value={filter}
+          value={
+            filter
+          }
           onChange={e =>
             setFilter(
               e.target.value
@@ -1330,6 +2047,9 @@ export default function Tenders() {
             bg-white
             text-black
             font-bold
+            outline-none
+            focus:ring-2
+            focus:ring-yellow-400
           "
         >
 
@@ -1337,13 +2057,16 @@ export default function Tenders() {
             كل المناقصات
           </option>
 
+
           <option value="upcoming">
             القادمة
           </option>
 
+
           <option value="active">
             الجارية
           </option>
+
 
           <option value="closed">
             المنتهية
@@ -1353,7 +2076,8 @@ export default function Tenders() {
 
       </div>
 
-      {/* TENDERS */}
+
+      {/* EMPTY */}
 
       {filteredTenders.length === 0 ? (
 
@@ -1369,7 +2093,9 @@ export default function Tenders() {
           font-black
         ">
 
-          لا توجد مناقصات حالياً
+          {search
+            ? 'لا توجد نتائج مطابقة للبحث'
+            : 'لا توجد مناقصات حالياً'}
 
         </div>
 
@@ -1390,13 +2116,19 @@ export default function Tenders() {
                   tender
                 )
 
+
               const tenderFiles =
-                tender.files || []
+                getDocuments(
+                  tender
+                )
+
 
               return (
 
                 <div
-                  key={tender.id}
+                  key={
+                    tender.id
+                  }
                   className="
                     bg-slate-900
                     border
@@ -1408,6 +2140,8 @@ export default function Tenders() {
                   "
                 >
 
+                  {/* CARD HEADER */}
+
                   <div className="
                     flex
                     justify-between
@@ -1415,15 +2149,39 @@ export default function Tenders() {
                     flex-wrap
                   ">
 
-                    <h2 className="
-                      text-2xl
-                      font-black
-                      text-yellow-400
-                    ">
+                    <div>
 
-                      {tender.name}
+                      <h2 className="
+                        text-2xl
+                        font-black
+                        text-yellow-400
+                      ">
 
-                    </h2>
+                        {tender.name ||
+                         tender.title ||
+                         'مناقصة بدون اسم'}
+
+                      </h2>
+
+
+                      {tender.referenceNumber && (
+
+                        <div className="
+                          text-gray-500
+                          text-sm
+                          mt-2
+                        ">
+
+                          رقم:
+                          {' '}
+                          {tender.referenceNumber}
+
+                        </div>
+
+                      )}
+
+                    </div>
+
 
                     <span className={`
                       px-4
@@ -1431,6 +2189,7 @@ export default function Tenders() {
                       rounded-xl
                       border
                       font-black
+                      h-fit
                       ${status.className}
                     `}>
 
@@ -1440,6 +2199,9 @@ export default function Tenders() {
 
                   </div>
 
+
+                  {/* DATA */}
+
                   <div className="
                     grid
                     grid-cols-1
@@ -1448,85 +2210,203 @@ export default function Tenders() {
                   ">
 
                     <div>
-                      <span className="text-gray-500">
+
+                      <span className="
+                        text-gray-500
+                        text-sm
+                      ">
+
                         رقم المناقصة
+
                       </span>
-                      <div className="font-bold">
-                        {tender.referenceNumber || '-'}
+
+                      <div className="
+                        font-bold
+                        mt-1
+                      ">
+
+                        {tender.referenceNumber ||
+                         '-'}
+
                       </div>
+
                     </div>
 
+
                     <div>
-                      <span className="text-gray-500">
+
+                      <span className="
+                        text-gray-500
+                        text-sm
+                      ">
+
                         الجهة
+
                       </span>
-                      <div className="font-bold">
-                        {tender.authority || '-'}
+
+                      <div className="
+                        font-bold
+                        mt-1
+                      ">
+
+                        {tender.authority ||
+                         '-'}
+
                       </div>
+
                     </div>
 
+
                     <div>
-                      <span className="text-gray-500">
+
+                      <span className="
+                        text-gray-500
+                        text-sm
+                      ">
+
                         تاريخ البدء
+
                       </span>
-                      <div className="font-bold">
+
+                      <div className="
+                        font-bold
+                        mt-1
+                      ">
+
                         {formatDate(
                           tender.startDate
                         )}
+
                       </div>
+
                     </div>
 
+
                     <div>
-                      <span className="text-gray-500">
+
+                      <span className="
+                        text-gray-500
+                        text-sm
+                      ">
+
                         تاريخ الانتهاء
+
                       </span>
-                      <div className="font-bold">
+
+                      <div className="
+                        font-bold
+                        mt-1
+                      ">
+
                         {formatDate(
                           tender.endDate
                         )}
+
                       </div>
+
                     </div>
 
+
                     <div>
-                      <span className="text-gray-500">
+
+                      <span className="
+                        text-gray-500
+                        text-sm
+                      ">
+
                         المكان
+
                       </span>
-                      <div className="font-bold">
-                        {tender.location || '-'}
+
+                      <div className="
+                        font-bold
+                        mt-1
+                      ">
+
+                        {tender.location ||
+                         '-'}
+
                       </div>
+
                     </div>
 
+
                     <div>
-                      <span className="text-gray-500">
+
+                      <span className="
+                        text-gray-500
+                        text-sm
+                      ">
+
                         المخزن
+
                       </span>
+
                       <div className="
                         font-bold
                         text-cyan-400
+                        mt-1
                       ">
-                        {tender.warehouseName || '-'}
+
+                        {tender.warehouseName ||
+                         '-'}
+
                       </div>
+
                     </div>
 
+
                     <div>
-                      <span className="text-gray-500">
+
+                      <span className="
+                        text-gray-500
+                        text-sm
+                      ">
+
                         المسؤول
+
                       </span>
-                      <div className="font-bold">
-                        {tender.responsiblePerson || '-'}
+
+                      <div className="
+                        font-bold
+                        mt-1
+                      ">
+
+                        {tender.responsiblePerson ||
+                         '-'}
+
                       </div>
+
                     </div>
 
+
                     <div>
-                      <span className="text-gray-500">
+
+                      <span className="
+                        text-gray-500
+                        text-sm
+                      ">
+
                         هاتف المسؤول
+
                       </span>
-                      <div className="font-bold">
-                        {tender.responsiblePhone || '-'}
+
+                      <div className="
+                        font-bold
+                        mt-1
+                      ">
+
+                        {tender.responsiblePhone ||
+                         '-'}
+
                       </div>
+
                     </div>
 
                   </div>
+
+
+                  {/* DESCRIPTION */}
 
                   {tender.description && (
 
@@ -1535,6 +2415,7 @@ export default function Tenders() {
                       rounded-2xl
                       p-4
                       text-gray-300
+                      leading-7
                     ">
 
                       {tender.description}
@@ -1543,6 +2424,9 @@ export default function Tenders() {
 
                   )}
 
+
+                  {/* NOTES */}
+
                   {tender.notes && (
 
                     <div className="
@@ -1550,6 +2434,7 @@ export default function Tenders() {
                       rounded-2xl
                       p-4
                       text-gray-400
+                      leading-7
                     ">
 
                       <strong>
@@ -1564,7 +2449,8 @@ export default function Tenders() {
 
                   )}
 
-                  {/* SAVED DOCUMENTS */}
+
+                  {/* DOCUMENTS */}
 
                   <div className="
                     bg-black
@@ -1592,6 +2478,7 @@ export default function Tenders() {
 
                       </div>
 
+
                       <div className="
                         bg-slate-800
                         px-3
@@ -1608,6 +2495,7 @@ export default function Tenders() {
                       </div>
 
                     </div>
+
 
                     {tenderFiles.length === 0 ? (
 
@@ -1628,142 +2516,171 @@ export default function Tenders() {
                       ">
 
                         {tenderFiles.map(
-                          file => (
+                          file => {
 
-                            <div
-                              key={file.id}
-                              className="
-                                bg-slate-900
-                                border
-                                border-slate-700
-                                rounded-2xl
-                                p-4
-                                flex
-                                items-center
-                                justify-between
-                                gap-4
-                                flex-wrap
-                              "
-                            >
+                            const url =
+                              getDocumentUrl(
+                                file
+                              )
 
-                              <div className="
-                                flex
-                                items-center
-                                gap-3
-                                min-w-0
-                              ">
 
-                                <span className="
-                                  text-3xl
+                            return (
+
+                              <div
+                                key={
+                                  file.id
+                                }
+                                className="
+                                  bg-slate-900
+                                  border
+                                  border-slate-700
+                                  rounded-2xl
+                                  p-4
+                                  flex
+                                  items-center
+                                  justify-between
+                                  gap-4
+                                  flex-wrap
+                                "
+                              >
+
+                                <div className="
+                                  flex
+                                  items-center
+                                  gap-3
+                                  min-w-0
                                 ">
 
-                                  {getFileIcon(
-                                    file.type,
-                                    file.name
-                                  )}
-
-                                </span>
-
-                                <div className="min-w-0">
-
-                                  <div className="
-                                    font-bold
-                                    break-all
+                                  <span className="
+                                    text-3xl
                                   ">
 
-                                    {file.name}
-
-                                  </div>
-
-                                  <div className="
-                                    text-sm
-                                    text-gray-500
-                                  ">
-
-                                    {formatFileSize(
-                                      file.size
+                                    {getFileIcon(
+                                      file.type,
+                                      file.name
                                     )}
+
+                                  </span>
+
+
+                                  <div className="
+                                    min-w-0
+                                  ">
+
+                                    <div className="
+                                      font-bold
+                                      break-all
+                                    ">
+
+                                      {file.name ||
+                                       'مستند'}
+
+                                    </div>
+
+
+                                    <div className="
+                                      text-sm
+                                      text-gray-500
+                                      mt-1
+                                    ">
+
+                                      {formatFileSize(
+                                        file.size
+                                      )}
+
+                                    </div>
 
                                   </div>
 
                                 </div>
 
+
+                                <div className="
+                                  flex
+                                  gap-2
+                                  flex-wrap
+                                ">
+
+                                  {url && (
+
+                                    <>
+
+                                      <a
+                                        href={
+                                          url
+                                        }
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="
+                                          bg-blue-600
+                                          hover:bg-blue-500
+                                          px-4
+                                          py-2
+                                          rounded-xl
+                                          font-black
+                                        "
+                                      >
+
+                                        فتح
+
+                                      </a>
+
+
+                                      <a
+                                        href={
+                                          url
+                                        }
+                                        download={
+                                          file.name
+                                        }
+                                        className="
+                                          bg-green-600
+                                          hover:bg-green-500
+                                          px-4
+                                          py-2
+                                          rounded-xl
+                                          font-black
+                                        "
+                                      >
+
+                                        تنزيل
+
+                                      </a>
+
+                                    </>
+
+                                  )}
+
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleDeleteDocument(
+                                        tender.id,
+                                        file.id
+                                      )
+                                    }
+                                    className="
+                                      bg-red-600
+                                      hover:bg-red-500
+                                      px-4
+                                      py-2
+                                      rounded-xl
+                                      font-black
+                                    "
+                                  >
+
+                                    حذف
+
+                                  </button>
+
+                                </div>
+
                               </div>
 
-                              <div className="
-                                flex
-                                gap-2
-                                flex-wrap
-                              ">
+                            )
 
-                                <a
-                                  href={
-                                    file.dataUrl
-                                  }
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="
-                                    bg-blue-600
-                                    hover:bg-blue-500
-                                    px-4
-                                    py-2
-                                    rounded-xl
-                                    font-black
-                                  "
-                                >
-
-                                  فتح
-
-                                </a>
-
-                                <a
-                                  href={
-                                    file.dataUrl
-                                  }
-                                  download={
-                                    file.name
-                                  }
-                                  className="
-                                    bg-green-600
-                                    hover:bg-green-500
-                                    px-4
-                                    py-2
-                                    rounded-xl
-                                    font-black
-                                  "
-                                >
-
-                                  تنزيل
-
-                                </a>
-
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    removeTenderFile(
-                                      tender.id,
-                                      file.id
-                                    )
-                                  }
-                                  className="
-                                    bg-red-600
-                                    hover:bg-red-500
-                                    px-4
-                                    py-2
-                                    rounded-xl
-                                    font-black
-                                  "
-                                >
-
-                                  حذف
-
-                                </button>
-
-                              </div>
-
-                            </div>
-
-                          )
+                          }
                         )}
 
                       </div>
@@ -1772,26 +2689,58 @@ export default function Tenders() {
 
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleDelete(
-                        tender.id
-                      )
-                    }
-                    className="
-                      w-full
-                      bg-red-600
-                      hover:bg-red-500
-                      py-4
-                      rounded-2xl
-                      font-black
-                    "
-                  >
 
-                    حذف المناقصة
+                  {/* ACTIONS */}
 
-                  </button>
+                  <div className="
+                    grid
+                    grid-cols-1
+                    md:grid-cols-2
+                    gap-3
+                  ">
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleEdit(
+                          tender
+                        )
+                      }
+                      className="
+                        bg-blue-600
+                        hover:bg-blue-500
+                        py-4
+                        rounded-2xl
+                        font-black
+                      "
+                    >
+
+                      ✏️ تعديل المناقصة
+
+                    </button>
+
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleDelete(
+                          tender.id
+                        )
+                      }
+                      className="
+                        bg-red-600
+                        hover:bg-red-500
+                        py-4
+                        rounded-2xl
+                        font-black
+                      "
+                    >
+
+                      🗑️ حذف المناقصة
+
+                    </button>
+
+                  </div>
 
                 </div>
 

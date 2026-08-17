@@ -1,0 +1,126 @@
+﻿C:\Users\EAA\Desktop\elola\elola\src\components\home\HomeNavigation.jsx:40: id: 'offers',
+C:\Users\EAA\Desktop\elola\elola\src\components\home\HomeOffers.jsx:1: export default function HomeOffers({
+C:\Users\EAA\Desktop\elola\elola\src\components\home\HomeOffers.jsx:3: offers = [],
+C:\Users\EAA\Desktop\elola\elola\src\components\home\HomeOffers.jsx:12: id="offers"
+C:\Users\EAA\Desktop\elola\elola\src\components\home\HomeOffers.jsx:38: offers.length === 0
+C:\Users\EAA\Desktop\elola\elola\src\components\home\HomeOffers.jsx:70: offers.map(offer => (
+C:\Users\EAA\Desktop\elola\elola\src\components\products\form\ProductWarehouseSection.jsx:431: publishToOffers:
+C:\Users\EAA\Desktop\elola\elola\src\components\products\form\ProductWarehouseSection.jsx:432: product.publishToOffers ??
+C:\Users\EAA\Desktop\elola\elola\src\components\products\form\ProductWarehouseSection.jsx:433: product.publishedToOffers ??
+C:\Users\EAA\Desktop\elola\elola\src\components\products\form\ProductWarehouseSection.jsx:446: publishedToOffers:
+C:\Users\EAA\Desktop\elola\elola\src\components\products\form\ProductWarehouseSection.jsx:447: product.publishedToOffers ??
+C:\Users\EAA\Desktop\elola\elola\src\components\products\form\ProductWarehouseSection.jsx:448: product.publishToOffers ??
+C:\Users\EAA\Desktop\elola\elola\src\components\warehouses\config\warehouseProductDefaults.js:77: publishToOffers: false,
+C:\Users\EAA\Desktop\elola\elola\src\components\warehouses\sections\PublishingSection.jsx:59: field="publishToOffers"
+C:\Users\EAA\Desktop\elola\elola\src\components\Footer.jsx:162: href="#offers"
+C:\Users\EAA\Desktop\elola\elola\src\layout\DashboardLayout.jsx:157: ...(hasPermission('offers')
+C:\Users\EAA\Desktop\elola\elola\src\layout\DashboardLayout.jsx:158: ? ['/offers']
+C:\Users\EAA\Desktop\elola\elola\src\layout\DashboardLayout.jsx:308: path: '/offers',
+C:\Users\EAA\Desktop\elola\elola\src\layout\DashboardLayout.jsx:310: visible: hasPermission('offers')
+C:\Users\EAA\Desktop\elola\elola\src\pages\Admin.jsx:15: offers,
+C:\Users\EAA\Desktop\elola\elola\src\pages\Admin.jsx:63: const myOffers =
+C:\Users\EAA\Desktop\elola\elola\src\pages\Admin.jsx:64: filterByWarehouse(offers)
+C:\Users\EAA\Desktop\elola\elola\src\pages\Admin.jsx:228: value: myOffers.length,
+C:\Users\EAA\Desktop\elola\elola\src\pages\Dashboard.jsx:19: offers = [],
+C:\Users\EAA\Desktop\elola\elola\src\pages\Dashboard.jsx:253: value: offers.length,
+C:\Users\EAA\Desktop\elola\elola\src\pages\Home.jsx:14: import HomeOffers from '../components/home/HomeOffers'
+C:\Users\EAA\Desktop\elola\elola\src\pages\Home.jsx:24: const offers = useWebsiteStore(state => state.offers || [])
+C:\Users\EAA\Desktop\elola\elola\src\pages\Home.jsx:418: <HomeOffers
+C:\Users\EAA\Desktop\elola\elola\src\pages\Home.jsx:420: offers={offers}
+C:\Users\EAA\Desktop\elola\elola\src\pages\Offers.jsx:4: export default function Offers() {
+C:\Users\EAA\Desktop\elola\elola\src\pages\Offers.jsx:10: const offers =
+C:\Users\EAA\Desktop\elola\elola\src\pages\Offers.jsx:11: Array.isArray(store.offers)
+C:\Users\EAA\Desktop\elola\elola\src\pages\Offers.jsx:12: ? store.offers
+C:\Users\EAA\Desktop\elola\elola\src\pages\Offers.jsx:15: const addOffer =
+C:\Users\EAA\Desktop\elola\elola\src\pages\Offers.jsx:16: typeof store.addOffer === 'function'
+C:\Users\EAA\Desktop\elola\elola\src\pages\Offers.jsx:17: ? store.addOffer
+C:\Users\EAA\Desktop\elola\elola\src\pages\Offers.jsx:20: const deleteOffer =
+C:\Users\EAA\Desktop\elola\elola\src\pages\Offers.jsx:21: typeof store.deleteOffer === 'function'
+C:\Users\EAA\Desktop\elola\elola\src\pages\Offers.jsx:22: ? store.deleteOffer
+C:\Users\EAA\Desktop\elola\elola\src\pages\Offers.jsx:63: const handleAddOffer = () => {
+C:\Users\EAA\Desktop\elola\elola\src\pages\Offers.jsx:77: addOffer({
+C:\Users\EAA\Desktop\elola\elola\src\pages\Offers.jsx:115: deleteOffer(id)
+C:\Users\EAA\Desktop\elola\elola\src\pages\Offers.jsx:121: const filteredOffers = useMemo(() => {
+C:\Users\EAA\Desktop\elola\elola\src\pages\Offers.jsx:123: return [...offers]
+C:\Users\EAA\Desktop\elola\elola\src\pages\Offers.jsx:160: }, [offers, search])
+C:\Users\EAA\Desktop\elola\elola\src\pages\Offers.jsx:164: const totalOffers =
+C:\Users\EAA\Desktop\elola\elola\src\pages\Offers.jsx:165: offers.length
+C:\Users\EAA\Desktop\elola\elola\src\pages\Offers.jsx:237: {totalOffers}
+C:\Users\EAA\Desktop\elola\elola\src\pages\Offers.jsx:272: {offers.length > 0
+C:\Users\EAA\Desktop\elola\elola\src\pages\Offers.jsx:273: ? offers[0]?.title
+C:\Users\EAA\Desktop\elola\elola\src\pages\Offers.jsx:307: {filteredOffers.length}
+C:\Users\EAA\Desktop\elola\elola\src\pages\Offers.jsx:451: onClick={handleAddOffer}
+C:\Users\EAA\Desktop\elola\elola\src\pages\Offers.jsx:505: {filteredOffers.length === 0 && (
+C:\Users\EAA\Desktop\elola\elola\src\pages\Offers.jsx:522: {/* OFFERS LIST */}
+C:\Users\EAA\Desktop\elola\elola\src\pages\Offers.jsx:526: {filteredOffers.map((offer, index) => (
+C:\Users\EAA\Desktop\elola\elola\src\pages\Warehouses.jsx:185: publishToOffers: false,
+C:\Users\EAA\Desktop\elola\elola\src\pages\Warehouses.jsx:713: publishToOffers: false,
+C:\Users\EAA\Desktop\elola\elola\src\repositories\SearchRepository.js:12: static getOffers() {
+C:\Users\EAA\Desktop\elola\elola\src\repositories\SearchRepository.js:13: return useWebsiteStore.getState().offers || []
+C:\Users\EAA\Desktop\elola\elola\src\repositories\SearchRepository.js:54: offers: this.getOffers(),
+C:\Users\EAA\Desktop\elola\elola\src\store\warehouse\helpers\createWarehouseProduct.js:132: publishToOffers:
+C:\Users\EAA\Desktop\elola\elola\src\store\warehouse\helpers\createWarehouseProduct.js:133: product.publishToOffers ?? false,
+C:\Users\EAA\Desktop\elola\elola\src\store\warehouse\helpers\createWarehouseProduct.js:141: publishedToOffers:
+C:\Users\EAA\Desktop\elola\elola\src\store\warehouse\helpers\createWarehouseProduct.js:142: product.publishedToOffers ?? false,
+C:\Users\EAA\Desktop\elola\elola\src\store\warehouse\helpers\createWarehouseProduct.js:316: publishToOffers:
+C:\Users\EAA\Desktop\elola\elola\src\store\warehouse\helpers\createWarehouseProduct.js:317: product.publishToOffers ?? false,
+C:\Users\EAA\Desktop\elola\elola\src\store\warehouse\helpers\createWarehouseProduct.js:325: publishedToOffers:
+C:\Users\EAA\Desktop\elola\elola\src\store\warehouse\helpers\createWarehouseProduct.js:326: product.publishedToOffers ?? false
+C:\Users\EAA\Desktop\elola\elola\src\store\constants.js:198: OFFERS: 'offers',
+C:\Users\EAA\Desktop\elola\elola\src\store\index.js:26: export * from './offerStore'
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:1: // src/store/offerStore.js
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:16: export const useOfferStore = create(
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:24: offers: [],
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:30: setOffers: (offers) =>
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:32: offers: ensureArray(offers)
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:39: addOffer: (offer) => {
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:69: offers: [
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:73: ...state.offers
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:87: updateOffer: (id, updates) =>
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:91: offers: state.offers.map(offer =>
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:113: deleteOffer: (id) =>
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:117: offers:
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:119: state.offers.filter(
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:135: offers: state.offers.map(offer =>
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:157: offers: state.offers.map(offer =>
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:179: searchOffers: (keyword) => {
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:182: return get().offers
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:184: return get().offers.filter(offer =>
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:195: // ACTIVE OFFERS
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:198: getActiveOffers: () =>
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:200: get().offers.filter(
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:212: const offers = get().offers
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:216: totalOffers: offers.length,
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:218: activeOffers:
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:220: offers.filter(
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:226: inactiveOffers:
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:228: offers.filter(
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:236: offers.length
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:238: ? offers.reduce(
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:246: ) / offers.length
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:258: name: `${STORAGE_KEYS.PRODUCTS}-offers`,
+C:\Users\EAA\Desktop\elola\elola\src\store\offerStore.js:262: offers: state.offers
+C:\Users\EAA\Desktop\elola\elola\src\store\warehouseStore.js:1206: publishedToOffers:
+C:\Users\EAA\Desktop\elola\elola\src\store\warehouseStore.js:1207: product.publishedToOffers ??
+C:\Users\EAA\Desktop\elola\elola\src\store\warehouseStore.js:1208: product.publishToOffers ??
+C:\Users\EAA\Desktop\elola\elola\src\store\websiteStore.js:873: // ================= OFFERS =================
+C:\Users\EAA\Desktop\elola\elola\src\store\websiteStore.js:875: offers: [],
+C:\Users\EAA\Desktop\elola\elola\src\store\websiteStore.js:877: setOffers: (offers) =>
+C:\Users\EAA\Desktop\elola\elola\src\store\websiteStore.js:881: offers:
+C:\Users\EAA\Desktop\elola\elola\src\store\websiteStore.js:882: Array.isArray(offers)
+C:\Users\EAA\Desktop\elola\elola\src\store\websiteStore.js:883: ? offers
+C:\Users\EAA\Desktop\elola\elola\src\store\websiteStore.js:888: addOffer: (offer) =>
+C:\Users\EAA\Desktop\elola\elola\src\store\websiteStore.js:892: offers: appendListItemWithId(
+C:\Users\EAA\Desktop\elola\elola\src\store\websiteStore.js:893: state.offers,
+C:\Users\EAA\Desktop\elola\elola\src\store\websiteStore.js:899: updateOffer: (id, data) =>
+C:\Users\EAA\Desktop\elola\elola\src\store\websiteStore.js:903: offers:
+C:\Users\EAA\Desktop\elola\elola\src\store\websiteStore.js:905: state.offers.map(
+C:\Users\EAA\Desktop\elola\elola\src\store\websiteStore.js:925: deleteOffer: (id) =>
+C:\Users\EAA\Desktop\elola\elola\src\store\websiteStore.js:929: offers:
+C:\Users\EAA\Desktop\elola\elola\src\store\websiteStore.js:931: state.offers.filter(
+C:\Users\EAA\Desktop\elola\elola\src\store\websiteStore.js:1473: offers:
+C:\Users\EAA\Desktop\elola\elola\src\store\websiteStore.js:1474: state.offers,
+C:\Users\EAA\Desktop\elola\elola\src\App.jsx:14: import Offers from "./pages/Offers";
+C:\Users\EAA\Desktop\elola\elola\src\App.jsx:348: {/* ================= OFFERS ================= */}
+C:\Users\EAA\Desktop\elola\elola\src\App.jsx:351: path="/offers"
+C:\Users\EAA\Desktop\elola\elola\src\App.jsx:355: <Offers />
