@@ -13,40 +13,402 @@ import HomeSearchResults
   from './HomeSearchResults'
 
 
-export default function HomeVehicleSearch() {
+export default function HomeVehicleSearch({
+  onAddToCart
+}) {
 
-
-  const [tab, setTab] = useState('vehicle')
+  const [tab, setTab] =
+    useState('vehicle')
 
 
   const {
-
     loading,
-
     results,
-
     form,
-
     setForm,
-
     vehicleTypes,
-
     brands,
-
     models,
-
     years,
-
+    tireSearchError,
     search
-
   } = useVehicleSearch()
 
+
+  // ====================================================
+  // SEARCH HANDLER
+  // ====================================================
+
+  const handleSearch = () => {
+
+    search(tab)
+
+  }
+
+
+  // ====================================================
+  // ADD RESULT TO CART
+  // ====================================================
+
+  const handleAddToCart = (
+    product
+  ) => {
+
+    if (
+      typeof onAddToCart !==
+      'function'
+    ) {
+
+      return
+
+    }
+
+
+    onAddToCart({
+
+      ...product,
+
+      id:
+        product?.id ??
+        product?.productId,
+
+      name:
+        product?.name ||
+        product?.productName ||
+        'منتج',
+
+      price:
+        product?.salePrice ??
+        product?.price ??
+        0
+
+    })
+
+  }
+
+
+  // ====================================================
+  // RESULT RENDERER
+  // ====================================================
+
+  const renderProduct = (
+    product,
+    index
+  ) => {
+
+    const productId =
+      product?.id ??
+      product?.productId ??
+      index
+
+
+    const productName =
+      product?.name ||
+      product?.productName ||
+      'منتج'
+
+
+    const price =
+      Number(
+        product?.salePrice ??
+        product?.price ??
+        0
+      )
+
+
+    const stock =
+      Number(
+        product?.availableQuantity ??
+        product?.quantity ??
+        product?.stock ??
+        0
+      )
+
+
+    const available =
+      product?.available === true ||
+      stock > 0
+
+
+    return (
+
+      <div
+        key={productId}
+        className="
+          bg-slate-900
+          rounded-3xl
+          overflow-hidden
+          border
+          border-slate-700
+          p-6
+        "
+      >
+
+        {/* IMAGE */}
+
+        {product?.image ? (
+
+          <img
+            src={product.image}
+            alt={productName}
+            className="
+              w-full
+              h-56
+              object-cover
+              rounded-2xl
+            "
+          />
+
+        ) : (
+
+          <div
+            className="
+              w-full
+              h-56
+              rounded-2xl
+              bg-slate-800
+              flex
+              items-center
+              justify-center
+              text-7xl
+            "
+          >
+            {tab === 'battery'
+              ? '🔋'
+              : tab === 'oil'
+                ? '🛢️'
+                : '🛞'
+            }
+          </div>
+
+        )}
+
+
+        {/* PRODUCT NAME */}
+
+        <div
+          className="
+            text-2xl
+            font-black
+            text-white
+            mt-5
+          "
+        >
+          {productName}
+        </div>
+
+
+        {/* BRAND */}
+
+        {product?.brand && (
+
+          <div
+            className="
+              text-gray-400
+              mt-2
+              font-bold
+            "
+          >
+            {product.brand}
+          </div>
+
+        )}
+
+
+        {/* PRODUCT TYPE */}
+
+        {product?.type && (
+
+          <div
+            className="
+              text-gray-400
+              mt-2
+            "
+          >
+            النوع: {product.type}
+          </div>
+
+        )}
+
+
+        {/* TIRE */}
+
+        {product?.tire && (
+
+          <div
+            className="
+              mt-4
+              bg-slate-800
+              rounded-xl
+              p-4
+              text-gray-200
+            "
+          >
+
+            <div className="font-black text-yellow-400 mb-2">
+              مقاس الإطار
+            </div>
+
+            <div className="text-xl font-bold">
+
+              {product.tire.width || ''}
+
+              {product.tire.width && '/'}
+
+              {
+                product.tire.profile ??
+                product.tire.height ??
+                ''
+              }
+
+              {(
+                product.tire.profile ||
+                product.tire.height
+              ) && '/'}
+
+              {product.tire.rim || ''}
+
+            </div>
+
+          </div>
+
+        )}
+
+
+        {/* BATTERY */}
+
+        {product?.battery && (
+
+          <div
+            className="
+              mt-4
+              bg-slate-800
+              rounded-xl
+              p-4
+              text-gray-200
+            "
+          >
+
+            <div className="font-black text-yellow-400">
+              مواصفات البطارية
+            </div>
+
+            {product.battery.capacity && (
+
+              <div className="mt-2">
+                السعة: {product.battery.capacity}
+              </div>
+
+            )}
+
+          </div>
+
+        )}
+
+
+        {/* OIL */}
+
+        {product?.oil && (
+
+          <div
+            className="
+              mt-4
+              bg-slate-800
+              rounded-xl
+              p-4
+              text-gray-200
+            "
+          >
+
+            <div className="font-black text-yellow-400">
+              مواصفات الزيت
+            </div>
+
+            {product.oil.viscosity && (
+
+              <div className="mt-2">
+                اللزوجة: {product.oil.viscosity}
+              </div>
+
+            )}
+
+          </div>
+
+        )}
+
+
+        {/* PRICE */}
+
+        <div
+          className="
+            text-yellow-400
+            text-3xl
+            mt-5
+            font-black
+          "
+        >
+          {price} ج
+        </div>
+
+
+        {/* AVAILABILITY */}
+
+        <div
+          className={`
+            mt-4
+            font-black
+            ${
+              available
+                ? 'text-green-400'
+                : 'text-red-400'
+            }
+          `}
+        >
+          {
+            available
+              ? '✔ متوفر'
+              : '❌ غير متوفر'
+          }
+        </div>
+
+
+        {/* ADD TO CART */}
+
+        {typeof onAddToCart ===
+          'function' && (
+
+          <button
+            type="button"
+            onClick={() =>
+              handleAddToCart(product)
+            }
+            className="
+              w-full
+              mt-6
+              bg-yellow-500
+              hover:bg-yellow-400
+              text-black
+              py-4
+              rounded-2xl
+              font-black
+              transition
+            "
+          >
+            إضافة للسلة
+          </button>
+
+        )}
+
+      </div>
+
+    )
+
+  }
 
 
   return (
 
     <section
-
       className="
         bg-slate-950
         py-12
@@ -54,14 +416,13 @@ export default function HomeVehicleSearch() {
         border-y
         border-yellow-500
       "
-
     >
 
       <div className="max-w-7xl mx-auto">
 
+        {/* TITLE */}
 
         <h2
-
           className="
             text-4xl
             md:text-5xl
@@ -69,32 +430,26 @@ export default function HomeVehicleSearch() {
             text-center
             text-yellow-400
           "
-
         >
-
           ابحث عن المنتج المناسب
-
         </h2>
 
 
         <p
-
           className="
             text-center
             text-gray-300
             mt-4
             mb-10
           "
-
         >
-
-          يمكنك البحث بأكثر من طريقة
-
+          ابحث عن الإطارات والبطاريات والزيوت والمركبات
         </p>
 
 
-        <div
+        {/* TABS */}
 
+        <div
           className="
             grid
             grid-cols-2
@@ -102,153 +457,97 @@ export default function HomeVehicleSearch() {
             gap-4
             mb-10
           "
-
         >
 
-
           <button
-
             type="button"
-
-            onClick={() => setTab('vehicle')}
-
+            onClick={() =>
+              setTab('vehicle')
+            }
             className={`
-
               rounded-2xl
-
               py-4
-
               font-black
-
               transition
-
               ${
-
                 tab === 'vehicle'
-
                   ? 'bg-yellow-500 text-black'
-
-                  : 'bg-slate-800'
-
+                  : 'bg-slate-800 text-white'
               }
-
             `}
-
           >
-
             حسب المركبة
-
           </button>
 
 
           <button
-
             type="button"
-
-            onClick={() => setTab('tire')}
-
+            onClick={() =>
+              setTab('tire')
+            }
             className={`
-
               rounded-2xl
-
               py-4
-
               font-black
-
               transition
-
               ${
-
                 tab === 'tire'
-
                   ? 'bg-yellow-500 text-black'
-
-                  : 'bg-slate-800'
-
+                  : 'bg-slate-800 text-white'
               }
-
             `}
-
           >
-
             حسب مقاس الإطار
-
           </button>
 
 
           <button
-
             type="button"
-
-            onClick={() => setTab('battery')}
-
+            onClick={() =>
+              setTab('battery')
+            }
             className={`
-
               rounded-2xl
-
               py-4
-
               font-black
-
               transition
-
               ${
-
                 tab === 'battery'
-
                   ? 'bg-yellow-500 text-black'
-
-                  : 'bg-slate-800'
-
+                  : 'bg-slate-800 text-white'
               }
-
             `}
-
           >
-
             حسب البطارية
-
           </button>
 
 
           <button
-
             type="button"
-
-            onClick={() => setTab('oil')}
-
+            onClick={() =>
+              setTab('oil')
+            }
             className={`
-
               rounded-2xl
-
               py-4
-
               font-black
-
               transition
-
               ${
-
                 tab === 'oil'
-
                   ? 'bg-yellow-500 text-black'
-
-                  : 'bg-slate-800'
-
+                  : 'bg-slate-800 text-white'
               }
-
             `}
-
           >
-
             حسب الزيت
-
           </button>
-
 
         </div>
-                <div
 
+
+        {/* SEARCH BOX */}
+
+        <div
           className="
             bg-slate-900
             rounded-[30px]
@@ -257,24 +556,17 @@ export default function HomeVehicleSearch() {
             border-slate-700
             space-y-8
           "
-
         >
 
+          {/* VEHICLE */}
 
-          {
-
-            tab === 'vehicle'
-
-            &&
+          {tab === 'vehicle' && (
 
             <>
 
               <VehicleTypeCards
-
                 types={vehicleTypes}
-
                 selected={form.vehicleType}
-
                 onSelect={(vehicleType) =>
 
                   setForm(prev => ({
@@ -292,382 +584,334 @@ export default function HomeVehicleSearch() {
                   }))
 
                 }
-
               />
 
 
               <VehicleSearchForm
-
                 vehicleTypes={vehicleTypes}
-
                 brands={brands}
-
                 models={models}
-
                 years={years}
-
                 form={form}
-
                 setForm={setForm}
-
-                onSearch={search}
-
+                onSearch={() =>
+                  search('vehicle')
+                }
               />
 
             </>
 
-          }
+          )}
 
 
+          {/* TIRE */}
 
-          {
-
-            tab === 'tire'
-
-            &&
+          {tab === 'tire' && (
 
             <div
-
               className="
-                grid
-                md:grid-cols-4
-                gap-4
+                max-w-3xl
+                mx-auto
+                space-y-5
               "
-
             >
 
-              <input
+              <div>
 
-                value={form.width || ''}
+                <label
+                  className="
+                    block
+                    text-white
+                    font-black
+                    text-lg
+                    mb-3
+                  "
+                >
+                  مقاس الإطار
+                </label>
 
-                onChange={(e) =>
 
-                  setForm(prev => ({
+                <input
+                  type="text"
+                  value={
+                    form.tireSize || ''
+                  }
+                  onChange={(e) =>
 
-                    ...prev,
+                    setForm(prev => ({
 
-                    width: e.target.value
+                      ...prev,
 
-                  }))
+                      tireSize:
+                        e.target.value
 
-                }
+                    }))
 
-                placeholder="عرض الإطار"
+                  }
+                  onKeyDown={(e) => {
 
+                    if (
+                      e.key === 'Enter'
+                    ) {
+
+                      search('tire')
+
+                    }
+
+                  }}
+                  placeholder="مثال: 205/55/16 أو 1200/24"
+                  className="
+                    w-full
+                    p-5
+                    rounded-2xl
+                    bg-slate-800
+                    border
+                    border-slate-700
+                    text-white
+                    text-xl
+                    font-bold
+                    outline-none
+                    focus:border-yellow-400
+                  "
+                />
+
+              </div>
+
+
+              <div
                 className="
-                  p-4
-                  rounded-2xl
-                  bg-slate-800
-                  border
-                  border-slate-700
+                  text-gray-400
+                  text-sm
+                  text-center
                 "
-
-              />
-
-
-              <input
-
-                value={form.profile || ''}
-
-                onChange={(e) =>
-
-                  setForm(prev => ({
-
-                    ...prev,
-
-                    profile: e.target.value
-
-                  }))
-
-                }
-
-                placeholder="الارتفاع"
-
-                className="
-                  p-4
-                  rounded-2xl
-                  bg-slate-800
-                  border
-                  border-slate-700
-                "
-
-              />
+              >
+                الصيغ المقبولة:
+                <span className="text-yellow-400 font-bold mx-1">
+                  205/55/16
+                </span>
+                أو
+                <span className="text-yellow-400 font-bold mx-1">
+                  205*55*16
+                </span>
+                أو
+                <span className="text-yellow-400 font-bold mx-1">
+                  1200/24
+                </span>
+                أو
+                <span className="text-yellow-400 font-bold mx-1">
+                  1200*24
+                </span>
+              </div>
 
 
-              <input
+              {tireSearchError && (
 
-                value={form.rim || ''}
+                <div
+                  className="
+                    bg-red-950
+                    border
+                    border-red-600
+                    text-red-300
+                    rounded-2xl
+                    p-4
+                    text-center
+                    font-bold
+                  "
+                >
+                  {tireSearchError}
+                </div>
 
-                onChange={(e) =>
-
-                  setForm(prev => ({
-
-                    ...prev,
-
-                    rim: e.target.value
-
-                  }))
-
-                }
-
-                placeholder="مقاس الجنط"
-
-                className="
-                  p-4
-                  rounded-2xl
-                  bg-slate-800
-                  border
-                  border-slate-700
-                "
-
-              />
+              )}
 
 
               <button
-
                 type="button"
-
-                onClick={search}
-
+                onClick={() =>
+                  search('tire')
+                }
+                disabled={loading}
                 className="
+                  w-full
                   rounded-2xl
                   bg-yellow-500
+                  hover:bg-yellow-400
+                  disabled:opacity-50
                   text-black
+                  py-5
                   font-black
+                  text-xl
+                  transition
                 "
-
               >
-
-                🔍 بحث
-
+                {
+                  loading
+                    ? 'جارٍ البحث...'
+                    : '🔍 بحث عن الإطار'
+                }
               </button>
-
 
             </div>
 
-          }
+          )}
 
 
+          {/* BATTERY */}
 
-          {
-
-            tab === 'battery'
-
-            &&
+          {tab === 'battery' && (
 
             <div
-
               className="
                 grid
                 md:grid-cols-2
                 gap-4
               "
-
             >
 
               <input
-
-                value={form.capacity || ''}
-
+                value={
+                  form.capacity || ''
+                }
                 onChange={(e) =>
 
                   setForm(prev => ({
 
                     ...prev,
 
-                    capacity: e.target.value
+                    capacity:
+                      e.target.value
 
                   }))
 
                 }
-
                 placeholder="سعة البطارية"
-
                 className="
                   p-4
                   rounded-2xl
                   bg-slate-800
                   border
                   border-slate-700
+                  text-white
                 "
-
               />
 
 
               <button
-
                 type="button"
-
-                onClick={search}
-
+                onClick={() =>
+                  search('battery')
+                }
+                disabled={loading}
                 className="
                   rounded-2xl
                   bg-yellow-500
+                  hover:bg-yellow-400
+                  disabled:opacity-50
                   text-black
                   font-black
                 "
-
               >
-
                 🔍 بحث
-
               </button>
-
 
             </div>
 
-          }
+          )}
 
 
+          {/* OIL */}
 
-          {
-
-            tab === 'oil'
-
-            &&
+          {tab === 'oil' && (
 
             <div
-
               className="
                 grid
                 md:grid-cols-2
                 gap-4
               "
-
             >
 
               <input
-
-                value={form.viscosity || ''}
-
+                value={
+                  form.viscosity || ''
+                }
                 onChange={(e) =>
 
                   setForm(prev => ({
 
                     ...prev,
 
-                    viscosity: e.target.value
+                    viscosity:
+                      e.target.value
 
                   }))
 
                 }
-
                 placeholder="لزوجة الزيت"
-
                 className="
                   p-4
                   rounded-2xl
                   bg-slate-800
                   border
                   border-slate-700
+                  text-white
                 "
-
               />
 
 
               <button
-
                 type="button"
-
-                onClick={search}
-
+                onClick={() =>
+                  search('oil')
+                }
+                disabled={loading}
                 className="
                   rounded-2xl
                   bg-yellow-500
+                  hover:bg-yellow-400
+                  disabled:opacity-50
                   text-black
                   font-black
                 "
-
               >
-
                 🔍 بحث
-
               </button>
-
 
             </div>
 
-          }
-                    {
+          )}
 
-            loading &&
+
+          {/* LOADING */}
+
+          {loading && (
 
             <div
-
               className="
                 text-center
                 text-yellow-400
                 text-xl
                 font-black
               "
-
             >
-
               جارٍ البحث...
-
             </div>
 
-          }
+          )}
 
 
+          {/* RESULTS */}
 
           <HomeSearchResults
-
             title="نتائج البحث"
-
             results={results}
-
             emptyMessage="لا توجد منتجات مطابقة"
-
-            renderItem={(product)=>(
-
-              <div
-
-                key={product.id}
-
-                className="
-                  bg-slate-800
-                  rounded-2xl
-                  p-5
-                  border
-                  border-slate-700
-                "
-
-              >
-
-                <div className="font-black text-xl">
-
-                  {product.name}
-
-                </div>
-
-
-                <div className="text-gray-400 mt-2">
-
-                  {product.brand}
-
-                </div>
-
-
-                <div className="text-yellow-400 text-2xl mt-4">
-
-                  {product.salePrice ?? product.price} ج
-
-                </div>
-
-
-              </div>
-
-            )}
-
+            renderItem={renderProduct}
+            onAddToCart={handleAddToCart}
           />
-
 
         </div>
 
-
       </div>
-
 
     </section>
 

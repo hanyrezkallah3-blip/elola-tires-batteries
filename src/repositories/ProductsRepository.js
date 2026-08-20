@@ -1,6 +1,10 @@
-import BaseRepository from './BaseRepository'
+import BaseRepository
+  from './BaseRepository'
 
-class ProductsRepository extends BaseRepository {
+
+class ProductsRepository
+  extends BaseRepository {
+
 
   constructor() {
 
@@ -8,20 +12,74 @@ class ProductsRepository extends BaseRepository {
 
   }
 
+
+  // =====================================================
+  // GET ALL
+  // =====================================================
+
   async getAll() {
 
-    return await this.findAll()
+    const result =
+      await super.getAll()
+
+
+    if (
+      result?.success === false
+    ) {
+
+      console.error(
+        'ProductsRepository.getAll failed:',
+        result?.message,
+        result?.errors
+      )
+
+      return []
+
+    }
+
+
+    return Array.isArray(
+      result?.data
+    )
+
+      ? result.data
+
+      : []
 
   }
+
+
+  // =====================================================
+  // GET BY ID
+  // =====================================================
 
   async getById(id) {
 
     if (!id)
       return null
 
-    return await this.findById(id)
+
+    const result =
+      await super.getById(id)
+
+
+    if (
+      result?.success === false
+    ) {
+
+      return null
+
+    }
+
+
+    return result?.data || null
 
   }
+
+
+  // =====================================================
+  // CREATE
+  // =====================================================
 
   async create(product = {}) {
 
@@ -71,20 +129,39 @@ class ProductsRepository extends BaseRepository {
 
     }
 
+
     delete item.minimumStock
+
     delete item.maximumStock
+
     delete item.reorderPoint
+
     delete item.preferredWarehouseId
+
     delete item.warehouses
+
     delete item.stockByWarehouse
+
     delete item.totalStock
+
     delete item.quantity
 
-    return await super.create(item)
+
+    return await super.create(
+      item
+    )
 
   }
 
-  async update(id, data = {}) {
+
+  // =====================================================
+  // UPDATE
+  // =====================================================
+
+  async update(
+    id,
+    data = {}
+  ) {
 
     const item = {
 
@@ -95,14 +172,23 @@ class ProductsRepository extends BaseRepository {
 
     }
 
+
     delete item.minimumStock
+
     delete item.maximumStock
+
     delete item.reorderPoint
+
     delete item.preferredWarehouseId
+
     delete item.warehouses
+
     delete item.stockByWarehouse
+
     delete item.totalStock
+
     delete item.quantity
+
 
     return await super.update(
 
@@ -114,12 +200,19 @@ class ProductsRepository extends BaseRepository {
 
   }
 
+
+  // =====================================================
+  // DELETE
+  // =====================================================
+
   async delete(id) {
 
     return await super.delete(id)
 
   }
-    // =====================================================
+
+
+  // =====================================================
   // VEHICLE SEARCH
   // =====================================================
 
@@ -134,56 +227,65 @@ class ProductsRepository extends BaseRepository {
   }) {
 
     const products =
-
       await this.getAll()
 
-    return products.filter(product => {
 
-      const vehicles =
+    return products.filter(
+      product => {
 
-        Array.isArray(
-          product.compatibleVehicles
-        )
-          ? product.compatibleVehicles
-          : []
+        const vehicles =
 
-      return vehicles.some(vehicle =>
+          Array.isArray(
+            product.compatibleVehicles
+          )
 
-        (!brand ||
+            ? product.compatibleVehicles
 
-          vehicle.brand === brand)
+            : []
 
-        &&
 
-        (!model ||
+        return vehicles.some(
+          vehicle =>
 
-          vehicle.model === model)
-
-        &&
-
-        (
-
-          !year ||
-
-          (
-
-            Number(year) >=
-            Number(vehicle.yearFrom)
+            (!brand ||
+              vehicle.brand === brand)
 
             &&
 
-            Number(year) <=
-            Number(vehicle.yearTo)
+            (!model ||
+              vehicle.model === model)
 
-          )
+            &&
+
+            (
+
+              !year ||
+
+              (
+
+                Number(year) >=
+                Number(
+                  vehicle.yearFrom
+                )
+
+                &&
+
+                Number(year) <=
+                Number(
+                  vehicle.yearTo
+                )
+
+              )
+
+            )
 
         )
 
-      )
-
-    })
+      }
+    )
 
   }
+
 
   // =====================================================
   // TIRE SEARCH
@@ -200,40 +302,48 @@ class ProductsRepository extends BaseRepository {
   }) {
 
     const products =
-
       await this.getAll()
 
-    return products.filter(product =>
 
-      product.type === 'tire'
+    return products.filter(
+      product =>
 
-      &&
+        product.type === 'tire'
 
-      Number(product.tire?.width)
+        &&
 
-      ===
+        Number(
+          product.tire?.width
+        )
 
-      Number(width)
+        ===
 
-      &&
+        Number(width)
 
-      Number(product.tire?.height)
+        &&
 
-      ===
+        Number(
+          product.tire?.height
+        )
 
-      Number(profile)
+        ===
 
-      &&
+        Number(profile)
 
-      Number(product.tire?.rim)
+        &&
 
-      ===
+        Number(
+          product.tire?.rim
+        )
 
-      Number(rim)
+        ===
+
+        Number(rim)
 
     )
 
   }
+
 
   // =====================================================
   // BATTERY SEARCH
@@ -246,25 +356,30 @@ class ProductsRepository extends BaseRepository {
   }) {
 
     const products =
-
       await this.getAll()
 
-    return products.filter(product =>
 
-      product.type === 'battery'
+    return products.filter(
+      product =>
 
-      &&
+        product.type === 'battery'
 
-      Number(product.battery?.capacity)
+        &&
 
-      ===
+        Number(
+          product.battery?.capacity
+        )
 
-      Number(capacity)
+        ===
+
+        Number(capacity)
 
     )
 
   }
-    // =====================================================
+
+
+  // =====================================================
   // OIL SEARCH
   // =====================================================
 
@@ -275,33 +390,31 @@ class ProductsRepository extends BaseRepository {
   }) {
 
     const products =
-
       await this.getAll()
 
-    return products.filter(product =>
 
-      product.type === 'oil'
+    return products.filter(
+      product =>
 
-      &&
+        product.type === 'oil'
 
-      String(
+        &&
 
-        product.oil?.viscosity || ''
+        String(
+          product.oil?.viscosity || ''
+        ).toLowerCase()
 
-      ).toLowerCase()
+        ===
 
-      ===
-
-      String(
-
-        viscosity || ''
-
-      ).toLowerCase()
+        String(
+          viscosity || ''
+        ).toLowerCase()
 
     )
 
   }
 
 }
+
 
 export default new ProductsRepository()
