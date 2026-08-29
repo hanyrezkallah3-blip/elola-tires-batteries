@@ -1,191 +1,223 @@
-import { useUserStore } from "../store/userStore";import { useOrderStore } from "../store/orderStore";import { useProductStore } from "../store/productStore";import { useMemo, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useWebsiteStore } from '../store/websiteStore';
-import حماية_الصفحة from '../security/حماية_الصفحة';
+import { useMemo, useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useWebsiteStore } from '../store/websiteStore'
+import حماية_الصفحة from '../security/حماية_الصفحة'
 
 export default function WarehouseDashboard() {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   const currentUser =
-  useUserStore((state) => state.currentUser);
+    useWebsiteStore((state) => state.currentUser)
 
   const products =
-  useProductStore((state) => state.products || []);
+    useWebsiteStore((state) => state.products || [])
 
   const orders =
-  useOrderStore((state) => state.orders || []);
+    useWebsiteStore((state) => state.orders || [])
 
   const users =
-  useUserStore((state) => state.users || []);
+    useWebsiteStore((state) => state.users || [])
 
   const transfers =
-  useWebsiteStore((state) => state.transfers || []);
+    useWebsiteStore((state) => state.transfers || [])
 
   const stockHistory =
-  useWebsiteStore((state) => state.stockHistory || []);
+    useWebsiteStore((state) => state.stockHistory || [])
 
   const logout =
-  useUserStore((state) => state.logout);
+    useWebsiteStore((state) => state.logout)
 
   const transferProductQuantity =
-  useWebsiteStore(
-    (state) => state.transferProductQuantity
-  );
+    useWebsiteStore(
+      (state) => state.transferProductQuantity
+    )
 
   const [selectedProduct, setSelectedProduct] =
-  useState('');
+    useState('')
 
   const [targetWarehouse, setTargetWarehouse] =
-  useState('');
+    useState('')
 
   const [quantity, setQuantity] =
-  useState('');
+    useState('')
 
   const [search, setSearch] =
-  useState('');
+    useState('')
 
   useEffect(() => {
     if (!currentUser) {
-      navigate('/login');
-      return;
+      navigate('/login')
+      return
     }
 
     const allowedRoles = [
-    'warehouse',
-    'branch',
-    'shop',
-    'owner'];
-
+      'warehouse',
+      'branch',
+      'shop',
+      'owner'
+    ]
 
     if (!allowedRoles.includes(currentUser.role)) {
-      navigate('/home');
+      navigate('/home')
     }
-  }, [currentUser, navigate]);
+  }, [currentUser, navigate])
 
-  if (!currentUser) return null;
+  // ================= MEMOIZED DATA =================
 
   const warehouseProducts = useMemo(() => {
+    const warehouseId = currentUser?.warehouseId
+
+    if (!warehouseId) {
+      return []
+    }
+
     return products.filter(
       (p) =>
-      p.warehouseId === currentUser.warehouseId
-    );
-  }, [products, currentUser]);
+        p.warehouseId === warehouseId
+    )
+  }, [products, currentUser?.warehouseId])
 
   const warehouseOrders = useMemo(() => {
+    const warehouseId = currentUser?.warehouseId
+
+    if (!warehouseId) {
+      return []
+    }
+
     return orders.filter(
       (o) =>
-      o.warehouseId === currentUser.warehouseId
-    );
-  }, [orders, currentUser]);
+        o.warehouseId === warehouseId
+    )
+  }, [orders, currentUser?.warehouseId])
 
   const availableUnits = useMemo(() => {
+    const warehouseId = currentUser?.warehouseId
+
+    if (!warehouseId) {
+      return []
+    }
+
     return users.filter(
       (u) =>
-      (
-      u.role === 'warehouse' ||
-      u.role === 'branch' ||
-      u.role === 'shop') &&
+        (
+          u.role === 'warehouse' ||
+          u.role === 'branch' ||
+          u.role === 'shop'
+        ) &&
+        u.warehouseId !== warehouseId
+    )
+  }, [users, currentUser?.warehouseId])
 
-      u.warehouseId !== currentUser.warehouseId
-    );
-  }, [users, currentUser]);
+  // ================= AUTH GUARD =================
+
+  if (!currentUser) return null
+
+  // ================= STATS =================
 
   const totalProducts =
-  warehouseProducts.length;
+    warehouseProducts.length
 
   const totalOrders =
-  warehouseOrders.length;
+    warehouseOrders.length
 
   const totalSales =
-  warehouseOrders.reduce(
-    (acc, o) =>
-    acc + Number(o.total || 0),
-    0
-  );
+    warehouseOrders.reduce(
+      (acc, o) =>
+        acc + Number(o.total || 0),
+      0
+    )
 
   const totalStock =
-  warehouseProducts.reduce(
-    (acc, p) =>
-    acc + Number(p.stock || 0),
-    0
-  );
+    warehouseProducts.reduce(
+      (acc, p) =>
+        acc + Number(p.stock || 0),
+      0
+    )
 
   const lowStockProducts =
-  warehouseProducts.filter(
-    (p) => Number(p.stock || 0) <= 5
-  );
+    warehouseProducts.filter(
+      (p) => Number(p.stock || 0) <= 5
+    )
 
   const filteredProducts =
-  warehouseProducts.filter((p) =>
-  (p.name || '').
-  toLowerCase().
-  includes(search.toLowerCase())
-  );
+    warehouseProducts.filter((p) =>
+      (p.name || '')
+        .toLowerCase()
+        .includes(search.toLowerCase())
+    )
 
   const warehouseTransfers =
-  transfers.filter(
-    (t) =>
-    t.fromWarehouseId ===
-    currentUser.warehouseId ||
-    t.toWarehouseId ===
-    currentUser.warehouseId
-  );
+    transfers.filter(
+      (t) =>
+        t.fromWarehouseId ===
+          currentUser.warehouseId ||
+        t.toWarehouseId ===
+          currentUser.warehouseId
+    )
 
   const warehouseHistory =
-  stockHistory.filter(
-    (h) =>
-    h.warehouseId ===
-    currentUser.warehouseId
-  );
+    stockHistory.filter(
+      (h) =>
+        h.warehouseId ===
+        currentUser.warehouseId
+    )
+
+  // ================= HELPERS =================
 
   const getRoleName = (role) => {
     if (role === 'warehouse')
-    return '🏭 المخزن';
+      return '🏭 المخزن'
 
     if (role === 'branch')
-    return '🏢 الفرع';
+      return '🏢 الفرع'
 
     if (role === 'shop')
-    return '🏪 المعرض';
+      return '🏪 المعرض'
 
     if (role === 'owner')
-    return '👑 الإدارة';
+      return '👑 الإدارة'
 
-    return role;
-  };
+    return role
+  }
+
+  // ================= TRANSFER =================
 
   const handleTransfer = () => {
     if (
-    !selectedProduct ||
-    !targetWarehouse ||
-    !quantity)
-    {
-      alert('يرجى استكمال البيانات');
-      return;
+      !selectedProduct ||
+      !targetWarehouse ||
+      !quantity
+    ) {
+      alert('يرجى استكمال البيانات')
+      return
     }
 
     transferProductQuantity({
       productId: selectedProduct,
       fromWarehouseId:
-      currentUser.warehouseId,
+        currentUser.warehouseId,
       toWarehouseId: targetWarehouse,
       quantity: Number(quantity)
-    });
+    })
 
-    setSelectedProduct('');
-    setTargetWarehouse('');
-    setQuantity('');
+    setSelectedProduct('')
+    setTargetWarehouse('')
+    setQuantity('')
 
-    alert('تم التحويل بنجاح');
-  };
+    alert('تم التحويل بنجاح')
+  }
+
+  // ================= UI =================
 
   return (
     <حماية_الصفحة
       requiredPermission="warehouse_dashboard"
       requiredRole="warehouse"
-      page="warehouse_dashboard">
-      
-      <div className="min-h-screen bg-red text-white p-8 space-y-8">
+      page="warehouse_dashboard"
+    >
+      <div className="min-h-screen bg-black text-white p-8 space-y-8">
+
+        {/* HEADER */}
 
         <div className="flex flex-wrap justify-between gap-4">
 
@@ -196,7 +228,7 @@ export default function WarehouseDashboard() {
 
             <div className="text-gray-400 mt-2">
               {currentUser.warehouseName ||
-              currentUser.username}
+                currentUser.username}
             </div>
           </div>
 
@@ -204,20 +236,20 @@ export default function WarehouseDashboard() {
 
             <button
               onClick={() =>
-              navigate('/products')
+                navigate('/products')
               }
-              className="bg-green-600 px-4 py-3 rounded-xl font-bold">
-              
+              className="bg-green-600 px-4 py-3 rounded-xl font-bold"
+            >
               المنتجات
             </button>
 
             <button
               onClick={() => {
-                logout();
-                navigate('/login');
+                logout()
+                navigate('/login')
               }}
-              className="bg-red-600 px-4 py-3 rounded-xl font-bold">
-              
+              className="bg-red-600 px-4 py-3 rounded-xl font-bold"
+            >
               خروج
             </button>
 
@@ -225,10 +257,13 @@ export default function WarehouseDashboard() {
 
         </div>
 
+        {/* STATS */}
+
         <div className="grid md:grid-cols-4 gap-4">
 
           <div className="bg-slate-900 p-5 rounded-2xl">
             <div>الأصناف</div>
+
             <div className="text-3xl font-black">
               {totalProducts}
             </div>
@@ -236,6 +271,7 @@ export default function WarehouseDashboard() {
 
           <div className="bg-slate-900 p-5 rounded-2xl">
             <div>الطلبات</div>
+
             <div className="text-3xl font-black">
               {totalOrders}
             </div>
@@ -243,6 +279,7 @@ export default function WarehouseDashboard() {
 
           <div className="bg-slate-900 p-5 rounded-2xl">
             <div>إجمالي المخزون</div>
+
             <div className="text-3xl font-black">
               {totalStock}
             </div>
@@ -250,12 +287,15 @@ export default function WarehouseDashboard() {
 
           <div className="bg-slate-900 p-5 rounded-2xl">
             <div>المبيعات</div>
+
             <div className="text-3xl font-black">
               {totalSales}
             </div>
           </div>
 
         </div>
+
+        {/* TRANSFER */}
 
         <div className="bg-slate-900 p-5 rounded-2xl space-y-4">
 
@@ -267,24 +307,24 @@ export default function WarehouseDashboard() {
             className="w-full p-3 rounded text-black"
             value={selectedProduct}
             onChange={(e) =>
-            setSelectedProduct(
-              e.target.value
-            )
-            }>
-            
+              setSelectedProduct(
+                e.target.value
+              )
+            }
+          >
             <option value="">
               اختر المنتج
             </option>
 
             {warehouseProducts.map(
-              (product) =>
-              <option
-                key={product.id}
-                value={product.id}>
-                
+              (product) => (
+                <option
+                  key={product.id}
+                  value={product.id}
+                >
                   {product.name}
                 </option>
-
+              )
             )}
           </select>
 
@@ -292,23 +332,23 @@ export default function WarehouseDashboard() {
             className="w-full p-3 rounded text-black"
             value={targetWarehouse}
             onChange={(e) =>
-            setTargetWarehouse(
-              e.target.value
-            )
-            }>
-            
+              setTargetWarehouse(
+                e.target.value
+              )
+            }
+          >
             <option value="">
               اختر الوجهة
             </option>
 
-            {availableUnits.map((unit) =>
-            <option
-              key={unit.id}
-              value={unit.warehouseId}>
-              
+            {availableUnits.map((unit) => (
+              <option
+                key={unit.id}
+                value={unit.warehouseId}
+              >
                 {unit.warehouseName}
               </option>
-            )}
+            ))}
           </select>
 
           <input
@@ -316,20 +356,22 @@ export default function WarehouseDashboard() {
             min="1"
             value={quantity}
             onChange={(e) =>
-            setQuantity(e.target.value)
+              setQuantity(e.target.value)
             }
             className="w-full p-3 rounded text-black"
-            placeholder="الكمية" />
-          
+            placeholder="الكمية"
+          />
 
           <button
             onClick={handleTransfer}
-            className="bg-blue-600 px-5 py-3 rounded-xl font-bold">
-            
+            className="bg-blue-600 px-5 py-3 rounded-xl font-bold"
+          >
             تنفيذ التحويل
           </button>
 
         </div>
+
+        {/* PRODUCTS */}
 
         <div className="bg-slate-900 p-5 rounded-2xl">
 
@@ -342,31 +384,38 @@ export default function WarehouseDashboard() {
             <input
               value={search}
               onChange={(e) =>
-              setSearch(e.target.value)
+                setSearch(e.target.value)
               }
               placeholder="بحث"
-              className="p-2 rounded text-black" />
-            
+              className="p-2 rounded text-black"
+            />
 
           </div>
 
           <div className="overflow-auto">
 
             <table className="w-full">
+
               <thead>
                 <tr>
-                  <th className="text-right p-2">الصنف</th>
-                  <th className="text-right p-2">المخزون</th>
+                  <th className="text-right p-2">
+                    الصنف
+                  </th>
+
+                  <th className="text-right p-2">
+                    المخزون
+                  </th>
                 </tr>
               </thead>
 
               <tbody>
+
                 {filteredProducts.map(
-                  (product) =>
-                  <tr
-                    key={product.id}
-                    className="border-t border-slate-700">
-                    
+                  (product) => (
+                    <tr
+                      key={product.id}
+                      className="border-t border-slate-700"
+                    >
                       <td className="p-2">
                         {product.name}
                       </td>
@@ -375,14 +424,18 @@ export default function WarehouseDashboard() {
                         {product.stock}
                       </td>
                     </tr>
-
+                  )
                 )}
+
               </tbody>
+
             </table>
 
           </div>
 
         </div>
+
+        {/* LOW STOCK + TRANSFERS */}
 
         <div className="grid lg:grid-cols-2 gap-6">
 
@@ -392,14 +445,14 @@ export default function WarehouseDashboard() {
               ⚠ الأصناف منخفضة المخزون
             </h2>
 
-            {lowStockProducts.map((p) =>
-            <div
-              key={p.id}
-              className="border-b border-slate-700 py-2">
-              
+            {lowStockProducts.map((p) => (
+              <div
+                key={p.id}
+                className="border-b border-slate-700 py-2"
+              >
                 {p.name} - {p.stock}
               </div>
-            )}
+            ))}
 
           </div>
 
@@ -409,21 +462,23 @@ export default function WarehouseDashboard() {
               🚚 آخر التحويلات
             </h2>
 
-            {warehouseTransfers.
-            slice(-10).
-            reverse().
-            map((t) =>
-            <div
-              key={t.id}
-              className="border-b border-slate-700 py-2">
-              
+            {warehouseTransfers
+              .slice(-10)
+              .reverse()
+              .map((t) => (
+                <div
+                  key={t.id}
+                  className="border-b border-slate-700 py-2"
+                >
                   {t.productName || t.productId}
                 </div>
-            )}
+              ))}
 
           </div>
 
         </div>
+
+        {/* STOCK HISTORY */}
 
         <div className="bg-slate-900 p-5 rounded-2xl">
 
@@ -431,22 +486,22 @@ export default function WarehouseDashboard() {
             📈 حركة المخزون
           </h2>
 
-          {warehouseHistory.
-          slice(-20).
-          reverse().
-          map((item, index) =>
-          <div
-            key={index}
-            className="border-b border-slate-700 py-2">
-            
+          {warehouseHistory
+            .slice(-20)
+            .reverse()
+            .map((item, index) => (
+              <div
+                key={index}
+                className="border-b border-slate-700 py-2"
+              >
                 {item.action || item.type} -
                 {item.productName}
               </div>
-          )}
+            ))}
 
         </div>
 
       </div>
-    </حماية_الصفحة>);
-
+    </حماية_الصفحة>
+  )
 }

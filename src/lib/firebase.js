@@ -13,7 +13,8 @@ import {
 } from 'firebase/storage'
 
 import {
-  getAuth
+  getAuth,
+  signInAnonymously
 } from 'firebase/auth'
 
 
@@ -48,14 +49,8 @@ const firebaseConfig = {
 
 
 // ==================================================
-// INITIALIZE FIREBASE SAFELY
+// INITIALIZE FIREBASE
 // ==================================================
-//
-// إذا كان Firebase قد تم تهيئته بالفعل في مكان آخر
-// نستخدم التطبيق الموجود بدلاً من إنشاء DEFAULT APP جديد.
-// هذا يمنع:
-// FirebaseError: app/duplicate-app
-//
 
 const app =
   getApps().length > 0
@@ -78,14 +73,67 @@ const auth =
 
 
 // ==================================================
+// ANONYMOUS AUTHENTICATION
+// ==================================================
+
+let anonymousAuthPromise = null
+
+
+export const ensureAnonymousAuth = async () => {
+
+  if (auth.currentUser) {
+
+    return auth.currentUser
+
+  }
+
+
+  if (!anonymousAuthPromise) {
+
+    anonymousAuthPromise =
+      signInAnonymously(auth)
+
+        .then(
+          credential =>
+            credential.user
+        )
+
+        .catch(error => {
+
+          anonymousAuthPromise =
+            null
+
+          console.error(
+            'Firebase Anonymous Authentication Error:',
+            error
+          )
+
+          throw error
+
+        })
+
+  }
+
+
+  return anonymousAuthPromise
+
+}
+
+
+// ==================================================
 // EXPORTS
 // ==================================================
 
 export {
+
   app,
+
   db,
+
   storage,
+
   auth
+
 }
 
 export default app

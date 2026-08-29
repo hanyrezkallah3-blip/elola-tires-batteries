@@ -1,8 +1,7 @@
 import { useMemo } from 'react'
-import { useInventoryStore } from '../../store/inventoryStore'
 import { استخدام_ذكاء_المخزون } from '../../ai/ذكاء_المخازن'
 
-export default function تحليل_المخازن() {
+export default function WarehouseAnalysis() {
 
   const AI = استخدام_ذكاء_المخزون()
 
@@ -159,5 +158,4 @@ export default function تحليل_المخازن() {
     </div>
 
   )
-
 }

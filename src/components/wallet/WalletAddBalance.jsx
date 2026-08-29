@@ -1,18 +1,11 @@
-import { useState, useMemo } from 'react'
+import { useMemo, useState } from 'react'
 
 export default function WalletAddBalance({
-
   customer,
   onClose,
   onSubmit,
   operationType = 'add'
-
 }) {
-
-  // ================= GUARD =================
-
-  if (!customer) return null
-
   // ================= STATES =================
 
   const [amount, setAmount] = useState('')
@@ -25,19 +18,22 @@ export default function WalletAddBalance({
   // ================= CURRENT BALANCE =================
 
   const currentBalance = useMemo(() => {
-
     return Number(
       customer?.balance ||
       customer?.walletBalance ||
       0
     )
-
   }, [customer])
+
+  // ================= GUARD =================
+
+  if (!customer) {
+    return null
+  }
 
   // ================= TYPE CONFIG =================
 
   const typeConfig = {
-
     manual_add: {
       label: '➕ إضافة رصيد',
       color: 'text-green-400',
@@ -55,13 +51,11 @@ export default function WalletAddBalance({
       color: 'text-red-400',
       bg: 'bg-red-500/10'
     }
-
   }
 
   // ================= HANDLER =================
 
   const handleSubmit = () => {
-
     const value = Number(amount || 0)
 
     if (value <= 0) {
@@ -70,7 +64,6 @@ export default function WalletAddBalance({
     }
 
     onSubmit?.({
-
       phone: customer?.phone,
 
       customerName:
@@ -83,57 +76,60 @@ export default function WalletAddBalance({
       type: selectedType,
 
       reason: note
-
     })
 
     setAmount('')
     setNote('')
 
     onClose?.()
-
   }
 
-  const currentType = typeConfig[selectedType]
+  const currentType =
+    typeConfig[selectedType] ||
+    typeConfig.manual_add
 
   // ================= UI =================
 
   return (
-
-    <div className="
-      fixed inset-0 z-50
-      bg-black/80 backdrop-blur-md
-      p-4 overflow-y-auto
-    ">
-
-      <div className="
-        max-w-3xl mx-auto mt-10
-        bg-slate-900
-        border border-slate-700
-        rounded-[40px]
-        overflow-hidden
-        shadow-2xl
-      ">
+    <div
+      className="
+        fixed inset-0 z-50
+        bg-black/80 backdrop-blur-md
+        p-4 overflow-y-auto
+      "
+    >
+      <div
+        className="
+          max-w-3xl mx-auto mt-10
+          bg-slate-900
+          border border-slate-700
+          rounded-[40px]
+          overflow-hidden
+          shadow-2xl
+        "
+      >
 
         {/* HEADER */}
 
-        <div className="
-          bg-gradient-to-r
-          from-green-700 via-emerald-600 to-yellow-500
-          p-8
-        ">
-
+        <div
+          className="
+            bg-gradient-to-r
+            from-green-700 via-emerald-600 to-yellow-500
+            p-8
+          "
+        >
           <div className="flex justify-between flex-wrap gap-4">
 
             <div>
-
               <h2 className="text-4xl font-black mb-3">
                 إدارة المحفظة
               </h2>
 
               <div className="text-xl text-white/90">
-                {customer?.customerName || customer?.name || 'عميل'}
+                {customer?.customerName ||
+                  customer?.name ||
+                  'عميل'}
               </div>
-
             </div>
 
             <button
@@ -148,7 +144,6 @@ export default function WalletAddBalance({
             </button>
 
           </div>
-
         </div>
 
         {/* CONTENT */}
@@ -157,120 +152,106 @@ export default function WalletAddBalance({
 
           {/* BALANCE */}
 
-          <div className="
-            bg-black/40
-            border border-green-500/30
-            rounded-[35px]
-            p-6
-          ">
-
+          <div
+            className="
+              bg-black/40
+              border border-green-500/30
+              rounded-[35px]
+              p-6
+            "
+          >
             <div className="text-gray-400 text-xl mb-3">
               الرصيد الحالي
             </div>
 
             <div className="text-5xl font-black text-green-400">
               {currentBalance.toLocaleString()}
-              <span className="text-2xl mr-3">ج.م</span>
-            </div>
 
+              <span className="text-2xl mr-3">
+                ج.م
+              </span>
+            </div>
           </div>
 
           {/* TYPE SWITCH */}
 
           <div className="grid grid-cols-3 gap-3">
 
-            {Object.entries(typeConfig).map(([key, cfg]) => (
-
-              <button
-
-                key={key}
-
-                onClick={() => setSelectedType(key)}
-
-                className={`
-                  p-4 rounded-2xl font-black
-                  transition-all
-                  ${
-                    selectedType === key
-                      ? cfg.bg + ' ' + cfg.color
-                      : 'bg-slate-800 text-gray-300'
-                  }
-                `}
-              >
-
-                {cfg.label}
-
-              </button>
-
-            ))}
+            {Object.entries(typeConfig).map(
+              ([key, cfg]) => (
+                <button
+                  key={key}
+                  onClick={() => setSelectedType(key)}
+                  className={`
+                    p-4 rounded-2xl font-black
+                    transition-all
+                    ${
+                      selectedType === key
+                        ? cfg.bg + ' ' + cfg.color
+                        : 'bg-slate-800 text-gray-300'
+                    }
+                  `}
+                >
+                  {cfg.label}
+                </button>
+              )
+            )}
 
           </div>
 
           {/* AMOUNT */}
 
           <div>
-
             <label className="block text-2xl font-black mb-4">
               المبلغ
             </label>
 
             <input
-
               type="number"
-
               value={amount}
-
               onChange={(e) =>
                 setAmount(e.target.value)
               }
-
               className="
                 w-full p-5 rounded-3xl
                 text-black text-2xl font-black
               "
               placeholder="أدخل المبلغ"
             />
-
           </div>
 
           {/* NOTE */}
 
           <div>
-
             <label className="block text-2xl font-black mb-4">
               ملاحظات
             </label>
 
             <textarea
-
               rows={4}
-
               value={note}
-
               onChange={(e) =>
                 setNote(e.target.value)
               }
-
               className="
                 w-full p-5 rounded-3xl
                 text-black text-xl font-bold
                 resize-none
               "
-
               placeholder="اكتب ملاحظة"
             />
-
           </div>
 
           {/* SUMMARY */}
 
-          <div className="
-            bg-black/40
-            border border-slate-700
-            rounded-[35px]
-            p-6
-          ">
-
+          <div
+            className="
+              bg-black/40
+              border border-slate-700
+              rounded-[35px]
+              p-6
+            "
+          >
             <div className="text-yellow-400 text-2xl font-black mb-5">
               ملخص العملية
             </div>
@@ -278,19 +259,18 @@ export default function WalletAddBalance({
             <div className="grid md:grid-cols-2 gap-5">
 
               <div className="bg-slate-900 p-5 rounded-3xl">
-
                 <div className="text-gray-400 mb-2">
                   النوع
                 </div>
 
-                <div className={`text-2xl font-black ${currentType.color}`}>
+                <div
+                  className={`text-2xl font-black ${currentType.color}`}
+                >
                   {currentType.label}
                 </div>
-
               </div>
 
               <div className="bg-slate-900 p-5 rounded-3xl">
-
                 <div className="text-gray-400 mb-2">
                   المبلغ
                 </div>
@@ -298,19 +278,15 @@ export default function WalletAddBalance({
                 <div className="text-3xl font-black text-green-400">
                   {Number(amount || 0).toLocaleString()} ج.م
                 </div>
-
               </div>
 
             </div>
-
           </div>
 
           {/* SUBMIT */}
 
           <button
-
             onClick={handleSubmit}
-
             className="
               w-full
               bg-green-600 hover:bg-green-700
@@ -319,17 +295,11 @@ export default function WalletAddBalance({
               shadow-2xl
             "
           >
-
             💾 حفظ العملية
-
           </button>
 
         </div>
-
       </div>
-
     </div>
-
   )
-
 }

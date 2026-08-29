@@ -6,246 +6,139 @@ import DemandEventBus, {
   DemandEvents
 } from '../core/events/DemandEventBus'
 
-import { useDemandStore } 
-  from '../store/demandStore'
-
+import { useDemandStore } from '../store/demandStore'
 
 
 class VehicleSearchTrackingService {
 
-
-
   static track({
-
     make,
-
     model,
-
     year,
-
     vehicle,
-
     tires = [],
-
     batteries = [],
-
     oils = []
-
   }) {
 
+    const products = [
+      ...tires,
+      ...batteries,
+      ...oils
+    ]
 
-    const found =
+    const found = products.length > 0
 
-      (
+    const record = {
 
-        tires.length +
+      make,
+      model,
+      year,
 
-        batteries.length +
+      vehicleId:
+        vehicle?.id || null,
 
-        oils.length
+      found,
 
-      ) > 0
+      productsCount:
+        products.length,
+
+      productsFound: {
+        tires: tires.length,
+        batteries: batteries.length,
+        oils: oils.length
+      },
+
+      tireSize:
+        vehicle?.tires?.[0]
+          ? `${vehicle.tires[0].width}/${vehicle.tires[0].profile}R${vehicle.tires[0].rim}`
+          : '',
+
+      batteryCapacity:
+        vehicle?.batteries?.[0]?.capacity || '',
+
+      oilViscosity:
+        vehicle?.oils?.[0]?.viscosity || ''
+    }
 
 
+    // ================= DEMAND STORE =================
 
     useDemandStore
       .getState()
-      .addSearch({
-
-        make,
-
-        model,
-
-        year,
-
-        vehicleId:
-
-          vehicle?.id || null,
+      .addSearch(record)
 
 
-        found,
-
-
-        productsFound:
-
-          {
-
-            tires:
-
-              tires.length,
-
-
-            batteries:
-
-              batteries.length,
-
-
-            oils:
-
-              oils.length
-
-          }
-
-      })
-
-
-
-    // تسجيل المنتجات غير المتوفرة
+    // ================= MISSING REQUEST =================
 
     if (!found) {
-
 
       useDemandStore
         .getState()
         .addMissingRequest({
 
           make,
-
           model,
-
           year,
 
-
           reason:
-
             'لم توجد منتجات مناسبة للسيارة'
-
 
         })
 
     }
 
 
-  }
-
-
-}
-
-
-export default VehicleSearchTrackingService
-
-export default class VehicleSearchTrackingService {
-
-  static track({
-
-    make,
-
-    model,
-
-    year,
-
-    vehicle,
-
-    tires = [],
-
-    batteries = [],
-
-    oils = []
-
-  }) {
-
-    const products = [
-
-      ...tires,
-
-      ...batteries,
-
-      ...oils
-
-    ]
-
-    const record = {
-
-      make,
-
-      model,
-
-      year,
-
-      found:
-
-        products.length > 0,
-
-      productsCount:
-
-        products.length,
-
-      tireSize:
-
-        vehicle?.tires?.[0]
-
-          ? `${vehicle.tires[0].width}/${vehicle.tires[0].profile}R${vehicle.tires[0].rim}`
-
-          : '',
-
-      batteryCapacity:
-
-        vehicle?.batteries?.[0]?.capacity || '',
-
-      oilViscosity:
-
-        vehicle?.oils?.[0]?.viscosity || ''
-
-    }
+    // ================= AI ENGINES =================
 
     VehicleDemandEngine.record(
-
       record
-
     )
 
     VehicleRecommendationEngine.learn(
-
       record
-
     )
 
     ProcurementAI.learn(
-
       record
-
     )
+
+
+    // ================= EVENTS =================
 
     DemandEventBus.emit(
-
       DemandEvents.SEARCH_RECORDED,
-
       record
-
     )
 
-    if (record.found) {
+
+    if (found) {
 
       DemandEventBus.emit(
-
         DemandEvents.PRODUCT_FOUND,
-
         record
-
       )
 
     } else {
 
       DemandEventBus.emit(
-
         DemandEvents.PRODUCT_MISSING,
-
         record
-
       )
 
       DemandEventBus.emit(
-
         DemandEvents.PROCUREMENT_REQUIRED,
-
         record
-
       )
 
     }
+
 
     return record
 
   }
 
 }
+
+
+export default VehicleSearchTrackingService

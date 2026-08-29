@@ -5,313 +5,684 @@
 
 export default class VehicleMapper {
 
+
   // ====================================================
   // TO NUMBER
   // ====================================================
 
-  static toNumber(value, fallback = 0) {
+  static toNumber(
+
+    value,
+
+    fallback = 0
+
+  ) {
 
     const number = Number(value)
 
     return Number.isFinite(number)
+
       ? number
+
       : fallback
 
   }
 
+
   // ====================================================
-  // NORMALIZE TYPE
+  // NORMALIZE VEHICLE TYPE
   // ====================================================
 
-  static normalizeVehicleType(type = '') {
+  static normalizeVehicleType(
 
-    const value = String(type)
-      .toLowerCase()
-      .trim()
+    type = ''
 
-    if (value.includes('truck'))
+  ) {
+
+    const value =
+
+      String(type ?? '')
+
+        .toLowerCase()
+
+        .trim()
+
+
+    if (
+
+      [
+
+        'car',
+
+        'cars',
+
+        'passenger',
+
+        'passenger car',
+
+        'sedan',
+
+        'صالون',
+
+        'سيارة',
+
+        'سيارات'
+
+      ].includes(value)
+
+    ) {
+
+      return 'car'
+
+    }
+
+
+    if (
+
+      [
+
+        'truck',
+
+        'trucks',
+
+        'lorry',
+
+        'شاحنة',
+
+        'شاحنات'
+
+      ].includes(value)
+
+    ) {
+
       return 'truck'
 
-    if (value.includes('bus'))
+    }
+
+
+    if (
+
+      [
+
+        'bus',
+
+        'buses',
+
+        'حافلة',
+
+        'اتوبيس',
+
+        'أتوبيس'
+
+      ].includes(value)
+
+    ) {
+
       return 'bus'
 
-    if (value.includes('motor'))
+    }
+
+
+    if (
+
+      [
+
+        'motor',
+
+        'motorcycle',
+
+        'motorcycles',
+
+        'bike',
+
+        'دراجة',
+
+        'دراجة نارية'
+
+      ].includes(value)
+
+    ) {
+
       return 'motorcycle'
 
-    if (value.includes('suv'))
+    }
+
+
+    if (
+
+      [
+
+        'suv',
+
+        'suvs'
+
+      ].includes(value)
+
+    ) {
+
       return 'suv'
 
-    if (value.includes('pickup'))
+    }
+
+
+    if (
+
+      [
+
+        'pickup',
+
+        'pick-up',
+
+        'pickups',
+
+        'بيك اب',
+
+        'بيك أب'
+
+      ].includes(value)
+
+    ) {
+
       return 'pickup'
 
-    return 'car'
+    }
+
+
+    return value
 
   }
+
 
   // ====================================================
   // VEHICLE TYPES
   // ====================================================
 
-  static mapVehicleTypes(items = []) {
+  static mapVehicleTypes(
 
-  if (!Array.isArray(items))
-    return []
+    items = []
 
-  return items
-    .filter(Boolean)
-    .map(item => {
+  ) {
 
-      if (typeof item === 'string') {
+    if (
 
-        return {
+      !Array.isArray(items)
 
-          id: item,
+    )
 
-          name: item,
+      return []
 
-          image: ''
+
+    return items
+
+      .filter(Boolean)
+
+      .map(item => {
+
+        if (
+
+          typeof item === 'string'
+
+        ) {
+
+          const type =
+
+            this.normalizeVehicleType(
+
+              item
+
+            )
+
+
+          return {
+
+            id: type,
+
+            value: type,
+
+            name: item,
+
+            label: item,
+
+            image: ''
+
+          }
 
         }
 
-      }
 
-      return {
+        const rawType =
 
-        id:
+          item?.type ??
 
-          item.id ||
+          item?.value ??
 
-          item.value ||
+          item?.id ??
 
-          item.type ||
-
-          item.name ||
-
-          crypto.randomUUID(),
-
-        name:
-
-          item.name ||
-
-          item.label ||
-
-          item.type ||
-
-          '',
-
-        image:
-
-          item.image ||
+          item?.name ??
 
           ''
 
-      }
 
-    })
+        const type =
 
-}
+          this.normalizeVehicleType(
+
+            rawType
+
+          )
+
+
+        return {
+
+          id:
+
+            item?.id ??
+
+            type,
+
+          value: type,
+
+          name:
+
+            item?.name ??
+
+            item?.label ??
+
+            item?.type ??
+
+            type,
+
+          label:
+
+            item?.label ??
+
+            item?.name ??
+
+            item?.type ??
+
+            type,
+
+          image:
+
+            item?.image ??
+
+            ''
+
+        }
+
+      })
+
+  }
+
 
   // ====================================================
   // BRANDS
   // ====================================================
 
-  static mapBrands(items = []) {
+  static mapBrands(
 
-  if (!Array.isArray(items))
-    return []
+    items = []
 
-  return items
-    .filter(item => item && typeof item === 'object' || typeof item === 'string')
-    .map(item => {
+  ) {
 
-      if (typeof item === 'string') {
+    if (
 
-        return {
+      !Array.isArray(items)
 
-          id: item,
+    )
 
-          name: item
+      return []
+
+
+    return items
+
+      .filter(
+
+        item =>
+
+          item &&
+
+          (
+
+            typeof item === 'object' ||
+
+            typeof item === 'string'
+
+          )
+
+      )
+
+      .map(item => {
+
+        if (
+
+          typeof item === 'string'
+
+        ) {
+
+          return {
+
+            id: item,
+
+            value: item,
+
+            name: item,
+
+            label: item
+
+          }
 
         }
 
-      }
 
-      return {
+        const id =
 
-        id:
+          item?.id ??
 
-          item?.id ||
+          item?.make_id ??
 
-          item?.make_id ||
+          item?.make ??
 
-          item?.make ||
+          item?.name ??
 
-          item?.name ||
-
-          item?.make_display ||
-
-          crypto.randomUUID(),
-
-        name:
-
-          item?.name ||
-
-          item?.make_display ||
-
-          item?.make ||
+          item?.make_display ??
 
           ''
 
-      }
 
-    })
+        const name =
 
-}
+          item?.name ??
+
+          item?.make_display ??
+
+          item?.make ??
+
+          item?.label ??
+
+          id
+
+
+        return {
+
+          ...item,
+
+          id,
+
+          value: id,
+
+          name,
+
+          label: name
+
+        }
+
+      })
+
+  }
+
+
   // ====================================================
   // MODELS
   // ====================================================
 
-  static mapModels(items = []) {
+  static mapModels(
 
-  if (!Array.isArray(items))
-    return []
+    items = []
 
-  return items
-    .filter(item =>
-      item &&
-      (
-        typeof item === 'object' ||
-        typeof item === 'string'
-      )
+  ) {
+
+    if (
+
+      !Array.isArray(items)
+
     )
-    .map(item => {
 
-      if (typeof item === 'string') {
+      return []
 
-        return {
 
-          id: item,
+    return items
 
-          name: item
+      .filter(
+
+        item =>
+
+          item &&
+
+          (
+
+            typeof item === 'object' ||
+
+            typeof item === 'string'
+
+          )
+
+      )
+
+      .map(item => {
+
+        if (
+
+          typeof item === 'string'
+
+        ) {
+
+          return {
+
+            id: item,
+
+            value: item,
+
+            name: item,
+
+            label: item
+
+          }
 
         }
 
-      }
 
-      return {
+        const id =
 
-        id:
+          item?.id ??
 
-          item?.id ||
+          item?.model_id ??
 
-          item?.model_id ||
+          item?.model ??
 
-          item?.model ||
+          item?.model_name ??
 
-          item?.model_name ||
-
-          item?.name ||
-
-          crypto.randomUUID(),
-
-        name:
-
-          item?.name ||
-
-          item?.model_name ||
-
-          item?.model ||
+          item?.name ??
 
           ''
 
-      }
 
-    })
+        const name =
 
-}
+          item?.name ??
+
+          item?.model_name ??
+
+          item?.model ??
+
+          item?.label ??
+
+          id
+
+
+        return {
+
+          ...item,
+
+          id,
+
+          value: id,
+
+          name,
+
+          label: name
+
+        }
+
+      })
+
+  }
+
 
   // ====================================================
   // YEARS
   // ====================================================
 
-  static mapYears(items = []) {
+  static mapYears(
 
-    if (!Array.isArray(items))
+    items = []
+
+  ) {
+
+    if (
+
+      !Array.isArray(items)
+
+    )
+
       return []
 
-    return items.map(item => {
 
-      const value =
 
-        typeof item === 'object'
+    return items
 
-          ? (
+      .map(item => {
 
-              item.year ??
+        const value =
 
-              item.name ??
+          typeof item === 'object'
 
-              item.id
+            ? (
 
-            )
+                item?.year ??
 
-          : item
+                item?.name ??
 
-      return {
+                item?.value ??
 
-        id: String(value),
+                item?.id
 
-        name: String(value)
+              )
 
-      }
+            : item
 
-    })
+
+        if (
+
+          value === undefined ||
+
+          value === null ||
+
+          value === ''
+
+        ) {
+
+          return null
+
+        }
+
+
+        return {
+
+          id: String(value),
+
+          value: String(value),
+
+          name: String(value),
+
+          label: String(value)
+
+        }
+
+      })
+
+      .filter(Boolean)
 
   }
+
 
   // ====================================================
   // CARQUERY
   // ====================================================
 
-  static fromCarQuery(vehicle = {}) {
+  static fromCarQuery(
+
+    vehicle = {}
+
+  ) {
 
     const make =
+
       vehicle.make_display ||
+
       vehicle.make_name ||
+
       vehicle.model_make_display ||
+
       vehicle.model_make_id ||
+
       ''
+
 
     const model =
+
       vehicle.model_name ||
+
       vehicle.model_display ||
+
       ''
 
+
     const yearFrom =
+
       this.toNumber(
+
         vehicle.model_year ||
+
         vehicle.year_from ||
+
         vehicle.yearFrom,
+
         1980
+
       )
+
 
     const yearTo =
+
       this.toNumber(
+
         vehicle.year_to ||
+
         vehicle.yearTo,
+
         new Date().getFullYear()
+
       )
 
+
     const type =
+
       this.normalizeVehicleType(
+
         vehicle.vehicle_type ||
+
         vehicle.type
+
       )
+
 
     return {
 
       id:
+
         vehicle.model_id ||
+
         `${make}-${model}-${yearFrom}`,
 
       vehicleType: type,
@@ -336,22 +707,33 @@ export default class VehicleMapper {
 
   }
 
+
   // ====================================================
   // NHTSA
   // ====================================================
 
-  static fromNHTSA(vehicle = {}) {
+  static fromNHTSA(
+
+    vehicle = {}
+
+  ) {
 
     const make =
+
       vehicle.Make_Name || ''
 
+
     const model =
+
       vehicle.Model_Name || ''
+
 
     return {
 
       id:
+
         vehicle.Model_ID ||
+
         `${make}-${model}`,
 
       vehicleType: 'car',
@@ -366,7 +748,9 @@ export default class VehicleMapper {
 
       yearFrom: 1980,
 
-      yearTo: new Date().getFullYear(),
+      yearTo:
+
+        new Date().getFullYear(),
 
       source: 'nhtsa',
 
@@ -376,11 +760,16 @@ export default class VehicleMapper {
 
   }
 
+
   // ====================================================
   // LOCAL
   // ====================================================
 
-  static fromLocal(vehicle = {}) {
+  static fromLocal(
+
+    vehicle = {}
+
+  ) {
 
     return {
 
@@ -392,16 +781,33 @@ export default class VehicleMapper {
 
   }
 
+
   // ====================================================
   // ARRAY
   // ====================================================
 
-  static mapArray(items = [], mapper) {
+  static mapArray(
 
-    if (!Array.isArray(items))
+    items = [],
+
+    mapper
+
+  ) {
+
+    if (
+
+      !Array.isArray(items)
+
+    )
+
       return []
 
-    return items.map(mapper)
+
+    return items.map(
+
+      mapper
+
+    )
 
   }
 

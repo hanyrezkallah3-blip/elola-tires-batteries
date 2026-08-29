@@ -1,6 +1,6 @@
 import { usePermissionsStore } from '../../store/الصلاحيات_العربية'
 
-export default function حارس_الصلاحيات({
+export default function PermissionsGuard({
   children,
   الميزة
 }) {

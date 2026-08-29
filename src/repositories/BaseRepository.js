@@ -10,15 +10,21 @@ import {
   orderBy
 } from 'firebase/firestore'
 
-import { db } from '../firebase/firebase'
+import {
+  db,
+  ensureAnonymousAuth
+} from '../lib/firebase'
+
 
 export default class BaseRepository {
 
   constructor(collectionName) {
 
-    this.collectionName = collectionName
+    this.collectionName =
+      collectionName
 
   }
+
 
   // ======================================================
   // COLLECTION
@@ -36,6 +42,18 @@ export default class BaseRepository {
 
   }
 
+
+  // ======================================================
+  // AUTHENTICATION
+  // ======================================================
+
+  async ensureAuthenticated() {
+
+    return await ensureAnonymousAuth()
+
+  }
+
+
   // ======================================================
   // LIFE CYCLE
   // ======================================================
@@ -46,11 +64,13 @@ export default class BaseRepository {
 
   }
 
+
   async afterCreate(result, data) {
 
     return result
 
   }
+
 
   async beforeUpdate(id, data) {
 
@@ -58,11 +78,13 @@ export default class BaseRepository {
 
   }
 
+
   async afterUpdate(result, id, data) {
 
     return result
 
   }
+
 
   async beforeDelete(id) {
 
@@ -70,11 +92,13 @@ export default class BaseRepository {
 
   }
 
+
   async afterDelete(result, id) {
 
     return result
 
   }
+
 
   // ======================================================
   // CREATE
@@ -84,26 +108,30 @@ export default class BaseRepository {
 
     try {
 
+      await this.ensureAuthenticated()
+
+
       const payload =
         await this.beforeCreate(data)
 
-      const ref = await addDoc(
 
-        this.getCollection(),
+      const ref =
+        await addDoc(
 
-        {
+          this.getCollection(),
 
-          ...payload,
+          {
 
-          createdAt:
+            ...payload,
 
-            payload.createdAt ||
+            createdAt:
+              payload.createdAt ||
+              new Date().toISOString()
 
-            new Date().toISOString()
+          }
 
-        }
+        )
 
-      )
 
       const result = {
 
@@ -115,11 +143,13 @@ export default class BaseRepository {
 
         },
 
-        message: 'تم الحفظ بنجاح',
+        message:
+          'تم الحفظ بنجاح',
 
         errors: []
 
       }
+
 
       return await this.afterCreate(
 
@@ -133,6 +163,15 @@ export default class BaseRepository {
 
     catch (error) {
 
+      console.error(
+
+        `BaseRepository.create(${this.collectionName}) failed:`,
+
+        error
+
+      )
+
+
       return {
 
         success: false,
@@ -140,7 +179,6 @@ export default class BaseRepository {
         data: null,
 
         message:
-
           error.message,
 
         errors: [error]
@@ -150,6 +188,7 @@ export default class BaseRepository {
     }
 
   }
+
 
   // ======================================================
   // GET ALL
@@ -165,36 +204,39 @@ export default class BaseRepository {
 
     try {
 
-      const q = query(
+      await this.ensureAuthenticated()
 
-        this.getCollection(),
 
-        orderBy(
+      const q =
+        query(
 
-          field,
+          this.getCollection(),
 
-          direction
+          orderBy(
+
+            field,
+
+            direction
+
+          )
 
         )
 
-      )
 
       const snapshot =
-
         await getDocs(q)
+
 
       return {
 
         success: true,
 
         data:
-
           snapshot.docs.map(
 
             document => ({
 
               id:
-
                 document.id,
 
               ...document.data()
@@ -213,6 +255,15 @@ export default class BaseRepository {
 
     catch (error) {
 
+      console.error(
+
+        `BaseRepository.getAll(${this.collectionName}) failed:`,
+
+        error
+
+      )
+
+
       return {
 
         success: false,
@@ -220,7 +271,6 @@ export default class BaseRepository {
         data: [],
 
         message:
-
           error.message,
 
         errors: [error]
@@ -231,6 +281,7 @@ export default class BaseRepository {
 
   }
 
+
   // ======================================================
   // GET BY ID
   // ======================================================
@@ -239,8 +290,28 @@ export default class BaseRepository {
 
     try {
 
-      const snapshot =
+      if (!id) {
 
+        return {
+
+          success: false,
+
+          data: null,
+
+          message:
+            'معرف العنصر مطلوب',
+
+          errors: []
+
+        }
+
+      }
+
+
+      await this.ensureAuthenticated()
+
+
+      const snapshot =
         await getDoc(
 
           doc(
@@ -255,10 +326,9 @@ export default class BaseRepository {
 
         )
 
+
       if (
-
         !snapshot.exists()
-
       ) {
 
         return {
@@ -268,7 +338,6 @@ export default class BaseRepository {
           data: null,
 
           message:
-
             'العنصر غير موجود',
 
           errors: []
@@ -277,6 +346,7 @@ export default class BaseRepository {
 
       }
 
+
       return {
 
         success: true,
@@ -284,7 +354,6 @@ export default class BaseRepository {
         data: {
 
           id:
-
             snapshot.id,
 
           ...snapshot.data()
@@ -301,6 +370,15 @@ export default class BaseRepository {
 
     catch (error) {
 
+      console.error(
+
+        `BaseRepository.getById(${this.collectionName}) failed:`,
+
+        error
+
+      )
+
+
       return {
 
         success: false,
@@ -308,7 +386,6 @@ export default class BaseRepository {
         data: null,
 
         message:
-
           error.message,
 
         errors: [error]
@@ -319,6 +396,7 @@ export default class BaseRepository {
 
   }
 
+
   // ======================================================
   // UPDATE
   // ======================================================
@@ -327,8 +405,28 @@ export default class BaseRepository {
 
     try {
 
-      const payload =
+      if (!id) {
 
+        return {
+
+          success: false,
+
+          data: null,
+
+          message:
+            'معرف العنصر مطلوب',
+
+          errors: []
+
+        }
+
+      }
+
+
+      await this.ensureAuthenticated()
+
+
+      const payload =
         await this.beforeUpdate(
 
           id,
@@ -336,6 +434,7 @@ export default class BaseRepository {
           data
 
         )
+
 
       await updateDoc(
 
@@ -353,6 +452,7 @@ export default class BaseRepository {
 
       )
 
+
       const result = {
 
         success: true,
@@ -360,12 +460,12 @@ export default class BaseRepository {
         data: null,
 
         message:
-
           'تم التحديث بنجاح',
 
         errors: []
 
       }
+
 
       return await this.afterUpdate(
 
@@ -381,6 +481,15 @@ export default class BaseRepository {
 
     catch (error) {
 
+      console.error(
+
+        `BaseRepository.update(${this.collectionName}) failed:`,
+
+        error
+
+      )
+
+
       return {
 
         success: false,
@@ -388,7 +497,6 @@ export default class BaseRepository {
         data: null,
 
         message:
-
           error.message,
 
         errors: [error]
@@ -399,6 +507,7 @@ export default class BaseRepository {
 
   }
 
+
   // ======================================================
   // DELETE
   // ======================================================
@@ -407,7 +516,29 @@ export default class BaseRepository {
 
     try {
 
+      if (!id) {
+
+        return {
+
+          success: false,
+
+          data: null,
+
+          message:
+            'معرف العنصر مطلوب',
+
+          errors: []
+
+        }
+
+      }
+
+
+      await this.ensureAuthenticated()
+
+
       await this.beforeDelete(id)
+
 
       await deleteDoc(
 
@@ -423,6 +554,7 @@ export default class BaseRepository {
 
       )
 
+
       const result = {
 
         success: true,
@@ -430,12 +562,12 @@ export default class BaseRepository {
         data: null,
 
         message:
-
           'تم الحذف بنجاح',
 
         errors: []
 
       }
+
 
       return await this.afterDelete(
 
@@ -449,6 +581,15 @@ export default class BaseRepository {
 
     catch (error) {
 
+      console.error(
+
+        `BaseRepository.delete(${this.collectionName}) failed:`,
+
+        error
+
+      )
+
+
       return {
 
         success: false,
@@ -456,7 +597,6 @@ export default class BaseRepository {
         data: null,
 
         message:
-
           error.message,
 
         errors: [error]

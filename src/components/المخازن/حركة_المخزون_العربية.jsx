@@ -1,18 +1,15 @@
 import { useState, useMemo } from 'react'
 import { useInventoryStore } from '../../store/inventoryStore'
 
-export default function حركة_المخزون_العربية() {
+export default function StockMovementArabic() {
 
   // ================= STORE =================
 
   const stockItems =
-    useInventoryStore((s) => s.stockItems)
+    useInventoryStore((s) => s.stockItems || [])
 
   const warehouses =
-    useInventoryStore((s) => s.warehouses)
-
-  const addStockMovement =
-    useInventoryStore((s) => s.addStockMovement)
+    useInventoryStore((s) => s.warehouses || [])
 
   const increaseStock =
     useInventoryStore((s) => s.increaseStock)
@@ -36,8 +33,9 @@ export default function حركة_المخزون_العربية() {
 
   const تنفيذ_الحركة = () => {
 
-    if (!المنتج || !الكمية) {
-      return alert('ادخل البيانات كاملة')
+    if (!المنتج || !الكمية || Number(الكمية) <= 0) {
+      alert('ادخل البيانات كاملة')
+      return
     }
 
     const payload = {
@@ -49,17 +47,13 @@ export default function حركة_المخزون_العربية() {
     // ================= ADD =================
 
     if (نوع_الحركة === 'add') {
-
       increaseStock(payload)
-
     }
 
     // ================= DEDUCT =================
 
     if (نوع_الحركة === 'deduct') {
-
       decreaseStock(payload)
-
     }
 
     // ================= TRANSFER =================
@@ -67,7 +61,13 @@ export default function حركة_المخزون_العربية() {
     if (نوع_الحركة === 'transfer') {
 
       if (!المخزن_من || !المخزن_الى) {
-        return alert('اختر المخازن')
+        alert('اختر المخازن')
+        return
+      }
+
+      if (المخزن_من === المخزن_الى) {
+        alert('لا يمكن التحويل إلى نفس المخزن')
+        return
       }
 
       transferStock({
@@ -80,15 +80,14 @@ export default function حركة_المخزون_العربية() {
 
     setالكمية(0)
     setملاحظة('')
-
   }
 
   // ================= FILTER MOVEMENTS =================
 
   const الحركات_اليومية = useMemo(() => {
 
-    return stockItems.filter((item) =>
-      item.updatedAt
+    return stockItems.filter(
+      (item) => item.updatedAt
     )
 
   }, [stockItems])
@@ -127,9 +126,17 @@ export default function حركة_المخزون_العربية() {
           onChange={(e) => setنوع_الحركة(e.target.value)}
         >
 
-          <option value="add">➕ إضافة مخزون</option>
-          <option value="deduct">➖ خصم مخزون</option>
-          <option value="transfer">🔁 تحويل بين المخازن</option>
+          <option value="add">
+            ➕ إضافة مخزون
+          </option>
+
+          <option value="deduct">
+            ➖ خصم مخزون
+          </option>
+
+          <option value="transfer">
+            🔁 تحويل بين المخازن
+          </option>
 
         </select>
 
@@ -149,11 +156,16 @@ export default function حركة_المخزون_العربية() {
           onChange={(e) => setالمنتج(e.target.value)}
         >
 
-          <option value="">اختر المنتج</option>
+          <option value="">
+            اختر المنتج
+          </option>
 
           {stockItems.map((item) => (
 
-            <option key={item.id} value={item.id}>
+            <option
+              key={item.id}
+              value={item.id}
+            >
               {item.productName}
             </option>
 
@@ -172,14 +184,21 @@ export default function حركة_المخزون_العربية() {
           <select
             className="p-4 text-black rounded-2xl"
             value={المخزن_من}
-            onChange={(e) => setالمخزن_من(e.target.value)}
+            onChange={(e) =>
+              setالمخزن_من(e.target.value)
+            }
           >
 
-            <option value="">من مخزن</option>
+            <option value="">
+              من مخزن
+            </option>
 
             {warehouses.map((w) => (
 
-              <option key={w.id} value={w.id}>
+              <option
+                key={w.id}
+                value={w.id}
+              >
                 {w.name}
               </option>
 
@@ -190,14 +209,21 @@ export default function حركة_المخزون_العربية() {
           <select
             className="p-4 text-black rounded-2xl"
             value={المخزن_الى}
-            onChange={(e) => setالمخزن_الى(e.target.value)}
+            onChange={(e) =>
+              setالمخزن_الى(e.target.value)
+            }
           >
 
-            <option value="">إلى مخزن</option>
+            <option value="">
+              إلى مخزن
+            </option>
 
             {warehouses.map((w) => (
 
-              <option key={w.id} value={w.id}>
+              <option
+                key={w.id}
+                value={w.id}
+              >
                 {w.name}
               </option>
 
@@ -219,9 +245,12 @@ export default function حركة_المخزون_العربية() {
 
         <input
           type="number"
+          min="1"
           className="w-full p-4 text-black rounded-2xl mt-3"
           value={الكمية}
-          onChange={(e) => setالكمية(e.target.value)}
+          onChange={(e) =>
+            setالكمية(e.target.value)
+          }
         />
 
       </div>
@@ -237,7 +266,9 @@ export default function حركة_المخزون_العربية() {
         <input
           className="w-full p-4 text-black rounded-2xl mt-3"
           value={ملاحظة}
-          onChange={(e) => setملاحظة(e.target.value)}
+          onChange={(e) =>
+            setملاحظة(e.target.value)
+          }
         />
 
       </div>
@@ -262,9 +293,11 @@ export default function حركة_المخزون_العربية() {
         <div className="space-y-3">
 
           {الحركات_اليومية.length === 0 && (
+
             <div className="text-gray-400">
               لا توجد حركات
             </div>
+
           )}
 
           {الحركات_اليومية.map((item) => (

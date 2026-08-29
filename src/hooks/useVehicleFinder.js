@@ -1,29 +1,31 @@
+// ======================================================
+// EL OLA ERP
+// Vehicle Finder Hook
+// ======================================================
+
 import {
   useEffect,
   useState
 } from 'react'
 
-import { useProductStore }
-from '../store/productStore'
-
 import VehicleProvider
-from '../core/vehicles/VehicleProvider'
+  from '../core/vehicles/VehicleProvider'
 
-import VehicleEngine
-from '../engines/VehicleEngine'
+import VehicleSearchController
+  from '../controllers/VehicleSearchController'
 
 import VehicleSearchTrackingService
-from '../services/VehicleSearchTrackingService'
+  from '../services/VehicleSearchTrackingService'
 
 import useVehicleSync
-from './useVehicleSync'
+  from './useVehicleSync'
+
 
 export default function useVehicleFinder() {
 
-  const products =
-    useProductStore(
-      s => s.products || []
-    )
+  // ====================================================
+  // FORM STATE
+  // ====================================================
 
   const [
     vehicleType,
@@ -45,6 +47,11 @@ export default function useVehicleFinder() {
     setYear
   ] = useState('')
 
+
+  // ====================================================
+  // OPTIONS
+  // ====================================================
+
   const [
     vehicleTypes,
     setVehicleTypes
@@ -65,208 +72,394 @@ export default function useVehicleFinder() {
     setYears
   ] = useState([])
 
+
+  // ====================================================
+  // RESULT
+  // ====================================================
+
   const [
     result,
     setResult
   ] = useState(null)
+
 
   const [
     loading,
     setLoading
   ] = useState(false)
 
+
+  // ====================================================
+  // VEHICLE SYNC
+  // ====================================================
+
   useVehicleSync({
 
     vehicleType,
 
-    brand: make,
+    brand:
+      make,
 
     model
 
   })
 
+
   // ====================================================
-  // TYPES
+  // LOAD VEHICLE TYPES
   // ====================================================
 
   useEffect(() => {
+
+    let cancelled = false
+
+
+    async function loadVehicleTypes() {
+
+      try {
+
+        const data =
+          await VehicleProvider.getVehicleTypes()
+
+
+        if (
+          cancelled
+        ) {
+
+          return
+
+        }
+
+
+        setVehicleTypes(
+
+          Array.isArray(data)
+            ? data
+            : []
+
+        )
+
+      }
+
+      catch (error) {
+
+        console.error(
+          '[useVehicleFinder] vehicle types failed:',
+          error
+        )
+
+
+        if (
+          !cancelled
+        ) {
+
+          setVehicleTypes([])
+
+        }
+
+      }
+
+    }
+
 
     loadVehicleTypes()
 
+
+    return () => {
+
+      cancelled = true
+
+    }
+
   }, [])
 
-  async function loadVehicleTypes() {
-
-    const data =
-
-      await VehicleProvider.getVehicleTypes()
-
-    setVehicleTypes(
-
-      data || []
-
-    )
-
-  }
 
   // ====================================================
-  // BRANDS
+  // LOAD BRANDS
   // ====================================================
 
   useEffect(() => {
 
-    if (!vehicleType) {
+    let cancelled = false
 
-      setMakes([])
 
-      setModels([])
+    async function loadBrands() {
 
-      setYears([])
+      if (
+        !vehicleType
+      ) {
 
-      setMake('')
+        setMakes([])
 
-      setModel('')
+        setModels([])
 
-      setYear('')
+        setYears([])
 
-      return
+        setMake('')
+
+        setModel('')
+
+        setYear('')
+
+        return
+
+      }
+
+
+      try {
+
+        const data =
+          await VehicleProvider.getBrands(
+            vehicleType
+          )
+
+
+        if (
+          cancelled
+        ) {
+
+          return
+
+        }
+
+
+        setMakes(
+
+          Array.isArray(data)
+            ? data
+            : []
+
+        )
+
+      }
+
+      catch (error) {
+
+        console.error(
+          '[useVehicleFinder] brands failed:',
+          error
+        )
+
+
+        if (
+          !cancelled
+        ) {
+
+          setMakes([])
+
+        }
+
+      }
 
     }
+
 
     loadBrands()
 
+
+    return () => {
+
+      cancelled = true
+
+    }
+
   }, [
-
     vehicleType
-
   ])
 
-  async function loadBrands() {
 
-    const data =
-
-      await VehicleProvider.getBrands(
-
-        vehicleType
-
-      )
-
-    setMakes(
-
-      data || []
-
-    )
-
-  }
-    // ====================================================
-  // MODELS
+  // ====================================================
+  // LOAD MODELS
   // ====================================================
 
   useEffect(() => {
 
-    if (
+    let cancelled = false
 
-      !vehicleType ||
 
-      !make
+    async function loadModels() {
 
-    ) {
+      if (
+        !vehicleType ||
+        !make
+      ) {
 
-      setModels([])
+        setModels([])
 
-      setYears([])
+        setYears([])
 
-      setModel('')
+        setModel('')
 
-      setYear('')
+        setYear('')
 
-      return
+        return
+
+      }
+
+
+      try {
+
+        const data =
+          await VehicleProvider.getModels({
+
+            vehicleType,
+
+            brand:
+              make
+
+          })
+
+
+        if (
+          cancelled
+        ) {
+
+          return
+
+        }
+
+
+        setModels(
+
+          Array.isArray(data)
+            ? data
+            : []
+
+        )
+
+      }
+
+      catch (error) {
+
+        console.error(
+          '[useVehicleFinder] models failed:',
+          error
+        )
+
+
+        if (
+          !cancelled
+        ) {
+
+          setModels([])
+
+        }
+
+      }
 
     }
+
 
     loadModels()
 
+
+    return () => {
+
+      cancelled = true
+
+    }
+
   }, [
-
     vehicleType,
-
     make
-
   ])
 
-  async function loadModels() {
-
-    const data =
-
-      await VehicleProvider.getModels({
-
-        vehicleType,
-
-        brand: make
-
-      })
-
-    setModels(
-
-      data || []
-
-    )
-
-  }
 
   // ====================================================
-  // YEARS
+  // LOAD YEARS
   // ====================================================
 
   useEffect(() => {
 
-    if (
+    let cancelled = false
 
-      !make ||
 
-      !model
+    async function loadYears() {
 
-    ) {
+      if (
+        !make ||
+        !model
+      ) {
 
-      setYears([])
+        setYears([])
 
-      setYear('')
+        setYear('')
 
-      return
+        return
+
+      }
+
+
+      try {
+
+        const data =
+          await VehicleProvider.getYears({
+
+            vehicleType,
+
+            brand:
+              make,
+
+            model
+
+          })
+
+
+        if (
+          cancelled
+        ) {
+
+          return
+
+        }
+
+
+        setYears(
+
+          Array.isArray(data)
+            ? data
+            : []
+
+        )
+
+      }
+
+      catch (error) {
+
+        console.error(
+          '[useVehicleFinder] years failed:',
+          error
+        )
+
+
+        if (
+          !cancelled
+        ) {
+
+          setYears([])
+
+        }
+
+      }
 
     }
 
+
     loadYears()
 
+
+    return () => {
+
+      cancelled = true
+
+    }
+
   }, [
-
+    vehicleType,
     make,
-
     model
-
   ])
 
-  async function loadYears() {
-
-    const data =
-
-      await VehicleProvider.getYears({
-
-        vehicleType,
-
-        brand: make,
-
-        model
-
-      })
-
-    setYears(
-
-      data || []
-
-    )
-
-  }
 
   // ====================================================
   // SEARCH
@@ -274,18 +467,16 @@ export default function useVehicleFinder() {
 
   useEffect(() => {
 
+    let cancelled = false
+
+
     async function performSearch() {
 
       if (
-
         !vehicleType ||
-
         !make ||
-
         !model ||
-
         !year
-
       ) {
 
         setResult(null)
@@ -294,13 +485,30 @@ export default function useVehicleFinder() {
 
       }
 
+
       try {
 
         setLoading(true)
 
-        const data =
 
-          await VehicleEngine.search({
+        // =================================================
+        // IMPORTANT
+        // =================================================
+        // Do NOT read products directly from productStore.
+        //
+        // VehicleSearchController is the unified search
+        // entry point and loads products from:
+        //
+        // ProductsRepository
+        // WebsiteStore
+        // WarehouseStore
+        //
+        // This keeps vehicle search connected to the
+        // unified project data layer.
+        // =================================================
+
+        const data =
+          await VehicleSearchController.searchVehicle({
 
             vehicleType,
 
@@ -308,96 +516,183 @@ export default function useVehicleFinder() {
 
             model,
 
-            year,
-
-            products
+            year
 
           })
 
-        setResult(data)
+
+        if (
+          cancelled
+        ) {
+
+          return
+
+        }
+
+
+        const safeResult = {
+
+          vehicle:
+            data?.vehicle ||
+            null,
+
+          oem:
+            data?.oem ||
+            null,
+
+          tires:
+            Array.isArray(
+              data?.tires
+            )
+              ? data.tires
+              : [],
+
+          batteries:
+            Array.isArray(
+              data?.batteries
+            )
+              ? data.batteries
+              : [],
+
+          oils:
+            Array.isArray(
+              data?.oils
+            )
+              ? data.oils
+              : [],
+
+          products:
+            Array.isArray(
+              data?.products
+            )
+              ? data.products
+              : []
+
+        }
+
+
+        console.log(
+          '[useVehicleFinder] search result:',
+          safeResult
+        )
+
+
+        setResult(
+          safeResult
+        )
 
       }
 
       catch (error) {
 
         console.error(
-
-          '[useVehicleFinder]',
-
+          '[useVehicleFinder] search failed:',
           error
-
         )
 
-        setResult(null)
+
+        if (
+          !cancelled
+        ) {
+
+          setResult(null)
+
+        }
 
       }
 
       finally {
 
-        setLoading(false)
+        if (
+          !cancelled
+        ) {
+
+          setLoading(false)
+
+        }
 
       }
 
     }
 
+
     performSearch()
 
+
+    return () => {
+
+      cancelled = true
+
+    }
+
   }, [
-
     vehicleType,
-
     make,
-
     model,
-
-    year,
-
-    products
-
+    year
   ])
-    // ====================================================
+
+
+  // ====================================================
   // TRACK SEARCH
   // ====================================================
 
   useEffect(() => {
 
-    if (!result)
+    if (
+      !result
+    ) {
 
       return
 
-    VehicleSearchTrackingService.track({
+    }
 
-      vehicleType,
 
-      make,
+    try {
 
-      model,
+      VehicleSearchTrackingService.track({
 
-      year,
+        vehicleType,
 
-      vehicle: result.vehicle,
+        make,
 
-      tires: result.tires,
+        model,
 
-      batteries: result.batteries,
+        year,
 
-      oils: result.oils
+        vehicle:
+          result.vehicle,
 
-    })
+        tires:
+          result.tires,
+
+        batteries:
+          result.batteries,
+
+        oils:
+          result.oils
+
+      })
+
+    }
+
+    catch (error) {
+
+      console.error(
+        '[useVehicleFinder] tracking failed:',
+        error
+      )
+
+    }
 
   }, [
-
     result,
-
     vehicleType,
-
     make,
-
     model,
-
     year
-
   ])
+
 
   // ====================================================
   // RETURN
@@ -406,15 +701,19 @@ export default function useVehicleFinder() {
   return {
 
     vehicleType,
+
     setVehicleType,
 
     make,
+
     setMake,
 
     model,
+
     setModel,
 
     year,
+
     setYear,
 
     vehicleTypes,

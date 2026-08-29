@@ -123,13 +123,6 @@ export default function Home() {
 
   // ====================================================
   // WAREHOUSES
-  //
-  // IMPORTANT:
-  // Warehouses are used internally only to calculate
-  // product availability.
-  //
-  // Warehouse names, locations, purchase prices and
-  // individual quantities are NEVER passed to HomeProducts.
   // ====================================================
 
   const warehouses =
@@ -142,50 +135,69 @@ export default function Home() {
 
 
   // ====================================================
-  // NORMALIZE WAREHOUSE PRODUCTS
+  // WAREHOUSE PRODUCTS
+  //
+  // Warehouses are the source of:
+  // - Products available for sale
+  // - Sale price when there is no active website offer
+  // - Actual availability
+  //
+  // Internal warehouse information is never exposed
+  // to the customer.
   // ====================================================
 
   const warehouseProducts =
     useMemo(() => {
 
       return warehouses.flatMap(
-        warehouse =>
-          Array.isArray(warehouse?.products)
-            ? warehouse.products.map(
-                product => ({
-                  ...product,
+        warehouse => {
 
-                  warehouseId:
-                    warehouse?.id ?? null,
+          if (
+            !Array.isArray(
+              warehouse?.products
+            )
+          ) {
+            return []
+          }
 
-                  warehouseName:
-                    warehouse?.name ?? ''
+          return warehouse.products.map(
+            product => ({
 
-                })
-              )
-            : []
+              ...product,
+
+              warehouseId:
+                warehouse?.id ?? null,
+
+              warehouseName:
+                warehouse?.name ?? ''
+
+            })
+          )
+
+        }
       )
 
     }, [warehouses])
 
 
   // ====================================================
-  // BUILD PRODUCT AVAILABILITY INDEX
+  // WAREHOUSE PRODUCT INDEX
   //
-  // The consumer does NOT receive warehouse details.
+  // Same product can exist in multiple warehouses.
   //
-  // We only calculate:
+  // The index keeps:
+  // - One public product source
+  // - Total quantity
+  // - The first usable warehouse product as the
+  //   base product data
   //
-  // available
-  // totalQuantity
-  //
-  // internally.
+  // Warehouse-specific data remains internal.
   // ====================================================
 
-  const availabilityByProduct =
+  const warehouseProductIndex =
     useMemo(() => {
 
-      const availability =
+      const index =
         new Map()
 
       warehouseProducts.forEach(
@@ -213,23 +225,38 @@ export default function Home() {
               0
             )
 
-          const current =
-            availability.get(key) || 0
+          const safeQuantity =
+            Number.isFinite(quantity)
+              ? Math.max(quantity, 0)
+              : 0
 
-          availability.set(
-            key,
-            current +
-              (
-                Number.isFinite(quantity)
-                  ? Math.max(quantity, 0)
-                  : 0
-              )
-          )
+          const existing =
+            index.get(key)
+
+          if (!existing) {
+
+            index.set(
+              key,
+              {
+                product:
+                  warehouseProduct,
+
+                totalQuantity:
+                  safeQuantity
+              }
+            )
+
+            return
+
+          }
+
+          existing.totalQuantity +=
+            safeQuantity
 
         }
       )
 
-      return availability
+      return index
 
     }, [warehouseProducts])
 
@@ -244,13 +271,16 @@ export default function Home() {
       const map =
         new Map()
 
-      const now =
+      const currentDate =
         new Date()
 
       offers.forEach(
         offer => {
 
-          if (!offer || offer.active === false) {
+          if (
+            !offer ||
+            offer.active === false
+          ) {
             return
           }
 
@@ -264,8 +294,9 @@ export default function Home() {
             return
           }
 
+
           // --------------------------------------------
-          // DATE VALIDATION
+          // START DATE
           // --------------------------------------------
 
           if (offer.startDate) {
@@ -276,13 +307,20 @@ export default function Home() {
               )
 
             if (
-              !Number.isNaN(start.getTime()) &&
-              now < start
+              !Number.isNaN(
+                start.getTime()
+              ) &&
+              currentDate < start
             ) {
               return
             }
 
           }
+
+
+          // --------------------------------------------
+          // END DATE
+          // --------------------------------------------
 
           if (offer.endDate) {
 
@@ -292,26 +330,22 @@ export default function Home() {
               )
 
             if (
-              !Number.isNaN(end.getTime()) &&
-              now > end
+              !Number.isNaN(
+                end.getTime()
+              ) &&
+              currentDate > end
             ) {
               return
             }
 
           }
 
+
           const key =
             String(productId)
 
-          const existing =
-            map.get(key)
 
-          /*
-           * If more than one active offer exists,
-           * use the first active offer registered
-           * for the product.
-           */
-          if (!existing) {
+          if (!map.has(key)) {
 
             map.set(
               key,
@@ -329,273 +363,408 @@ export default function Home() {
 
 
   // ====================================================
+  // WEBSITE PRODUCT INDEX
+  //
+  // Website products are used ONLY as a reference for:
+  // - Active offers
+  //
+  // The normal sale price remains the warehouse price.
+  // ====================================================
+
+  const websiteProductIndex =
+    useMemo(() => {
+
+      const map =
+        new Map()
+
+      products.forEach(
+        product => {
+
+          if (!product) {
+            return
+          }
+
+          const productId =
+            product.id ??
+            product.productId
+
+          if (
+            productId === null ||
+            productId === undefined
+          ) {
+            return
+          }
+
+          map.set(
+            String(productId),
+            product
+          )
+
+        }
+      )
+
+      return map
+
+    }, [products])
+
+
+  // ====================================================
   // PUBLIC PRODUCT VIEW
   //
-  // This is the important boundary.
+  // SOURCE:
+  //   Warehouse products
   //
-  // HomeProducts receives only consumer-safe data.
+  // PRICE:
+  //   Warehouse salePrice normally
   //
-  // NEVER pass:
-  // - warehouseName
+  // ACTIVE WEBSITE OFFER:
+  //   Website product salePrice becomes the old/base
+  //   price and the website offer determines the final
+  //   price.
+  //
+  // AVAILABILITY:
+  //   Total stock across all warehouses.
+  //
+  // INTERNAL DATA NEVER EXPOSED:
   // - warehouseId
+  // - warehouseName
   // - purchasePrice
-  // - warehouse quantity
+  // - realCost
+  // - warehouse quantities
   // - profit
   // ====================================================
 
   const visibleProducts =
     useMemo(() => {
 
-      return products
+      const result = []
 
-        .filter(
-          product =>
-            product &&
-            !product.hidden &&
-            product.publishedToHome !== false
-        )
+      warehouseProductIndex.forEach(
+        (
+          warehouseEntry,
+          key
+        ) => {
 
-        .map(
-          product => {
+          const warehouseProduct =
+            warehouseEntry.product
 
-            const productId =
-              product.id ??
-              product.productId
+          const totalQuantity =
+            warehouseEntry.totalQuantity
 
-            const key =
-              String(productId)
+          if (!warehouseProduct) {
+            return
+          }
 
-            const totalQuantity =
-              availabilityByProduct.get(key) || 0
 
-            const available =
-              totalQuantity > 0
+          // ------------------------------------------
+          // WEBSITE PRODUCT REFERENCE
+          // ------------------------------------------
 
-            const offer =
-              activeOffersByProduct.get(key) ||
-              null
+          const websiteProduct =
+            websiteProductIndex.get(key) ||
+            null
 
-            const salePrice =
+
+          // ------------------------------------------
+          // ACTIVE OFFER
+          // ------------------------------------------
+
+          const offer =
+            activeOffersByProduct.get(key) ||
+            null
+
+
+          // ------------------------------------------
+          // BASE SALE PRICE
+          //
+          // Normally ALWAYS comes from warehouse.
+          // ------------------------------------------
+
+          let salePrice =
+            Number(
+              warehouseProduct.salePrice ??
+              0
+            )
+
+          if (
+            !Number.isFinite(
+              salePrice
+            )
+          ) {
+            salePrice = 0
+          }
+
+
+          // ------------------------------------------
+          // OFFER PRICE
+          // ------------------------------------------
+
+          let offerPrice =
+            null
+
+          let oldPrice =
+            null
+
+
+          if (offer) {
+
+            /*
+             * When there is an active website offer,
+             * the website product sale price becomes
+             * the old/base price.
+             *
+             * This is the only case where the normal
+             * warehouse sale price is replaced.
+             */
+
+            const websiteSalePrice =
               Number(
-                product.salePrice ??
-                product.price ??
-                0
+                websiteProduct?.salePrice ??
+                websiteProduct?.price ??
+                NaN
               )
 
-            // ------------------------------------------
-            // OFFER PRICE
-            // ------------------------------------------
 
-            let offerPrice =
-              null
+            const offerBasePrice =
+              Number.isFinite(
+                websiteSalePrice
+              )
+                ? websiteSalePrice
+                : salePrice
 
-            let oldPrice =
-              null
 
-            if (offer) {
+            const explicitOfferPrice =
+              Number(
+                offer.offerPrice ??
+                offer.salePrice ??
+                offer.newPrice ??
+                NaN
+              )
 
-              const explicitOfferPrice =
+
+            if (
+              Number.isFinite(
+                explicitOfferPrice
+              ) &&
+              explicitOfferPrice >= 0
+            ) {
+
+              offerPrice =
+                explicitOfferPrice
+
+              oldPrice =
+                offerBasePrice
+
+            } else {
+
+              const discount =
                 Number(
-                  offer.offerPrice ??
-                  offer.salePrice ??
-                  offer.newPrice ??
-                  NaN
+                  offer.discount ??
+                  0
                 )
 
               if (
                 Number.isFinite(
-                  explicitOfferPrice
+                  discount
                 ) &&
-                explicitOfferPrice >= 0
+                discount > 0 &&
+                discount < 100 &&
+                offerBasePrice > 0
               ) {
 
                 offerPrice =
-                  explicitOfferPrice
-
-                oldPrice =
-                  salePrice
-
-              } else {
-
-                const discount =
-                  Number(
-                    offer.discount ??
-                    0
+                  offerBasePrice -
+                  (
+                    offerBasePrice *
+                    discount /
+                    100
                   )
 
-                if (
-                  Number.isFinite(discount) &&
-                  discount > 0 &&
-                  discount < 100 &&
-                  salePrice > 0
-                ) {
-
-                  offerPrice =
-                    salePrice -
-                    (
-                      salePrice *
-                      discount /
-                      100
-                    )
-
-                  oldPrice =
-                    salePrice
-
-                }
+                oldPrice =
+                  offerBasePrice
 
               }
 
             }
 
-
-            // ------------------------------------------
-            // PUBLIC PRODUCT OBJECT
-            // ------------------------------------------
-
-            return {
-
-              id:
-                productId,
-
-              name:
-                product.name ||
-                product.productName ||
-                '',
-
-              sku:
-                product.sku ||
-                '',
-
-              barcode:
-                product.barcode ||
-                '',
-
-              brand:
-                product.brand ||
-                '',
-
-              model:
-                product.model ||
-                '',
-
-              category:
-                product.category ||
-                '',
-
-              description:
-                product.description ||
-                '',
-
-              image:
-                product.image ||
-                '',
-
-              type:
-                product.type ||
-                '',
-
-              tire:
-                product.tire ||
-                null,
-
-              battery:
-                product.battery ||
-                null,
-
-              oil:
-                product.oil ||
-                null,
-
-              specifications:
-                product.specifications ||
-                {},
-
-              tags:
-                Array.isArray(product.tags)
-                  ? product.tags
-                  : [],
-
-              compatibleVehicles:
-                Array.isArray(
-                  product.compatibleVehicles
-                )
-                  ? product.compatibleVehicles
-                  : [],
-
-              // ----------------------------------------
-              // CONSUMER PRICING
-              // ----------------------------------------
-
-              salePrice,
-
-              offerPrice,
-
-              oldPrice,
-
-              hasOffer:
-                Boolean(
-                  offer &&
-                  offerPrice !== null
-                ),
-
-              offerTitle:
-                offer?.title ||
-                '',
-
-              offerDescription:
-                offer?.description ||
-                '',
-
-              offerId:
-                offer?.id ??
-                null,
-
-              // ----------------------------------------
-              // CONSUMER AVAILABILITY
-              //
-              // Only boolean status is exposed.
-              // ----------------------------------------
-
-              available,
-
-              availability:
-                available
-                  ? 'متوفر'
-                  : 'غير متوفر',
-
-              // ----------------------------------------
-              // UI FLAGS
-              // ----------------------------------------
-
-              active:
-                product.active !== false,
-
-              hidden:
-                Boolean(product.hidden),
-
-              publishedToHome:
-                product.publishedToHome !== false
-
-            }
-
           }
-        )
+
+
+          const available =
+            totalQuantity > 0
+
+
+          // ------------------------------------------
+          // PUBLIC PRODUCT OBJECT
+          // ------------------------------------------
+
+          result.push({
+
+            id:
+              warehouseProduct.productId ??
+              warehouseProduct.id,
+
+            name:
+              warehouseProduct.name ||
+              warehouseProduct.productName ||
+              '',
+
+            sku:
+              warehouseProduct.sku ||
+              '',
+
+            barcode:
+              warehouseProduct.barcode ||
+              '',
+
+            brand:
+              warehouseProduct.brand ||
+              '',
+
+            model:
+              warehouseProduct.model ||
+              '',
+
+            category:
+              warehouseProduct.category ||
+              '',
+
+            description:
+              warehouseProduct.description ||
+              '',
+
+            image:
+              warehouseProduct.image ||
+              '',
+
+            images:
+              Array.isArray(
+                warehouseProduct.images
+              )
+                ? warehouseProduct.images
+                : [],
+
+            type:
+              warehouseProduct.type ||
+              '',
+
+            tire:
+              warehouseProduct.tire ||
+              null,
+
+            battery:
+              warehouseProduct.battery ||
+              null,
+
+            oil:
+              warehouseProduct.oil ||
+              null,
+
+            specifications:
+              warehouseProduct.specifications ||
+              {},
+
+            attributes:
+              warehouseProduct.attributes ||
+              {},
+
+            tags:
+              Array.isArray(
+                warehouseProduct.tags
+              )
+                ? warehouseProduct.tags
+                : [],
+
+            compatibleVehicles:
+              Array.isArray(
+                warehouseProduct.compatibleVehicles
+              )
+                ? warehouseProduct.compatibleVehicles
+                : [],
+
+
+            // ----------------------------------------
+            // CONSUMER PRICING
+            // ----------------------------------------
+
+            salePrice,
+
+            offerPrice,
+
+            oldPrice,
+
+            hasOffer:
+              Boolean(
+                offer &&
+                offerPrice !== null
+              ),
+
+            offerTitle:
+              offer?.title ||
+              '',
+
+            offerDescription:
+              offer?.description ||
+              '',
+
+            offerId:
+              offer?.id ??
+              null,
+
+
+            // ----------------------------------------
+            // CONSUMER AVAILABILITY
+            // ----------------------------------------
+
+            available,
+
+            availability:
+              available
+                ? 'متوفر'
+                : 'غير متوفر',
+
+
+            // ----------------------------------------
+            // UI FLAGS
+            // ----------------------------------------
+
+            active:
+              warehouseProduct.active !== false,
+
+            hidden:
+              Boolean(
+                warehouseProduct.hidden
+              ),
+
+            publishedToHome:
+              warehouseProduct.publishedToHome ??
+              warehouseProduct.publishToHome ??
+              true
+
+          })
+
+        }
+      )
+
+
+      return result
 
         .filter(
           product =>
             product.active &&
-            !product.hidden
+            !product.hidden &&
+            product.publishedToHome !== false
         )
 
     }, [
-      products,
-      availabilityByProduct,
+      warehouseProductIndex,
+      websiteProductIndex,
       activeOffersByProduct
     ])
 
 
   // ====================================================
-  // UI
+  // UI STATE
   // ====================================================
 
   const [
@@ -636,11 +805,11 @@ export default function Home() {
       setInterval(() => {
 
         setCurrentSlide(
-          prev =>
-            prev >=
+          previous =>
+            previous >=
             slides.length - 1
               ? 0
-              : prev + 1
+              : previous + 1
         )
 
       }, 5000)
@@ -676,7 +845,7 @@ export default function Home() {
   // ====================================================
 
   const scrollToSection =
-    (id) => {
+    id => {
 
       document
         .getElementById(id)

@@ -2,34 +2,27 @@
 
 export default {
 
-content: [
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}"
+  ],
 
-```
-"./index.html",
+  theme: {
 
-"./src/**/*.{js,ts,jsx,tsx}",
-```
+    extend: {
 
-],
+      colors: {
 
-theme: {
+        primary: '#1e3a8a',
 
-```
-extend: {
+        secondary: '#eab308'
 
-  colors: {
+      }
 
-    primary: '#1e3a8a',
-
-    secondary: '#eab308',
+    }
 
   },
 
-},
-```
-
-},
-
-plugins: [],
+  plugins: []
 
 }

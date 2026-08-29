@@ -1,7 +1,7 @@
 import { useInventoryStore } from '../../store/inventoryStore'
 import { useMemo } from 'react'
 
-export default function شبكة_المخازن() {
+export default function WarehouseNetwork() {
 
   const warehouses =
     useInventoryStore((s) => s.warehouses)
@@ -82,13 +82,13 @@ export default function شبكة_المخازن() {
                 📊 المخزون: {s.totalStock}
               </div>
 
-              <div className={`
-                font-black
-                ${s.active ? 'text-green-400' : 'text-red-400'}
-              `}>
-
+              <div
+                className={`
+                  font-black
+                  ${s.active ? 'text-green-400' : 'text-red-400'}
+                `}
+              >
                 {s.active ? 'نشط' : 'متوقف'}
-
               </div>
 
             </div>
@@ -102,5 +102,4 @@ export default function شبكة_المخازن() {
     </div>
 
   )
-
 }

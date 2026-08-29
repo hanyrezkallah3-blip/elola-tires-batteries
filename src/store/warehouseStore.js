@@ -5,6 +5,7 @@ import createWarehouse from './warehouse/helpers/createWarehouse'
 import addProductToWarehouseHelper from './warehouse/helpers/addProductToWarehouse'
 import addWarehouseTransaction from './warehouse/helpers/addWarehouseTransaction'
 
+import ProductEngine from '../core/engines/product/ProductEngine'
 
 const STORAGE_KEY = 'elola_warehouses'
 
@@ -35,106 +36,289 @@ const generateId = () => {
 // CREATE PRODUCT
 // ==========================================
 
-const createProduct = (product = {}) => ({
+const createProduct = (product = {}) => {
 
-  id:
-    product.id ||
-    generateId(),
-
-  productId:
+  const productId =
     product.productId ||
-    generateId(),
+    product.id ||
+    generateId()
 
-  productName:
-    product.productName ||
-    product.name ||
-    '',
+  return {
 
-  image:
-    product.image ||
-    '',
+    id:
+      product.id ||
+      productId,
 
-  description:
-    product.description ||
-    '',
+    productId,
 
-  specifications:
-    product.specifications ||
-    {},
+    productName:
+      product.productName ||
+      product.name ||
+      '',
 
-  category:
-    product.category ||
-    '',
+    name:
+      product.name ||
+      product.productName ||
+      '',
 
-  brand:
-    product.brand ||
-    '',
+    image:
+      product.image ||
+      '',
 
-  barcode:
-    product.barcode ||
-    '',
+    images:
+      Array.isArray(product.images)
+        ? product.images
+        : [],
 
-  quantity:
-    Number(
-      product.quantity || 0
-    ),
+    description:
+      product.description ||
+      '',
 
-  purchasePrice:
-    Number(
-      product.purchasePrice || 0
-    ),
+    specifications:
+      product.specifications ||
+      {},
 
-  salePrice:
-    Number(
-      product.salePrice || 0
-    ),
+    category:
+      product.category ||
+      '',
 
-  minimumStock:
-    Number(
-      product.minimumStock || 0
-    ),
+    brand:
+      product.brand ||
+      '',
 
-  maximumStock:
-    Number(
-      product.maximumStock || 0
-    ),
+    model:
+      product.model ||
+      '',
 
-  reorderPoint:
-    Number(
-      product.reorderPoint || 0
-    ),
+    sku:
+      product.sku ||
+      '',
 
-  unit:
-    product.unit ||
-    'piece',
+    barcode:
+      product.barcode ||
+      '',
 
-  incoming:
-    Number(
-      product.incoming || 0
-    ),
+    code:
+      product.code ||
+      '',
 
-  outgoing:
-    Number(
-      product.outgoing || 0
-    ),
+    type:
+      product.type ||
+      'tire',
 
-  availableQuantity:
-    Number(
-      product.availableQuantity ??
-      product.quantity ??
-      0
-    ),
+    tire:
+      product.tire ||
+      {},
 
-  createdAt:
-    product.createdAt ||
-    new Date().toISOString(),
+    battery:
+      product.battery ||
+      {},
 
-  updatedAt:
-    new Date().toISOString(),
+    oil:
+      product.oil ||
+      {},
 
-  ...product
+    compatibleVehicles:
+      Array.isArray(product.compatibleVehicles)
+        ? product.compatibleVehicles
+        : [],
 
-})
+    compatibleSizes:
+      Array.isArray(product.compatibleSizes)
+        ? product.compatibleSizes
+        : [],
+
+    quantity:
+      Number(
+        product.quantity || 0
+      ),
+
+    purchasePrice:
+      Number(
+        product.purchasePrice || 0
+      ),
+
+    salePrice:
+      Number(
+        product.salePrice || 0
+      ),
+
+    minimumStock:
+      Number(
+        product.minimumStock || 0
+      ),
+
+    maximumStock:
+      Number(
+        product.maximumStock || 0
+      ),
+
+    reorderPoint:
+      Number(
+        product.reorderPoint || 0
+      ),
+
+    unit:
+      product.unit ||
+      'piece',
+
+    incoming:
+      Number(
+        product.incoming || 0
+      ),
+
+    outgoing:
+      Number(
+        product.outgoing || 0
+      ),
+
+    reserved:
+      Number(
+        product.reserved || 0
+      ),
+
+    availableQuantity:
+      Number(
+        product.availableQuantity ??
+        product.quantity ??
+        0
+      ),
+
+    wholesalePrice:
+      Number(
+        product.wholesalePrice || 0
+      ),
+
+    discountPrice:
+      Number(
+        product.discountPrice || 0
+      ),
+
+    cost:
+      Number(
+        product.cost ??
+        product.purchasePrice ??
+        0
+      ),
+
+    location:
+      product.location ||
+      '',
+
+    shelf:
+      product.shelf ||
+      '',
+
+    rack:
+      product.rack ||
+      '',
+
+    bin:
+      product.bin ||
+      '',
+
+    supplierId:
+      product.supplierId ||
+      '',
+
+    supplierName:
+      product.supplierName ||
+      '',
+
+    batchNumber:
+      product.batchNumber ||
+      '',
+
+    lotNumber:
+      product.lotNumber ||
+      '',
+
+    productionDate:
+      product.productionDate ||
+      '',
+
+    expiryDate:
+      product.expiryDate ||
+      '',
+
+    warranty:
+      product.warranty ||
+      '',
+
+    serialNumbers:
+      Array.isArray(product.serialNumbers)
+        ? product.serialNumbers
+        : [],
+
+    publishToHome:
+      product.publishToHome ??
+      product.publishedToHome ??
+      false,
+
+    publishToProducts:
+      product.publishToProducts ??
+      product.publishedToProducts ??
+      false,
+
+    publishToOffers:
+      product.publishToOffers ??
+      product.publishedToOffers ??
+      false,
+
+    publishedToHome:
+      product.publishedToHome ??
+      product.publishToHome ??
+      false,
+
+    publishedToProducts:
+      product.publishedToProducts ??
+      product.publishToProducts ??
+      false,
+
+    publishedToOffers:
+      product.publishedToOffers ??
+      product.publishToOffers ??
+      false,
+
+    hidden:
+      product.hidden ??
+      false,
+
+    featured:
+      product.featured ??
+      false,
+
+    active:
+      product.active !== false,
+
+    createdAt:
+      product.createdAt ||
+      new Date().toISOString(),
+
+    updatedAt:
+      new Date().toISOString(),
+
+    ...product,
+
+    id:
+      product.id ||
+      productId,
+
+    productId,
+
+    productName:
+      product.productName ||
+      product.name ||
+      '',
+
+    name:
+      product.name ||
+      product.productName ||
+      ''
+
+  }
+
+}
 
 
 // ==========================================
@@ -259,6 +443,7 @@ export const useWarehouseStore = create(
                 warehouse.id
               ) ===
               String(id)
+
           ) || null,
 
 
@@ -266,10 +451,408 @@ export const useWarehouseStore = create(
       // ADD PRODUCT TO WAREHOUSE
       // ==========================================
 
-      addProductToWarehouse: (
+      addProductToWarehouse: async (
         warehouseId,
-        product
-      ) =>
+        product = {}
+      ) => {
+
+        // ==========================================
+        // VALIDATION
+        // ==========================================
+
+        if (
+          !warehouseId ||
+          !product
+        ) {
+
+          return {
+
+            success: false,
+
+            data: null,
+
+            message:
+              'المخزن والمنتج مطلوبان',
+
+            errors: []
+
+          }
+
+        }
+
+
+        const warehouse =
+          get()
+            .warehouses
+            .find(
+              item =>
+
+                String(
+                  item.id
+                ) ===
+                String(
+                  warehouseId
+                )
+            )
+
+
+        if (!warehouse) {
+
+          return {
+
+            success: false,
+
+            data: null,
+
+            message:
+              'المخزن غير موجود',
+
+            errors: []
+
+          }
+
+        }
+
+
+        // ==========================================
+        // PRODUCT NAME
+        // ==========================================
+
+        const productName =
+          String(
+            product.productName ||
+            product.name ||
+            ''
+          ).trim()
+
+
+        if (!productName) {
+
+          return {
+
+            success: false,
+
+            data: null,
+
+            message:
+              'اسم المنتج مطلوب',
+
+            errors: []
+
+          }
+
+        }
+
+
+        // ==========================================
+        // EXISTING PRODUCT ID
+        // ==========================================
+
+        const existingProductId =
+          product.productId ||
+          product.id ||
+          ''
+
+
+        // ==========================================
+        // PREVENT DUPLICATE
+        // ==========================================
+
+        const existingProduct =
+          (
+            warehouse.products ||
+            []
+          ).find(
+            item => {
+
+              if (
+                existingProductId
+              ) {
+
+                return (
+
+                  String(
+                    item.productId
+                  ) ===
+                  String(
+                    existingProductId
+                  )
+
+                  ||
+
+                  String(
+                    item.id
+                  ) ===
+                  String(
+                    existingProductId
+                  )
+
+                )
+
+              }
+
+              return (
+
+                String(
+                  item.productName ||
+                  item.name ||
+                  ''
+                )
+                  .trim()
+                  .toLowerCase()
+
+                ===
+
+                productName
+                  .toLowerCase()
+
+              )
+
+            }
+          )
+
+
+        if (existingProduct) {
+
+          return {
+
+            success: false,
+
+            data: existingProduct,
+
+            message:
+              'المنتج موجود بالفعل في هذا المخزن',
+
+            errors: []
+
+          }
+
+        }
+
+
+        // ==========================================
+        // PREPARE PRODUCT DATA
+        // ==========================================
+
+        const productData = {
+
+          ...product,
+
+          id:
+            existingProductId ||
+            undefined,
+
+          productId:
+            existingProductId ||
+            undefined,
+
+          name:
+            product.name ||
+            productName,
+
+          productName,
+
+          type:
+            product.type ||
+            'tire',
+
+          category:
+            product.category ||
+            product.type ||
+            '',
+
+          purchasePrice:
+            Number(
+              product.purchasePrice || 0
+            ),
+
+          salePrice:
+            Number(
+              product.salePrice || 0
+            ),
+
+          quantity:
+            Number(
+              product.quantity || 0
+            ),
+
+          minimumStock:
+            Number(
+              product.minimumStock || 0
+            ),
+
+          maximumStock:
+            Number(
+              product.maximumStock || 0
+            ),
+
+          reorderPoint:
+            Number(
+              product.reorderPoint || 0
+            ),
+
+          active:
+            product.active !== false
+
+        }
+
+
+        // ==========================================
+        // CREATE IN FIRESTORE
+        // ==========================================
+
+        let firestoreResult
+
+        try {
+
+          firestoreResult =
+            await ProductEngine.create({
+
+              ...productData,
+
+              warehouseId,
+
+              quantity:
+                productData.quantity,
+
+              minimumStock:
+                productData.minimumStock,
+
+              maximumStock:
+                productData.maximumStock,
+
+              reorderPoint:
+                productData.reorderPoint
+
+            })
+
+        }
+
+        catch (error) {
+
+          console.error(
+            'warehouseStore.addProductToWarehouse Firestore error:',
+            error
+          )
+
+          return {
+
+            success: false,
+
+            data: null,
+
+            message:
+              error?.message ||
+              'فشل حفظ المنتج في Firestore',
+
+            errors: [
+              error
+            ]
+
+          }
+
+        }
+
+
+        // ==========================================
+        // FIRESTORE FAILURE
+        // ==========================================
+
+        if (
+          !firestoreResult?.success
+        ) {
+
+          console.error(
+            'warehouseStore.addProductToWarehouse failed:',
+            firestoreResult
+          )
+
+          return {
+
+            success: false,
+
+            data: null,
+
+            message:
+              firestoreResult?.message ||
+              'فشل إنشاء المنتج في Firestore',
+
+            errors:
+              firestoreResult?.errors ||
+              []
+
+          }
+
+        }
+
+
+        // ==========================================
+        // PRODUCT ID FROM FIRESTORE
+        // ==========================================
+
+        const firestoreProductId =
+          firestoreResult
+            ?.data
+            ?.id
+
+
+        if (!firestoreProductId) {
+
+          return {
+
+            success: false,
+
+            data: null,
+
+            message:
+              'تم إنشاء المنتج ولكن لم يتم الحصول على معرفه من Firestore',
+
+            errors: []
+
+          }
+
+        }
+
+
+        // ==========================================
+        // CREATE LOCAL PRODUCT
+        // ==========================================
+
+        const normalizedLocalProduct =
+          createProduct({
+
+            ...productData,
+
+            id:
+              firestoreProductId,
+
+            productId:
+              firestoreProductId,
+
+            productName,
+
+            quantity:
+              productData.quantity,
+
+            availableQuantity:
+              productData.quantity,
+
+            incoming:
+              Number(
+                product.incoming || 0
+              ),
+
+            outgoing:
+              Number(
+                product.outgoing || 0
+              )
+
+          })
+
+
+        // ==========================================
+        // ADD TO LOCAL WAREHOUSE
+        // ==========================================
 
         set(state => ({
 
@@ -281,11 +864,44 @@ export const useWarehouseStore = create(
 
               warehouseId,
 
-              createProduct(product)
+              normalizedLocalProduct
 
             )
 
-        })),
+        }))
+
+
+        // ==========================================
+        // RETURN RESULT
+        // ==========================================
+
+        return {
+
+          success: true,
+
+          data: {
+
+            productId:
+              firestoreProductId,
+
+            product:
+              normalizedLocalProduct,
+
+            warehouseId,
+
+            inventoryCreated:
+              true
+
+          },
+
+          message:
+            'تم إنشاء المنتج والمخزون وحفظهما في Firestore بنجاح',
+
+          errors: []
+
+        }
+
+      },
 
 
       // ==========================================
@@ -756,11 +1372,6 @@ export const useWarehouseStore = create(
 
                   ...warehouseItem,
 
-
-                  // ==================================
-                  // UPDATE PRODUCT
-                  // ==================================
-
                   products:
 
                     (
@@ -815,11 +1426,6 @@ export const useWarehouseStore = create(
 
                       }
                     ),
-
-
-                  // ==================================
-                  // TRANSACTION HISTORY
-                  // ==================================
 
                   transactions: [
 

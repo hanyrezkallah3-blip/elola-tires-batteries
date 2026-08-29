@@ -5,7 +5,10 @@
 
 import BaseRepository from './BaseRepository'
 
-class InventoryRepository extends BaseRepository {
+
+class InventoryRepository
+  extends BaseRepository {
+
 
   constructor() {
 
@@ -13,51 +16,175 @@ class InventoryRepository extends BaseRepository {
 
   }
 
+
+  // ======================================================
+  // GET ALL
+  // ======================================================
+
   async getAll() {
 
-    return await this.findAll()
+    const result =
+      await super.getAll()
+
+
+    if (
+      result?.success === false
+    ) {
+
+      console.error(
+        'InventoryRepository.getAll failed:',
+        result?.message,
+        result?.errors
+      )
+
+      return []
+
+    }
+
+
+    return Array.isArray(
+      result?.data
+    )
+
+      ? result.data
+
+      : []
 
   }
+
+
+  // ======================================================
+  // GET BY ID
+  // ======================================================
 
   async getById(id) {
 
-    return await this.findById(id)
+    if (!id)
+      return null
+
+
+    const result =
+      await super.getById(id)
+
+
+    if (
+      result?.success === false
+    ) {
+
+      return null
+
+    }
+
+
+    return result?.data || null
 
   }
 
+
+  // ======================================================
+  // GET BY PRODUCT
+  // ======================================================
+
   async getByProduct(productId) {
 
+    if (!productId)
+      return []
+
+
     const items =
-      await this.findAll()
+      await this.getAll()
+
 
     return items.filter(
 
       item =>
 
         String(item.productId) ===
-
         String(productId)
 
     )
 
   }
 
+
+  // ======================================================
+  // GET BY WAREHOUSE
+  // ======================================================
+
   async getByWarehouse(warehouseId) {
 
+    if (!warehouseId)
+      return []
+
+
     const items =
-      await this.findAll()
+      await this.getAll()
+
 
     return items.filter(
 
       item =>
 
         String(item.warehouseId) ===
-
         String(warehouseId)
 
     )
 
   }
+
+
+  // ======================================================
+  // GET BY PRODUCT + WAREHOUSE
+  // ======================================================
+
+  async getByProductAndWarehouse(
+
+    productId,
+
+    warehouseId
+
+  ) {
+
+    if (
+      !productId ||
+      !warehouseId
+    ) {
+
+      return null
+
+    }
+
+
+    const items =
+      await this.getAll()
+
+
+    return (
+
+      items.find(
+
+        item =>
+
+          String(item.productId) ===
+            String(productId)
+
+          &&
+
+          String(item.warehouseId) ===
+            String(warehouseId)
+
+      )
+
+      || null
+
+    )
+
+  }
+
+
+  // ======================================================
+  // CREATE
+  // ======================================================
 
   async create(item = {}) {
 
@@ -95,7 +222,36 @@ class InventoryRepository extends BaseRepository {
 
   }
 
-  async update(id, data = {}) {
+
+  // ======================================================
+  // UPDATE
+  // ======================================================
+
+  async update(
+
+    id,
+
+    data = {}
+
+  ) {
+
+    if (!id) {
+
+      return {
+
+        success: false,
+
+        data: null,
+
+        message:
+          'معرف المخزون مطلوب',
+
+        errors: []
+
+      }
+
+    }
+
 
     return await super.update(
 
@@ -113,56 +269,208 @@ class InventoryRepository extends BaseRepository {
     )
 
   }
-    async delete(id) {
+
+
+  // ======================================================
+  // DELETE
+  // ======================================================
+
+  async delete(id) {
+
+    if (!id) {
+
+      return {
+
+        success: false,
+
+        data: null,
+
+        message:
+          'معرف المخزون مطلوب',
+
+        errors: []
+
+      }
+
+    }
+
 
     return await super.delete(id)
 
   }
 
-  async increaseStock(id, quantity) {
+
+  // ======================================================
+  // INCREASE STOCK
+  // ======================================================
+
+  async increaseStock(
+
+    id,
+
+    quantity
+
+  ) {
 
     const item =
       await this.getById(id)
 
-    if (!item)
-      return null
 
-    return await this.update(id, {
+    if (!item) {
 
-      quantity:
+      return {
 
-        Number(item.quantity || 0) +
+        success: false,
 
-        Number(quantity || 0)
+        data: null,
 
-    })
+        message:
+          'سجل المخزون غير موجود',
+
+        errors: []
+
+      }
+
+    }
+
+
+    const amount =
+      Number(quantity || 0)
+
+
+    if (amount <= 0) {
+
+      return {
+
+        success: false,
+
+        data: null,
+
+        message:
+          'كمية الزيادة يجب أن تكون أكبر من صفر',
+
+        errors: []
+
+      }
+
+    }
+
+
+    return await this.update(
+
+      id,
+
+      {
+
+        quantity:
+
+          Number(
+            item.quantity || 0
+          ) + amount
+
+      }
+
+    )
 
   }
 
-  async decreaseStock(id, quantity) {
+
+  // ======================================================
+  // DECREASE STOCK
+  // ======================================================
+
+  async decreaseStock(
+
+    id,
+
+    quantity
+
+  ) {
 
     const item =
       await this.getById(id)
 
-    if (!item)
-      return null
 
-    return await this.update(id, {
+    if (!item) {
 
-      quantity: Math.max(
+      return {
 
-        0,
+        success: false,
 
-        Number(item.quantity || 0) -
+        data: null,
 
-        Number(quantity || 0)
+        message:
+          'سجل المخزون غير موجود',
 
+        errors: []
+
+      }
+
+    }
+
+
+    const amount =
+      Number(quantity || 0)
+
+
+    if (amount <= 0) {
+
+      return {
+
+        success: false,
+
+        data: null,
+
+        message:
+          'كمية النقص يجب أن تكون أكبر من صفر',
+
+        errors: []
+
+      }
+
+    }
+
+
+    const current =
+      Number(
+        item.quantity || 0
       )
 
-    })
+
+    if (current < amount) {
+
+      return {
+
+        success: false,
+
+        data: null,
+
+        message:
+          'الكمية المطلوبة أكبر من المخزون المتاح',
+
+        errors: []
+
+      }
+
+    }
+
+
+    return await this.update(
+
+      id,
+
+      {
+
+        quantity:
+          current - amount
+
+      }
+
+    )
 
   }
 
 }
+
 
 export default new InventoryRepository()

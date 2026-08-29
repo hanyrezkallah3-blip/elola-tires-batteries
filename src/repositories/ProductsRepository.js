@@ -13,9 +13,9 @@ class ProductsRepository
   }
 
 
-  // =====================================================
-  // GET ALL
-  // =====================================================
+  // ==================================================
+  // GET ALL PRODUCTS
+  // ==================================================
 
   async getAll() {
 
@@ -23,15 +23,71 @@ class ProductsRepository
       await super.getAll()
 
 
+    console.log(
+      'PRODUCTS FIRESTORE RESULT:',
+      result
+    )
+
+
     if (
       result?.success === false
     ) {
 
       console.error(
-        'ProductsRepository.getAll failed:',
+        'PRODUCTS FIRESTORE ERROR:',
         result?.message,
         result?.errors
       )
+
+      // مهم:
+      // لا نخفي الخطأ داخل [].
+      // نعيد النتيجة حتى يستطيع المستدعي
+      // معرفة أن Firestore فشل فعلاً.
+
+      return result
+
+    }
+
+
+    return {
+
+      success: true,
+
+      data:
+        Array.isArray(
+          result?.data
+        )
+          ? result.data
+          : [],
+
+      message:
+        result?.message || '',
+
+      errors:
+        Array.isArray(
+          result?.errors
+        )
+          ? result.errors
+          : []
+
+    }
+
+  }
+
+
+  // ==================================================
+  // GET ALL PRODUCTS DATA ONLY
+  // ==================================================
+
+  async getAllData() {
+
+    const result =
+      await this.getAll()
+
+
+    if (
+      result?.success === false
+    ) {
 
       return []
 
@@ -41,313 +97,15 @@ class ProductsRepository
     return Array.isArray(
       result?.data
     )
-
       ? result.data
-
       : []
 
   }
 
 
-  // =====================================================
-  // GET BY ID
-  // =====================================================
-
-  async getById(id) {
-
-    if (!id)
-      return null
-
-
-    const result =
-      await super.getById(id)
-
-
-    if (
-      result?.success === false
-    ) {
-
-      return null
-
-    }
-
-
-    return result?.data || null
-
-  }
-
-
-  // =====================================================
-  // CREATE
-  // =====================================================
-
-  async create(product = {}) {
-
-    const item = {
-
-      name: '',
-
-      type: 'tire',
-
-      brand: '',
-
-      model: '',
-
-      category: '',
-
-      barcode: '',
-
-      sku: '',
-
-      purchasePrice: 0,
-
-      salePrice: 0,
-
-      averagePurchasePrice: 0,
-
-      profit: 0,
-
-      profitMargin: 0,
-
-      compatibleVehicles: [],
-
-      tire: {},
-
-      battery: {},
-
-      oil: {},
-
-      active: true,
-
-      createdAt:
-        new Date().toISOString(),
-
-      updatedAt:
-        new Date().toISOString(),
-
-      ...product
-
-    }
-
-
-    delete item.minimumStock
-
-    delete item.maximumStock
-
-    delete item.reorderPoint
-
-    delete item.preferredWarehouseId
-
-    delete item.warehouses
-
-    delete item.stockByWarehouse
-
-    delete item.totalStock
-
-    delete item.quantity
-
-
-    return await super.create(
-      item
-    )
-
-  }
-
-
-  // =====================================================
-  // UPDATE
-  // =====================================================
-
-  async update(
-    id,
-    data = {}
-  ) {
-
-    const item = {
-
-      ...data,
-
-      updatedAt:
-        new Date().toISOString()
-
-    }
-
-
-    delete item.minimumStock
-
-    delete item.maximumStock
-
-    delete item.reorderPoint
-
-    delete item.preferredWarehouseId
-
-    delete item.warehouses
-
-    delete item.stockByWarehouse
-
-    delete item.totalStock
-
-    delete item.quantity
-
-
-    return await super.update(
-
-      id,
-
-      item
-
-    )
-
-  }
-
-
-  // =====================================================
-  // DELETE
-  // =====================================================
-
-  async delete(id) {
-
-    return await super.delete(id)
-
-  }
-
-
-  // =====================================================
-  // VEHICLE SEARCH
-  // =====================================================
-
-  async findCompatibleProducts({
-
-    brand,
-
-    model,
-
-    year
-
-  }) {
-
-    const products =
-      await this.getAll()
-
-
-    return products.filter(
-      product => {
-
-        const vehicles =
-
-          Array.isArray(
-            product.compatibleVehicles
-          )
-
-            ? product.compatibleVehicles
-
-            : []
-
-
-        return vehicles.some(
-          vehicle =>
-
-            (!brand ||
-              vehicle.brand === brand)
-
-            &&
-
-            (!model ||
-              vehicle.model === model)
-
-            &&
-
-            (
-
-              !year ||
-
-              (
-
-                Number(year) >=
-                Number(
-                  vehicle.yearFrom
-                )
-
-                &&
-
-                Number(year) <=
-                Number(
-                  vehicle.yearTo
-                )
-
-              )
-
-            )
-
-        )
-
-      }
-    )
-
-  }
-
-
-  // =====================================================
-  // TIRE SEARCH
-  // =====================================================
-
-  async findTiresBySize({
-
-    width,
-
-    profile,
-
-    rim
-
-  }) {
-
-    const products =
-      await this.getAll()
-
-
-    return products.filter(
-      product =>
-
-        product.type === 'tire'
-
-        &&
-
-        Number(
-          product.tire?.width
-        )
-
-        ===
-
-        Number(width)
-
-        &&
-
-        Number(
-          product.tire?.height
-        )
-
-        ===
-
-        Number(profile)
-
-        &&
-
-        Number(
-          product.tire?.rim
-        )
-
-        ===
-
-        Number(rim)
-
-    )
-
-  }
-
-
-  // =====================================================
-  // BATTERY SEARCH
-  // =====================================================
+  // ==================================================
+  // FIND BATTERIES
+  // ==================================================
 
   async findBatteries({
 
@@ -355,33 +113,173 @@ class ProductsRepository
 
   }) {
 
-    const products =
+    const result =
       await this.getAll()
 
 
-    return products.filter(
+    if (
+      result?.success === false
+    ) {
+
+      console.error(
+        'BATTERY SEARCH FIRESTORE ERROR:',
+        result.message,
+        result.errors
+      )
+
+      return []
+
+    }
+
+
+    const products =
+      Array.isArray(
+        result?.data
+      )
+        ? result.data
+        : []
+
+
+    console.log(
+      'ALL PRODUCTS:',
+      products
+    )
+
+
+    console.log(
+      'BATTERY SEARCH CAPACITY:',
+      capacity
+    )
+
+
+    const batteries =
+      products.filter(
+        product => {
+
+          console.log(
+            'CHECK PRODUCT:',
+            product
+          )
+
+
+          return (
+
+            String(
+              product?.type ||
+              ''
+            ).toLowerCase()
+
+            ===
+
+            'battery'
+
+          )
+
+        }
+      )
+
+
+    console.log(
+      'BATTERIES FOUND BEFORE CAPACITY:',
+      batteries
+    )
+
+
+    return batteries.filter(
       product =>
 
-        product.type === 'battery'
-
-        &&
-
         Number(
-          product.battery?.capacity
+          product?.battery?.capacity
         )
 
         ===
 
-        Number(capacity)
+        Number(
+          capacity
+        )
 
     )
 
   }
 
 
-  // =====================================================
-  // OIL SEARCH
-  // =====================================================
+  // ==================================================
+  // FIND TIRES BY SIZE
+  // ==================================================
+
+  async findTiresBySize({
+
+    width,
+    profile,
+    rim
+
+  }) {
+
+    const result =
+      await this.getAll()
+
+
+    if (
+      result?.success === false
+    ) {
+
+      console.error(
+        'TIRE SEARCH FIRESTORE ERROR:',
+        result.message,
+        result.errors
+      )
+
+      return []
+
+    }
+
+
+    const products =
+      Array.isArray(
+        result?.data
+      )
+        ? result.data
+        : []
+
+
+    return products.filter(
+      product =>
+
+        String(
+          product?.type ||
+          ''
+        ).toLowerCase()
+
+        ===
+
+        'tire'
+
+        &&
+
+        Number(
+          product?.tire?.width
+        ) === Number(width)
+
+        &&
+
+        Number(
+          product?.tire?.height
+        ) === Number(profile)
+
+        &&
+
+        Number(
+          product?.tire?.rim
+        ) === Number(rim)
+
+    )
+
+  }
+
+
+  // ==================================================
+  // FIND OILS
+  // ==================================================
 
   async findOils({
 
@@ -389,19 +287,50 @@ class ProductsRepository
 
   }) {
 
-    const products =
+    const result =
       await this.getAll()
+
+
+    if (
+      result?.success === false
+    ) {
+
+      console.error(
+        'OIL SEARCH FIRESTORE ERROR:',
+        result.message,
+        result.errors
+      )
+
+      return []
+
+    }
+
+
+    const products =
+      Array.isArray(
+        result?.data
+      )
+        ? result.data
+        : []
 
 
     return products.filter(
       product =>
 
-        product.type === 'oil'
+        String(
+          product?.type ||
+          ''
+        ).toLowerCase()
+
+        ===
+
+        'oil'
 
         &&
 
         String(
-          product.oil?.viscosity || ''
+          product?.oil?.viscosity ||
+          ''
         ).toLowerCase()
 
         ===

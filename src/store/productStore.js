@@ -45,6 +45,7 @@ export const useProductStore = create(
         const newProduct = {
 
           id:
+            product.id ||
             generateId(),
 
           // ================= BASIC =================
@@ -82,11 +83,9 @@ export const useProductStore = create(
           // ================= PRICE VISIBILITY =================
 
           purchasePriceVisible:
-            product.purchasePriceVisible ??
             false,
 
           salePriceVisible:
-            product.salePriceVisible ??
             true,
 
 
@@ -95,13 +94,6 @@ export const useProductStore = create(
           active: true,
 
           featured: false,
-
-
-          createdAt:
-            now(),
-
-          updatedAt:
-            now(),
 
 
           // ================= TYPE =================
@@ -176,11 +168,20 @@ export const useProductStore = create(
           tags: [],
 
 
+          // ==================================================
+          // USER DATA
+          // ==================================================
+
           ...product,
 
-          // ==========================================
-          // NORMALIZE PRICE VISIBILITY AFTER SPREAD
-          // ==========================================
+
+          // ==================================================
+          // NORMALIZE REQUIRED VALUES
+          // ==================================================
+
+          id:
+            product.id ||
+            generateId(),
 
           purchasePriceVisible:
             product.purchasePriceVisible ??
@@ -267,6 +268,7 @@ export const useProductStore = create(
         const value =
           Number(salePrice)
 
+
         if (
           !Number.isFinite(value) ||
           value < 0
@@ -304,9 +306,11 @@ export const useProductStore = create(
                   product.purchasePrice || 0
                 )
 
+
               const profit =
                 value -
                 purchase
+
 
               const profitMargin =
                 value > 0

@@ -1,17 +1,28 @@
-import { useCallback } from 'react'
+import {
+  useCallback
+} from 'react'
 
-import { useProductStore } from '../../store/productStore'
-import { useWebsiteStore } from '../../store/websiteStore'
-import { useWarehouseStore } from '../../store/warehouseStore'
+import {
+  useProductStore
+} from '../../store/productStore'
+
+import {
+  useWebsiteStore
+} from '../../store/websiteStore'
+
+import {
+  useWarehouseStore
+} from '../../store/warehouseStore'
 
 import ProductEngine
-from '../../core/engines/product/ProductEngine'
+  from '../../core/engines/product/ProductEngine'
+
 
 export default function useProductsActions() {
 
-  const addProduct =
+  const setProducts =
     useProductStore(
-      state => state.addProduct
+      state => state.setProducts
     )
 
 
@@ -39,64 +50,200 @@ export default function useProductsActions() {
     )
 
 
+  // ======================================================
+  // ADD / UPDATE PRODUCT
+  // ======================================================
+
   const handleAddProduct =
-    useCallback(async (product) => {
+    useCallback(async (product = {}) => {
 
-      // ==================================================
-      // UPDATE EXISTING WAREHOUSE PRODUCT
-      // ==================================================
+      try {
 
-      if (
-        product?.selectedProductId &&
-        product?.warehouseId
-      ) {
+        // ==================================================
+        // UPDATE EXISTING WAREHOUSE PRODUCT
+        // ==================================================
 
-        const warehouseProductId =
-          product.selectedWarehouseProductId ||
-          product.selectedProductId
+        if (
+          product?.selectedProductId &&
+          product?.warehouseId
+        ) {
+
+          const productId =
+            product.selectedProductId
 
 
-        const updatedProduct = {
+          const warehouseProductId =
+            product.selectedWarehouseProductId ||
+            productId
+
+
+          const updatedProduct = {
+
+            ...product,
+
+            id:
+              productId,
+
+            productId,
+
+            productName:
+              product.name ||
+              product.productName ||
+              '',
+
+            name:
+              product.name ||
+              product.productName ||
+              '',
+
+            quantity:
+              Number(
+                product.quantity || 0
+              ),
+
+            availableQuantity:
+              Number(
+                product.availableQuantity ??
+                product.quantity ??
+                0
+              ),
+
+            purchasePrice:
+              Number(
+                product.purchasePrice || 0
+              ),
+
+            salePrice:
+              Number(
+                product.salePrice || 0
+              ),
+
+            updatedAt:
+              new Date().toISOString()
+
+          }
+
+
+          // ==================================================
+          // UPDATE FIRESTORE PRODUCT
+          // ==================================================
+
+          const result =
+            await ProductEngine.update(
+
+              productId,
+
+              updatedProduct
+
+            )
+
+
+          if (
+            !result?.success
+          ) {
+
+            console.error(
+              'ProductEngine.update failed:',
+              result
+            )
+
+            alert(
+              result?.message ||
+              'فشل تحديث المنتج'
+            )
+
+            return null
+
+          }
+
+
+          // ==================================================
+          // UPDATE LOCAL PRODUCT STORE
+          // ==================================================
+
+          updateProduct(
+
+            productId,
+
+            updatedProduct
+
+          )
+
+
+          // ==================================================
+          // UPDATE WAREHOUSE STORE
+          // ==================================================
+
+          updateWarehouseProduct(
+
+            product.warehouseId,
+
+            warehouseProductId,
+
+            updatedProduct
+
+          )
+
+
+          // ==================================================
+          // RETURN UPDATED PRODUCT
+          // ==================================================
+
+          return {
+
+            ...(result.data || {}),
+
+            ...updatedProduct,
+
+            id:
+              productId
+
+          }
+
+        }
+
+
+        // ==================================================
+        // NEW PRODUCT
+        // ==================================================
+
+        const result =
+          await ProductEngine.create(
+            product
+          )
+
+
+        if (
+          !result?.success
+        ) {
+
+          console.error(
+            'ProductEngine.create failed:',
+            result
+          )
+
+          alert(
+            result?.message ||
+            'فشل إنشاء المنتج'
+          )
+
+          return null
+
+        }
+
+
+        const createdProduct = {
+
+          ...(result.data || {}),
 
           ...product,
 
           id:
-            product.selectedProductId,
+            result.data?.id,
 
-          productId:
-            product.selectedProductId,
-
-          productName:
-            product.name ||
-            product.productName ||
-            '',
-
-          name:
-            product.name ||
-            product.productName ||
-            '',
-
-          quantity:
-            Number(
-              product.quantity || 0
-            ),
-
-          availableQuantity:
-            Number(
-              product.availableQuantity ??
-              product.quantity ??
-              0
-            ),
-
-          purchasePrice:
-            Number(
-              product.purchasePrice || 0
-            ),
-
-          salePrice:
-            Number(
-              product.salePrice || 0
-            ),
+          createdAt:
+            result.data?.createdAt ||
+            new Date().toISOString(),
 
           updatedAt:
             new Date().toISOString()
@@ -105,101 +252,47 @@ export default function useProductsActions() {
 
 
         // ==================================================
-        // UPDATE WAREHOUSE
+        // SYNCHRONIZE LOCAL STORE
         // ==================================================
 
-        updateWarehouseProduct(
-
-          product.warehouseId,
-
-          warehouseProductId,
-
-          updatedProduct
-
-        )
-
-
-        // ==================================================
-        // UPDATE GLOBAL PRODUCT
-        // ==================================================
-
-        const globalProduct =
+        const currentProducts =
           useProductStore
             .getState()
-            .getProduct(
-              product.selectedProductId
-            )
+            .products || []
 
 
-        if (globalProduct) {
+        setProducts([
 
-          updateProduct(
+          createdProduct,
 
-            product.selectedProductId,
+          ...currentProducts
 
-            {
-
-              ...product,
-
-              id:
-                product.selectedProductId,
-
-              name:
-                product.name ||
-                product.productName ||
-                '',
-
-              purchasePrice:
-                Number(
-                  product.purchasePrice || 0
-                ),
-
-              salePrice:
-                Number(
-                  product.salePrice || 0
-                ),
-
-              category:
-                product.category ||
-                product.type ||
-                '',
-
-              updatedAt:
-                new Date().toISOString()
-
-            }
-
-          )
-
-        }
+        ])
 
 
-        return {
-
-          ...globalProduct,
-
-          ...updatedProduct,
-
-          id:
-            product.selectedProductId
-
-        }
+        return createdProduct
 
       }
 
+      catch (error) {
 
-      // ==================================================
-      // NEW PRODUCT BLOCKED
-      // ==================================================
+        console.error(
+          'handleAddProduct failed:',
+          error
+        )
 
-      alert(
-        'لا يمكن إضافة منتج جديد من صفحة المنتجات. اختر منتجًا موجودًا في أحد المخازن أولاً.'
-      )
+        alert(
+          error?.message ||
+          'حدث خطأ أثناء حفظ المنتج'
+        )
 
+        return null
 
-      return null
+      }
 
     }, [
+
+      setProducts,
 
       updateProduct,
 
@@ -208,20 +301,75 @@ export default function useProductsActions() {
     ])
 
 
-  // ==================================================
+  // ======================================================
   // DELETE
-  // ==================================================
+  // ======================================================
 
   const handleDelete =
-    useCallback(id => {
+    useCallback(async (id) => {
 
-      if (
+      if (!id) {
+
+        return
+
+      }
+
+
+      const confirmed =
         window.confirm(
           'هل تريد حذف المنتج؟'
         )
-      ) {
+
+
+      if (!confirmed) {
+
+        return
+
+      }
+
+
+      try {
+
+        const result =
+          await ProductEngine.delete(
+            id
+          )
+
+
+        if (
+          !result?.success
+        ) {
+
+          console.error(
+            'ProductEngine.delete failed:',
+            result
+          )
+
+          alert(
+            result?.message ||
+            'فشل حذف المنتج'
+          )
+
+          return
+
+        }
+
 
         deleteProduct(id)
+
+      }
+
+      catch (error) {
+
+        console.error(
+          'handleDelete failed:',
+          error
+        )
+
+        alert(
+          error?.message ||
+          'حدث خطأ أثناء حذف المنتج'
+        )
 
       }
 
@@ -231,6 +379,10 @@ export default function useProductsActions() {
 
     ])
 
+
+  // ======================================================
+  // RETURN
+  // ======================================================
 
   return {
 
