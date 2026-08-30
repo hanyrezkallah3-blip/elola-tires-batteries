@@ -2,9 +2,22 @@
 // EL OLA ERP
 // OEM Compatibility Engine
 // ======================================================
+//
+// Vehicle compatibility is determined from the vehicle's
+// OEM technical specifications.
+//
+// SOURCE:
+// VehicleSpecificationProvider
+//
+// NOT USED:
+// - product.compatibleVehicles
+// - warehouse compatibility
+// - manual product-to-vehicle links
+// ======================================================
 
 import VehicleSpecificationProvider
-from '../vehicles/providers/VehicleSpecificationProvider'
+  from '../vehicles/providers/VehicleSpecificationProvider'
+
 
 export default class OEMCompatibilityEngine {
 
@@ -34,71 +47,103 @@ export default class OEMCompatibilityEngine {
 
       })
 
+
     if (!specs) {
 
       return null
 
     }
 
+
     return {
 
       vehicle: specs,
 
-      tire: this.getTireSpecification(specs),
+      tire:
+        this.getTireSpecification(
+          specs
+        ),
 
-      battery: this.getBatterySpecification(specs),
+      battery:
+        this.getBatterySpecification(
+          specs
+        ),
 
-      oil: this.getOilSpecification(specs)
+      oil:
+        this.getOilSpecification(
+          specs
+        )
 
     }
 
   }
 
+
   // ====================================================
   // TIRE
   // ====================================================
 
-  static getTireSpecification(specs) {
+  static getTireSpecification(
+    specs
+  ) {
 
-    return specs.tire ||
+    return (
 
-           specs.tireSize ||
+      specs?.tire ??
 
-           specs.oemTire ||
+      specs?.tireSize ??
 
-           null
+      specs?.oemTire ??
+
+      null
+
+    )
 
   }
+
 
   // ====================================================
   // BATTERY
   // ====================================================
 
-  static getBatterySpecification(specs) {
+  static getBatterySpecification(
+    specs
+  ) {
 
-    return specs.battery ||
+    return (
 
-           specs.batterySpec ||
+      specs?.battery ??
 
-           specs.oemBattery ||
+      specs?.batterySpec ??
 
-           null
+      specs?.oemBattery ??
+
+      null
+
+    )
 
   }
+
 
   // ====================================================
   // OIL
   // ====================================================
 
-  static getOilSpecification(specs) {
+  static getOilSpecification(
+    specs
+  ) {
 
-    return specs.oil ||
+    return (
 
-           specs.oilViscosity ||
+      specs?.oil ??
 
-           specs.oemOil ||
+      specs?.oilViscosity ??
 
-           null
+      specs?.oemOil ??
+
+      null
+
+    )
 
   }
 

@@ -35,7 +35,7 @@ const normalizeText = value =>
     .replace(/أ|إ|آ/g, 'ا')
     .replace(/ة/g, 'ه')
     .replace(/ى/g, 'ي')
-    .replace(/َ|ُ|ِ|ّ|ْ/g, '')
+    .replace(/[\u064B-\u065F\u0670]/g, '')
 
 
 // ======================================================
@@ -57,6 +57,8 @@ const numberValue = value => {
       String(value)
         .trim()
         .replace(',', '.')
+        .replace(/ah$/i, '')
+        .trim()
     )
 
   return Number.isFinite(number)
@@ -118,8 +120,11 @@ const normalizeType = value => {
 // ======================================================
 
 const firstValue = (
+
   object,
+
   keys
+
 ) => {
 
   if (
@@ -167,10 +172,11 @@ const getProductTire = product => {
 
     product?.specifications?.tire ||
 
+    product?.specification?.tire ||
+
     product?.attributes?.tire ||
 
     {}
-
   )
 }
 
@@ -193,10 +199,11 @@ const getProductBattery = product => {
 
     product?.specifications?.battery ||
 
+    product?.specification?.battery ||
+
     product?.attributes?.battery ||
 
     {}
-
   )
 }
 
@@ -219,16 +226,29 @@ const getProductOil = product => {
 
     product?.specifications?.oil ||
 
+    product?.specification?.oil ||
+
     product?.attributes?.oil ||
 
     {}
-
   )
 }
 
 
 // ======================================================
 // NORMALIZE TIRE SIZE TEXT
+// ======================================================
+//
+// Supports:
+//
+// 195/65R15
+// 205/55R16
+// 215/45R17
+// 195/65/15
+// 205*55*16
+// 205x55x16
+// 205-55-16
+//
 // ======================================================
 
 const normalizeTireSize = value => {
@@ -246,7 +266,7 @@ const normalizeTireSize = value => {
     )
 
     .replace(
-      /\*/g,
+      /[*\\]/g,
       '/'
     )
 
@@ -255,21 +275,39 @@ const normalizeTireSize = value => {
       '/'
     )
 
+    // Convert:
+    //
+    // 195/65R15
+    //
+    // into:
+    //
+    // 195/65/15
+
     .replace(
-      /\\/g,
+      /r/gi,
       '/'
     )
 
     .replace(
       /\s+/g,
-      ''
-    )
-
+      '')
 }
 
 
 // ======================================================
 // PARSE TIRE SIZE
+// ======================================================
+//
+// Supported:
+//
+// 195/65R15
+// 205/55R16
+// 215/45R17
+// 195/65/15
+// 205*55*16
+// 205-55-16
+// 1200/24
+//
 // ======================================================
 
 const parseTireSize = value => {
@@ -291,11 +329,15 @@ const parseTireSize = value => {
   }
 
 
+  // ====================================================
+  // THREE PART
+  // ====================================================
+
   const three =
+
     input.match(
       /^(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)$/
     )
-
 
   if (three) {
 
@@ -315,16 +357,19 @@ const parseTireSize = value => {
         numberValue(
           three[3]
         )
-
     }
   }
 
 
+  // ====================================================
+  // TWO PART
+  // ====================================================
+
   const two =
+
     input.match(
       /^(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)$/
     )
-
 
   if (two) {
 
@@ -342,36 +387,28 @@ const parseTireSize = value => {
         numberValue(
           two[2]
         )
-
     }
   }
 
 
   return null
-
 }
 
 
 // ======================================================
 // EXTRACT TIRE SPECIFICATIONS
 // ======================================================
-//
-// Supports:
-// 205/55/16
-// 205*55*16
-// 205-55-16
-// { width, profile, rim }
-// { sectionWidth, aspectRatio, rimSize }
-// ======================================================
 
 const extractTireSpecifications = value => {
 
-  if (
-    !value
-  ) {
+  if (!value) {
     return []
   }
 
+
+  // ====================================================
+  // ARRAY
+  // ====================================================
 
   if (
     Array.isArray(value)
@@ -380,9 +417,12 @@ const extractTireSpecifications = value => {
     return value.flatMap(
       extractTireSpecifications
     )
-
   }
 
+
+  // ====================================================
+  // STRING / NUMBER
+  // ====================================================
 
   if (
     typeof value === 'string' ||
@@ -397,9 +437,12 @@ const extractTireSpecifications = value => {
     return parsed
       ? [parsed]
       : []
-
   }
 
+
+  // ====================================================
+  // OBJECT
+  // ====================================================
 
   if (
     typeof value !== 'object'
@@ -407,6 +450,10 @@ const extractTireSpecifications = value => {
     return []
   }
 
+
+  // ====================================================
+  // DIRECT WIDTH / PROFILE / RIM
+  // ====================================================
 
   const width =
     numberValue(
@@ -420,7 +467,6 @@ const extractTireSpecifications = value => {
       )
     )
 
-
   const profile =
     numberValue(
       firstValue(
@@ -433,7 +479,6 @@ const extractTireSpecifications = value => {
         ]
       )
     )
-
 
   const rim =
     numberValue(
@@ -457,49 +502,75 @@ const extractTireSpecifications = value => {
     return [
 
       {
-
         width,
-
         profile,
-
         rim
-
       }
 
     ]
-
   }
 
 
-  const nested =
-    firstValue(
-      value,
-      [
-        'size',
-        'tireSize',
-        'dimension',
-        'dimensions',
-        'sizes',
-        'tireSizes',
-        'oemTire'
-      ]
+  // ====================================================
+  // NESTED SIZE VALUES
+  // ====================================================
+
+  const nestedValues = [
+
+    value?.size,
+
+    value?.tireSize,
+
+    value?.dimension,
+
+    value?.dimensions,
+
+    value?.sizes,
+
+    value?.tireSizes,
+
+    value?.oemTire,
+
+    value?.oemSizes,
+
+    value?.optionalSizes,
+
+    value?.alternativeSizes,
+
+    value?.alternativeSize
+
+  ]
+
+
+  const nestedResults =
+
+    nestedValues.flatMap(
+      nested => {
+
+        if (
+          nested === undefined ||
+          nested === null ||
+          nested === value
+        ) {
+          return []
+        }
+
+        return extractTireSpecifications(
+          nested
+        )
+      }
     )
 
 
   if (
-    nested &&
-    nested !== value
+    nestedResults.length > 0
   ) {
 
-    return extractTireSpecifications(
-      nested
-    )
-
+    return nestedResults
   }
 
 
   return []
-
 }
 
 
@@ -508,14 +579,18 @@ const extractTireSpecifications = value => {
 // ======================================================
 
 const tireMatchesOEM = (
+
   product,
+
   oemTire
+
 ) => {
 
   const requested =
     extractTireSpecifications(
       oemTire
     )
+
 
   if (
     requested.length === 0
@@ -554,8 +629,19 @@ const tireMatchesOEM = (
 
     ...extractTireSpecifications(
       product?.sizeCode
-    )
+    ),
 
+    ...extractTireSpecifications(
+      product?.skuSize
+    ),
+
+    ...extractTireSpecifications(
+      product?.name
+    ),
+
+    ...extractTireSpecifications(
+      product?.productName
+    )
   ]
 
 
@@ -567,9 +653,11 @@ const tireMatchesOEM = (
 
 
   return requested.some(
+
     requestedSize =>
 
       productCandidates.some(
+
         productSize => {
 
           if (
@@ -596,8 +684,9 @@ const tireMatchesOEM = (
           }
 
 
-          // If OEM specifies profile,
-          // product must have same profile.
+          // =================================================
+          // PROFILE
+          // =================================================
 
           if (
             requestedSize.profile !== null
@@ -609,23 +698,20 @@ const tireMatchesOEM = (
               return false
             }
 
+
             if (
               productSize.profile !==
               requestedSize.profile
             ) {
               return false
             }
-
           }
 
 
           return true
-
         }
       )
-
   )
-
 }
 
 
@@ -650,7 +736,6 @@ const extractBatteryCapacity = value => {
     return value.flatMap(
       extractBatteryCapacity
     )
-
   }
 
 
@@ -676,19 +761,27 @@ const extractBatteryCapacity = value => {
     ) {
 
       return [
+
         numberValue(
-          nested
+
+          String(nested)
+            .replace(
+              /ah/gi,
+              ''
+            )
+            .trim()
+
         )
+
       ].filter(
+
         value =>
           value !== null
       )
-
     }
 
 
     return []
-
   }
 
 
@@ -699,19 +792,20 @@ const extractBatteryCapacity = value => {
 
   const direct =
     numberValue(
+
       text
         .replace(
           /ah/gi,
           ''
         )
         .trim()
+
     )
 
 
   return direct !== null
     ? [direct]
     : []
-
 }
 
 
@@ -720,8 +814,11 @@ const extractBatteryCapacity = value => {
 // ======================================================
 
 const batteryMatchesOEM = (
+
   product,
+
   oemBattery
+
 ) => {
 
   const wanted =
@@ -762,13 +859,24 @@ const batteryMatchesOEM = (
     ),
 
     ...extractBatteryCapacity(
+      product?.ampHours
+    ),
+
+    ...extractBatteryCapacity(
       product?.specifications?.capacity
     ),
 
     ...extractBatteryCapacity(
-      product?.attributes?.capacity
-    )
+      product?.specifications?.ampereHour
+    ),
 
+    ...extractBatteryCapacity(
+      product?.attributes?.capacity
+    ),
+
+    ...extractBatteryCapacity(
+      product?.attributes?.ampereHour
+    )
   ]
 
 
@@ -780,13 +888,16 @@ const batteryMatchesOEM = (
 
 
   return wanted.some(
+
     value =>
+
       candidates.some(
+
         candidate =>
+
           candidate === value
       )
   )
-
 }
 
 
@@ -811,7 +922,6 @@ const extractOilViscosities = value => {
     return value.flatMap(
       extractOilViscosities
     )
-
   }
 
 
@@ -839,12 +949,10 @@ const extractOilViscosities = value => {
       return extractOilViscosities(
         nested
       )
-
     }
 
 
     return []
-
   }
 
 
@@ -856,11 +964,13 @@ const extractOilViscosities = value => {
         /\s+/g,
         ''
       )
+      .replace(
+        /×/g,
+        'x'
+      )
 
 
-  if (
-    !normalized
-  ) {
+  if (!normalized) {
     return []
   }
 
@@ -870,7 +980,6 @@ const extractOilViscosities = value => {
     normalized
 
   ]
-
 }
 
 
@@ -879,8 +988,11 @@ const extractOilViscosities = value => {
 // ======================================================
 
 const oilMatchesOEM = (
+
   product,
+
   oemOil
+
 ) => {
 
   const wanted =
@@ -925,9 +1037,16 @@ const oilMatchesOEM = (
     ),
 
     ...extractOilViscosities(
-      product?.attributes?.viscosity
-    )
+      product?.specifications?.grade
+    ),
 
+    ...extractOilViscosities(
+      product?.attributes?.viscosity
+    ),
+
+    ...extractOilViscosities(
+      product?.attributes?.grade
+    )
   ]
 
 
@@ -939,54 +1058,42 @@ const oilMatchesOEM = (
 
 
   return wanted.some(
+
     wantedValue =>
 
       candidates.some(
+
         candidate =>
 
-          candidate ===
-          wantedValue
-
-          ||
+          candidate === wantedValue ||
 
           candidate.includes(
             wantedValue
-          )
-
-          ||
+          ) ||
 
           wantedValue.includes(
             candidate
           )
-
       )
   )
-
 }
 
 
 // ======================================================
 // OEM PRODUCT MATCH
 // ======================================================
-//
-// IMPORTANT:
-//
-// The vehicle compatibility decision comes from OEM
-// specifications.
-//
-// product.compatibleVehicles is intentionally NOT used.
-// warehouse data is intentionally NOT used.
-// ======================================================
 
 const matchProductAgainstOEM = ({
+
   product,
+
   type,
+
   oem
+
 }) => {
 
-  if (
-    !product
-  ) {
+  if (!product) {
     return false
   }
 
@@ -1008,7 +1115,6 @@ const matchProductAgainstOEM = ({
       product,
       oem?.tire
     )
-
   }
 
 
@@ -1020,7 +1126,6 @@ const matchProductAgainstOEM = ({
       product,
       oem?.battery
     )
-
   }
 
 
@@ -1032,12 +1137,10 @@ const matchProductAgainstOEM = ({
       product,
       oem?.oil
     )
-
   }
 
 
   return false
-
 }
 
 
@@ -1046,35 +1149,40 @@ const matchProductAgainstOEM = ({
 // ======================================================
 
 const filterByOEM = ({
+
   products,
+
   type,
+
   oem
+
 }) => {
 
-  if (
-    !oem
-  ) {
+  if (!oem) {
     return []
   }
 
 
   return (
 
-    Array.isArray(
-      products
-    )
+    Array.isArray(products)
       ? products
       : []
 
   ).filter(
+
     product =>
+
       matchProductAgainstOEM({
+
         product,
+
         type,
+
         oem
+
       })
   )
-
 }
 
 
@@ -1083,9 +1191,13 @@ const filterByOEM = ({
 // ======================================================
 
 const enrichProduct = ({
+
   product,
+
   type,
+
   oem
+
 }) => {
 
   const result = {
@@ -1103,7 +1215,6 @@ const enrichProduct = ({
 
     recommendedForVehicle:
       true
-
   }
 
 
@@ -1111,17 +1222,14 @@ const enrichProduct = ({
     type === 'tire'
   ) {
 
-    result.vehicleCompatibility =
-      {
+    result.vehicleCompatibility = {
 
-        source:
-          'OEM',
+      source:
+        'OEM',
 
-        specification:
-          oem?.tire ?? null
-
-      }
-
+      specification:
+        oem?.tire ?? null
+    }
   }
 
 
@@ -1129,17 +1237,14 @@ const enrichProduct = ({
     type === 'battery'
   ) {
 
-    result.vehicleCompatibility =
-      {
+    result.vehicleCompatibility = {
 
-        source:
-          'OEM',
+      source:
+        'OEM',
 
-        specification:
-          oem?.battery ?? null
-
-      }
-
+      specification:
+        oem?.battery ?? null
+    }
   }
 
 
@@ -1147,22 +1252,18 @@ const enrichProduct = ({
     type === 'oil'
   ) {
 
-    result.vehicleCompatibility =
-      {
+    result.vehicleCompatibility = {
 
-        source:
-          'OEM',
+      source:
+        'OEM',
 
-        specification:
-          oem?.oil ?? null
-
-      }
-
+      specification:
+        oem?.oil ?? null
+    }
   }
 
 
   return result
-
 }
 
 
@@ -1172,14 +1273,19 @@ const enrichProduct = ({
 
 export class VehicleEngine {
 
+
   // ====================================================
   // FIND VEHICLE
   // ====================================================
 
   static async findVehicle({
+
     make,
+
     model,
+
     year
+
   }) {
 
     return await VehicleProvider.findVehicle({
@@ -1191,13 +1297,13 @@ export class VehicleEngine {
       year
 
     })
-
   }
 
 
   // ====================================================
   // SEARCH VEHICLE
   // ====================================================
+
   //
   // Flow:
   //
@@ -1253,11 +1359,12 @@ export class VehicleEngine {
       })
 
 
-    // --------------------------------------------------
-    // SEARCH RESULTS
-    // --------------------------------------------------
+    // ==================================================
+    // SEARCH TIRES
+    // ==================================================
 
     const tires =
+
       filterByOEM({
 
         products,
@@ -1268,7 +1375,9 @@ export class VehicleEngine {
         oem
 
       }).map(
+
         product =>
+
           enrichProduct({
 
             product,
@@ -1282,7 +1391,12 @@ export class VehicleEngine {
       )
 
 
+    // ==================================================
+    // SEARCH BATTERIES
+    // ==================================================
+
     const batteries =
+
       filterByOEM({
 
         products,
@@ -1293,7 +1407,9 @@ export class VehicleEngine {
         oem
 
       }).map(
+
         product =>
+
           enrichProduct({
 
             product,
@@ -1307,7 +1423,12 @@ export class VehicleEngine {
       )
 
 
+    // ==================================================
+    // SEARCH OILS
+    // ==================================================
+
     const oils =
+
       filterByOEM({
 
         products,
@@ -1318,7 +1439,9 @@ export class VehicleEngine {
         oem
 
       }).map(
+
         product =>
+
           enrichProduct({
 
             product,
@@ -1332,9 +1455,9 @@ export class VehicleEngine {
       )
 
 
-    // --------------------------------------------------
+    // ==================================================
     // RETURN
-    // --------------------------------------------------
+    // ==================================================
 
     return {
 
@@ -1373,7 +1496,6 @@ export class VehicleEngine {
 
         oilSpecification:
           oem?.oil ?? null
-
       },
 
       tires,
@@ -1391,9 +1513,7 @@ export class VehicleEngine {
         ...oils
 
       ]
-
     }
-
   }
 
 
@@ -1419,7 +1539,6 @@ export class VehicleEngine {
       oem
 
     })
-
   }
 
 
@@ -1445,7 +1564,6 @@ export class VehicleEngine {
       oem
 
     })
-
   }
 
 
@@ -1471,7 +1589,6 @@ export class VehicleEngine {
       oem
 
     })
-
   }
 
 
@@ -1514,7 +1631,6 @@ export class VehicleEngine {
       })
 
     ]
-
   }
 
 }
