@@ -1,15 +1,23 @@
 import { useMemo } from 'react'
-import { useWarehouseStore } from '../../../store/warehouseStore'
+
+import {
+  useWarehouseStore
+} from '../../../store/warehouseStore'
+
 
 export default function ProductWarehouseSection({
+
   form,
+
   setForm
+
 }) {
 
   const warehouses =
     useWarehouseStore(
       state => state.warehouses || []
     )
+
 
   const activeWarehouses =
     useMemo(
@@ -45,6 +53,10 @@ export default function ProductWarehouseSection({
     )
 
 
+  // ======================================================
+  // WAREHOUSE CHANGE
+  // ======================================================
+
   const handleWarehouseChange = (
     warehouseId
   ) => {
@@ -71,11 +83,35 @@ export default function ProductWarehouseSection({
         '',
 
       selectedWarehouseProductId:
-        ''
+        '',
+
+      originalSalePrice:
+        0,
+
+      warehouseSalePrice:
+        0,
+
+      offerPrice:
+        0,
+
+      // ==================================================
+      // QUANTITY VISIBILITY
+      // ==================================================
+
+      showQuantityOnProducts:
+        false,
+
+      showQuantityOnOffers:
+        false
 
     }))
+
   }
 
+
+  // ======================================================
+  // PRODUCT CHANGE
+  // ======================================================
 
   const handleProductChange = (
     productId
@@ -91,11 +127,27 @@ export default function ProductWarehouseSection({
           '',
 
         selectedWarehouseProductId:
-          ''
+          '',
+
+        originalSalePrice:
+          0,
+
+        warehouseSalePrice:
+          0,
+
+        offerPrice:
+          0,
+
+        showQuantityOnProducts:
+          false,
+
+        showQuantityOnOffers:
+          false
 
       }))
 
       return
+
     }
 
 
@@ -111,9 +163,20 @@ export default function ProductWarehouseSection({
 
 
     if (!product) {
+
+      console.error(
+        'Warehouse product not found:',
+        productId
+      )
+
       return
+
     }
 
+
+    // ====================================================
+    // IDS
+    // ====================================================
 
     const productIdValue =
       product.productId ||
@@ -121,15 +184,60 @@ export default function ProductWarehouseSection({
       ''
 
 
+    const warehouseProductId =
+      product.id ||
+      product.productId ||
+      ''
+
+
+    // ====================================================
+    // ORIGINAL WAREHOUSE SALE PRICE
+    //
+    // IMPORTANT:
+    // This value is copied from the warehouse product.
+    // It becomes the reference price for the offer.
+    // ====================================================
+
+    const warehouseSalePrice =
+      Number(
+        product.salePrice ??
+        product.price ??
+        product.sellingPrice ??
+        product.retailPrice ??
+        0
+      )
+
+
+    const originalSalePrice =
+      warehouseSalePrice
+
+
+    // ====================================================
+    // OFFER PRICE
+    //
+    // Initially the offer price is the same as the
+    // warehouse price. The user can change it later.
+    // ====================================================
+
+    const offerPrice =
+      warehouseSalePrice
+
+
+    // ====================================================
+    // LOAD ALL PRODUCT DATA
+    // ====================================================
+
     setForm(prev => ({
 
       ...prev,
 
-      // ==========================
+
+      // ==================================================
       // PRODUCT IDENTITY
-      // ==========================
+      // ==================================================
 
       id:
+        product.productId ||
         product.id ||
         prev.id ||
         '',
@@ -138,8 +246,10 @@ export default function ProductWarehouseSection({
         productIdValue,
 
       selectedWarehouseProductId:
-        product.id ||
-        '',
+        warehouseProductId,
+
+      productId:
+        productIdValue,
 
       warehouseId:
         selectedWarehouse?.id ||
@@ -152,9 +262,9 @@ export default function ProductWarehouseSection({
         '',
 
 
-      // ==========================
+      // ==================================================
       // BASIC
-      // ==========================
+      // ==================================================
 
       name:
         product.name ||
@@ -179,9 +289,9 @@ export default function ProductWarehouseSection({
         {},
 
 
-      // ==========================
+      // ==================================================
       // PRODUCT INFO
-      // ==========================
+      // ==================================================
 
       type:
         product.type ||
@@ -216,74 +326,87 @@ export default function ProductWarehouseSection({
         product.countryOfOrigin ||
         '',
 
+      keywords:
+        product.keywords ||
+        '',
 
-      // ==========================
+
+      // ==================================================
       // PRICING
-      // ==========================
+      //
+      // Warehouse values are copied exactly.
+      // ==================================================
 
       purchasePrice:
         Number(
-          product.purchasePrice ||
+          product.purchasePrice ??
           0
         ),
 
       salePrice:
-        Number(
-          product.salePrice ||
-          0
-        ),
+        warehouseSalePrice,
+
+      originalSalePrice:
+        originalSalePrice,
+
+      warehouseSalePrice:
+        warehouseSalePrice,
+
+      offerPrice:
+        offerPrice,
 
       wholesalePrice:
         Number(
-          product.wholesalePrice ||
+          product.wholesalePrice ??
           0
         ),
 
       discountPrice:
         Number(
-          product.discountPrice ||
+          product.discountPrice ??
           0
         ),
 
       cost:
         Number(
-          product.cost ||
-          product.purchasePrice ||
+          product.cost ??
+          product.purchasePrice ??
           0
         ),
 
 
-      // ==========================
-      // STOCK INFORMATION
-      // ==========================
+      // ==================================================
+      // STOCK
+      // ==================================================
 
       quantity:
         Number(
-          product.quantity ||
+          product.quantity ??
           0
         ),
 
       stock:
         Number(
-          product.quantity ||
+          product.stock ??
+          product.quantity ??
           0
         ),
 
       incoming:
         Number(
-          product.incoming ||
+          product.incoming ??
           0
         ),
 
       outgoing:
         Number(
-          product.outgoing ||
+          product.outgoing ??
           0
         ),
 
       reserved:
         Number(
-          product.reserved ||
+          product.reserved ??
           0
         ),
 
@@ -295,25 +418,25 @@ export default function ProductWarehouseSection({
         ),
 
 
-      // ==========================
+      // ==================================================
       // STOCK CONTROL
-      // ==========================
+      // ==================================================
 
       minimumStock:
         Number(
-          product.minimumStock ||
+          product.minimumStock ??
           0
         ),
 
       maximumStock:
         Number(
-          product.maximumStock ||
+          product.maximumStock ??
           0
         ),
 
       reorderPoint:
         Number(
-          product.reorderPoint ||
+          product.reorderPoint ??
           0
         ),
 
@@ -322,38 +445,44 @@ export default function ProductWarehouseSection({
         'piece',
 
 
-      // ==========================
+      // ==================================================
       // COSTS
-      // ==========================
+      // ==================================================
 
       shippingCost:
         Number(
-          product.shippingCost ||
+          product.shippingCost ??
           0
         ),
 
       customsCost:
         Number(
-          product.customsCost ||
+          product.customsCost ??
           0
         ),
 
       transportCost:
         Number(
-          product.transportCost ||
+          product.transportCost ??
           0
         ),
 
       otherCosts:
         Number(
-          product.otherCosts ||
+          product.otherCosts ??
+          0
+        ),
+
+      additionalCost:
+        Number(
+          product.additionalCost ??
           0
         ),
 
 
-      // ==========================
+      // ==================================================
       // SUPPLIER
-      // ==========================
+      // ==================================================
 
       supplierId:
         product.supplierId ||
@@ -364,9 +493,9 @@ export default function ProductWarehouseSection({
         '',
 
 
-      // ==========================
+      // ==================================================
       // BATCH
-      // ==========================
+      // ==================================================
 
       batchNumber:
         product.batchNumber ||
@@ -389,13 +518,16 @@ export default function ProductWarehouseSection({
         '',
 
       serialNumbers:
-        product.serialNumbers ||
-        [],
+        Array.isArray(
+          product.serialNumbers
+        )
+          ? product.serialNumbers
+          : [],
 
 
-      // ==========================
+      // ==================================================
       // LOCATION
-      // ==========================
+      // ==================================================
 
       location:
         product.location ||
@@ -414,9 +546,9 @@ export default function ProductWarehouseSection({
         '',
 
 
-      // ==========================
+      // ==================================================
       // PUBLISHING
-      // ==========================
+      // ==================================================
 
       publishToHome:
         product.publishToHome ??
@@ -457,9 +589,28 @@ export default function ProductWarehouseSection({
         false,
 
 
-      // ==========================
+      // ==================================================
+      // QUANTITY VISIBILITY
+      //
+      // IMPORTANT:
+      // Default is FALSE.
+      //
+      // This controls what the customer sees,
+      // NOT the real inventory quantity.
+      // ==================================================
+
+      showQuantityOnProducts:
+        product.showQuantityOnProducts ??
+        false,
+
+      showQuantityOnOffers:
+        product.showQuantityOnOffers ??
+        false,
+
+
+      // ==================================================
       // TYPE DATA
-      // ==========================
+      // ==================================================
 
       typeData:
         product.typeData ||
@@ -467,49 +618,55 @@ export default function ProductWarehouseSection({
 
       tire:
         product.tire ||
-        prev.tire ||
         {},
 
       battery:
         product.battery ||
-        prev.battery ||
         {},
 
       oil:
         product.oil ||
-        prev.oil ||
         {},
 
 
-      // ==========================
+      // ==================================================
       // COMPATIBILITY
-      // ==========================
+      // ==================================================
 
       compatibleVehicles:
-        product.compatibleVehicles ||
-        [],
+        Array.isArray(
+          product.compatibleVehicles
+        )
+          ? product.compatibleVehicles
+          : [],
 
       compatibleSizes:
-        product.compatibleSizes ||
-        [],
+        Array.isArray(
+          product.compatibleSizes
+        )
+          ? product.compatibleSizes
+          : [],
 
       vehicleCompatibility:
         product.vehicleCompatibility ||
         '',
 
 
-      // ==========================
+      // ==================================================
       // MEDIA
-      // ==========================
+      // ==================================================
 
       images:
-        product.images ||
-        [],
+        Array.isArray(
+          product.images
+        )
+          ? product.images
+          : [],
 
 
-      // ==========================
+      // ==================================================
       // OTHER
-      // ==========================
+      // ==================================================
 
       notes:
         product.notes ||
@@ -524,12 +681,14 @@ export default function ProductWarehouseSection({
         ''
 
     }))
+
   }
 
 
   return (
 
     <div
+
       className="
         bg-slate-900
         border
@@ -538,43 +697,55 @@ export default function ProductWarehouseSection({
         p-6
         space-y-5
       "
+
     >
 
       <h3
+
         className="
           text-2xl
           font-black
           text-yellow-400
         "
+
       >
+
         اختيار المنتج من المخزن
+
       </h3>
 
 
       <div
+
         className="
           text-gray-400
           font-bold
         "
+
       >
+
         اختر المخزن أولاً ثم اختر منتجًا موجودًا
-        داخله لتحميل بياناته وتعديلها.
+        داخله لتحميل بياناته تلقائيًا.
+
       </div>
 
 
-      {/* ==========================
+      {/* ==================================================
           WAREHOUSE
-      ========================== */}
+      ================================================== */}
 
       <select
+
         value={
           form.warehouseId || ''
         }
+
         onChange={(e) =>
           handleWarehouseChange(
             e.target.value
           )
         }
+
         className="
           w-full
           p-4
@@ -583,55 +754,74 @@ export default function ProductWarehouseSection({
           text-black
           font-bold
         "
+
       >
 
         <option value="">
+
           اختر المخزن
+
         </option>
 
         {
+
           activeWarehouses.map(
             warehouse => (
 
               <option
-                key={warehouse.id}
-                value={warehouse.id}
+
+                key={
+                  warehouse.id
+                }
+
+                value={
+                  warehouse.id
+                }
+
               >
 
                 {warehouse.name}
 
                 {
+
                   warehouse.type
                     ? ` (${warehouse.type})`
                     : ''
+
                 }
 
               </option>
 
             )
+
           )
+
         }
 
       </select>
 
 
-      {/* ==========================
+      {/* ==================================================
           PRODUCTS
-      ========================== */}
+      ================================================== */}
 
       {
+
         form.warehouseId && (
 
           <select
+
             value={
               form.selectedProductId ||
               ''
             }
+
             onChange={(e) =>
               handleProductChange(
                 e.target.value
               )
             }
+
             className="
               w-full
               p-4
@@ -642,63 +832,99 @@ export default function ProductWarehouseSection({
               border-2
               border-yellow-500
             "
+
           >
 
             <option value="">
+
               اختر المنتج الموجود في المخزن
+
             </option>
 
             {
+
               warehouseProducts.map(
                 product => (
 
                   <option
+
                     key={
+
                       product.productId ||
                       product.id
+
                     }
+
                     value={
+
                       product.productId ||
                       product.id
+
                     }
+
                   >
 
                     {
+
                       product.name ||
                       product.productName ||
                       'منتج بدون اسم'
+
                     }
 
                     {' — الكمية: '}
 
                     {
+
                       Number(
                         product.quantity ||
                         0
                       )
+
+                    }
+
+                    {' — السعر: '}
+
+                    {
+
+                      Number(
+
+                        product.salePrice ??
+                        product.price ??
+                        product.sellingPrice ??
+                        product.retailPrice ??
+                        0
+
+                      )
+
                     }
 
                   </option>
 
                 )
+
               )
+
             }
 
           </select>
 
         )
+
       }
 
 
-      {/* ==========================
+      {/* ==================================================
           NO PRODUCTS
-      ========================== */}
+      ================================================== */}
 
       {
+
         form.warehouseId &&
         warehouseProducts.length === 0 && (
 
           <div
+
             className="
               rounded-2xl
               bg-red-900/30
@@ -708,6 +934,7 @@ export default function ProductWarehouseSection({
               text-red-300
               font-bold
             "
+
           >
 
             لا توجد منتجات في هذا المخزن.
@@ -720,17 +947,20 @@ export default function ProductWarehouseSection({
           </div>
 
         )
+
       }
 
 
-      {/* ==========================
+      {/* ==================================================
           SELECTED PRODUCT
-      ========================== */}
+      ================================================== */}
 
       {
+
         form.selectedProductId && (
 
           <div
+
             className="
               rounded-2xl
               bg-green-900/30
@@ -739,32 +969,339 @@ export default function ProductWarehouseSection({
               p-4
               text-green-300
               font-bold
+              space-y-2
             "
+
           >
 
-            ✓ تم اختيار المنتج:
+            <div>
 
-            {' '}
+              ✓ تم اختيار المنتج:
 
-            <span className="text-white">
-              {form.name}
-            </span>
+              {' '}
 
-            <br />
+              <span className="text-white">
 
-            يمكنك الآن تعديل البيانات في الأقسام
-            التالية ثم حفظ التعديلات.
+                {form.name}
+
+              </span>
+
+            </div>
+
+
+            <div>
+
+              سعر المنتج في المخزن:
+
+              {' '}
+
+              <span className="text-yellow-400">
+
+                {
+
+                  Number(
+                    form.originalSalePrice ||
+                    0
+                  ).toFixed(2)
+
+                }
+
+              </span>
+
+            </div>
+
+
+            <div>
+
+              هذا السعر محفوظ كسعر أصلي للعرض
+              ولن يتغير عند تغيير سعر العرض.
+
+            </div>
 
           </div>
 
         )
+
       }
 
 
+      {/* ==================================================
+          CUSTOMER STOCK VISIBILITY
+      ================================================== */}
+
       {
+
+        form.selectedProductId && (
+
+          <div
+
+            className="
+              rounded-3xl
+              bg-slate-800
+              border
+              border-cyan-500/40
+              p-6
+              space-y-5
+            "
+
+          >
+
+            <div>
+
+              <h3
+
+                className="
+                  text-2xl
+                  font-black
+                  text-cyan-400
+                "
+
+              >
+
+                👁 التحكم في ظهور الكمية للعميل
+
+              </h3>
+
+              <p
+
+                className="
+                  text-gray-400
+                  mt-2
+                  leading-relaxed
+                "
+
+              >
+
+                هذه الإعدادات تتحكم فقط في المعلومات
+                التي يراها العميل. كمية المخزون الحقيقية
+                تظل محفوظة ويستخدمها النظام في البيع
+                والتحقق من التوفر.
+
+              </p>
+
+            </div>
+
+
+            {/* ==================================================
+                PRODUCTS
+            ================================================== */}
+
+            <label
+
+              className="
+                flex
+                items-center
+                justify-between
+                gap-4
+                bg-slate-900
+                border
+                border-slate-700
+                rounded-2xl
+                p-5
+                cursor-pointer
+              "
+
+            >
+
+              <div>
+
+                <div
+
+                  className="
+                    text-lg
+                    font-black
+                    text-white
+                  "
+
+                >
+
+                  إظهار الكمية في صفحة المنتجات
+
+                </div>
+
+                <div
+
+                  className="
+                    text-sm
+                    text-gray-400
+                    mt-1
+                  "
+
+                >
+
+                  عند التفعيل سيظهر للعميل
+                  العدد الفعلي المتاح.
+
+                </div>
+
+              </div>
+
+
+              <input
+
+                type="checkbox"
+
+                checked={
+                  Boolean(
+                    form.showQuantityOnProducts
+                  )
+                }
+
+                onChange={(e) =>
+                  setForm(prev => ({
+
+                    ...prev,
+
+                    showQuantityOnProducts:
+                      e.target.checked
+
+                  }))
+                }
+
+                className="
+                  w-6
+                  h-6
+                  accent-cyan-500
+                  cursor-pointer
+                "
+
+              />
+
+            </label>
+
+
+            {/* ==================================================
+                OFFERS
+            ================================================== */}
+
+            <label
+
+              className="
+                flex
+                items-center
+                justify-between
+                gap-4
+                bg-slate-900
+                border
+                border-slate-700
+                rounded-2xl
+                p-5
+                cursor-pointer
+              "
+
+            >
+
+              <div>
+
+                <div
+
+                  className="
+                    text-lg
+                    font-black
+                    text-white
+                  "
+
+                >
+
+                  إظهار الكمية في العروض
+
+                </div>
+
+                <div
+
+                  className="
+                    text-sm
+                    text-gray-400
+                    mt-1
+                  "
+
+                >
+
+                  عند التفعيل سيظهر للعميل
+                  العدد الفعلي المتاح في العرض.
+
+                </div>
+
+              </div>
+
+
+              <input
+
+                type="checkbox"
+
+                checked={
+                  Boolean(
+                    form.showQuantityOnOffers
+                  )
+                }
+
+                onChange={(e) =>
+                  setForm(prev => ({
+
+                    ...prev,
+
+                    showQuantityOnOffers:
+                      e.target.checked
+
+                  }))
+                }
+
+                className="
+                  w-6
+                  h-6
+                  accent-cyan-500
+                  cursor-pointer
+                "
+
+              />
+
+            </label>
+
+
+            <div
+
+              className="
+                bg-yellow-900/20
+                border
+                border-yellow-500/30
+                rounded-2xl
+                p-4
+                text-yellow-300
+                text-sm
+                font-bold
+              "
+
+            >
+
+              الوضع الافتراضي:
+
+              {' '}
+
+              لا تظهر الكمية للعميل.
+
+              <br />
+
+              سيظهر فقط "متوفر" أو "غير متوفر".
+
+            </div>
+
+          </div>
+
+        )
+
+      }
+
+
+      {/* ==================================================
+          NO WAREHOUSES
+      ================================================== */}
+
+      {
+
         activeWarehouses.length === 0 && (
 
           <div
+
             className="
               rounded-2xl
               bg-red-900/30
@@ -774,6 +1311,7 @@ export default function ProductWarehouseSection({
               text-red-300
               font-bold
             "
+
           >
 
             لا يوجد أي مخزن مسجل.
@@ -784,8 +1322,11 @@ export default function ProductWarehouseSection({
           </div>
 
         )
+
       }
 
     </div>
+
   )
+
 }

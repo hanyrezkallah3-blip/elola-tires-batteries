@@ -6,6 +6,10 @@ export default function ProductPricingSection({
 
 }) {
 
+  // ======================================================
+  // UPDATE NUMBER FIELD
+  // ======================================================
+
   const update = (
 
     key,
@@ -18,49 +22,87 @@ export default function ProductPricingSection({
 
       ...prev,
 
-      [key]: Number(value)
+      [key]:
+        value === ''
+          ? 0
+          : Number(value)
 
     }))
 
   }
 
-  const purchasePrice =
 
-    Number(form.purchasePrice || 0)
+  // ======================================================
+  // WAREHOUSE ORIGINAL PRICE
+  //
+  // This price is READ ONLY.
+  // It must never be changed while creating an offer.
+  // ======================================================
+
+  const originalPrice =
+    Number(
+      form.originalSalePrice ??
+      form.warehouseSalePrice ??
+      form.salePrice ??
+      0
+    )
+
+
+  // ======================================================
+  // OFFER PRICE
+  //
+  // This is the ONLY commercial price that can be changed
+  // when creating an offer.
+  // ======================================================
+
+  const offerPrice =
+    Number(
+      form.offerPrice ??
+      originalPrice ??
+      0
+    )
+
+
+  // ======================================================
+  // COST
+  // ======================================================
+
+  const purchasePrice =
+    Number(
+      form.purchasePrice || 0
+    )
+
 
   const additionalCost =
+    Number(
+      form.additionalCost || 0
+    )
 
-    Number(form.additionalCost || 0)
-
-  const salePrice =
-
-    Number(form.salePrice || 0)
 
   const totalCost =
-
     purchasePrice +
-
     additionalCost
 
+
+  // ======================================================
+  // PROFIT
+  // ======================================================
+
   const profit =
-
-    salePrice -
-
+    offerPrice -
     totalCost
 
-  const profitMargin =
 
+  const profitMargin =
     totalCost > 0
 
       ? (
-
           profit /
-
           totalCost
-
         ) * 100
 
       : 0
+
 
   return (
 
@@ -91,6 +133,50 @@ export default function ProductPricingSection({
 
       </h3>
 
+
+      {/* ==================================================
+          OFFER PRICE INFORMATION
+      ================================================== */}
+
+      <div
+
+        className="
+          bg-blue-900/30
+          border
+          border-blue-500
+          rounded-2xl
+          p-5
+          space-y-3
+        "
+
+      >
+
+        <div className="text-gray-300 font-bold">
+
+          سعر المنتج في المخزن
+
+        </div>
+
+        <div className="text-3xl font-black text-white">
+
+          {originalPrice.toFixed(2)}
+
+        </div>
+
+        <div className="text-sm text-gray-400">
+
+          هذا هو السعر الأصلي للمنتج في المخزن
+          ولن يتم تغييره عند إنشاء العرض.
+
+        </div>
+
+      </div>
+
+
+      {/* ==================================================
+          PRICES
+      ================================================== */}
+
       <div
 
         className="
@@ -100,6 +186,10 @@ export default function ProductPricingSection({
         "
 
       >
+
+        {/* ==================================================
+            PURCHASE PRICE
+        ================================================== */}
 
         <div>
 
@@ -113,16 +203,15 @@ export default function ProductPricingSection({
 
             type="number"
 
-            value={form.purchasePrice}
+            value={
+              form.purchasePrice ?? 0
+            }
 
-            onChange={(e)=>
+            onChange={(e) =>
 
               update(
-
                 'purchasePrice',
-
                 e.target.value
-
               )
 
             }
@@ -140,6 +229,11 @@ export default function ProductPricingSection({
           />
 
         </div>
+
+
+        {/* ==================================================
+            ADDITIONAL COST
+        ================================================== */}
 
         <div>
 
@@ -153,16 +247,15 @@ export default function ProductPricingSection({
 
             type="number"
 
-            value={form.additionalCost || 0}
+            value={
+              form.additionalCost || 0
+            }
 
-            onChange={(e)=>
+            onChange={(e) =>
 
               update(
-
                 'additionalCost',
-
                 e.target.value
-
               )
 
             }
@@ -181,11 +274,16 @@ export default function ProductPricingSection({
 
         </div>
 
+
+        {/* ==================================================
+            WAREHOUSE PRICE
+        ================================================== */}
+
         <div>
 
           <label className="font-bold text-gray-300">
 
-            سعر البيع
+            سعر المنتج في المخزن
 
           </label>
 
@@ -193,33 +291,140 @@ export default function ProductPricingSection({
 
             type="number"
 
-            value={form.salePrice}
-
-            onChange={(e)=>
-
-              update(
-
-                'salePrice',
-
-                e.target.value
-
-              )
-
+            value={
+              originalPrice
             }
+
+            readOnly
 
             className="
               w-full
               mt-2
               p-4
               rounded-2xl
-              bg-white
+              bg-gray-300
               text-black
               font-bold
+              cursor-not-allowed
             "
 
           />
 
         </div>
+
+
+        {/* ==================================================
+            OFFER PRICE
+        ================================================== */}
+
+        <div>
+
+          <label className="font-bold text-yellow-400">
+
+            سعر العرض
+
+          </label>
+
+          <input
+
+            type="number"
+
+            min="0"
+
+            max={
+              originalPrice > 0
+                ? originalPrice - 0.01
+                : undefined
+            }
+
+            value={
+              form.offerPrice ?? originalPrice
+            }
+
+            onChange={(e) => {
+
+              const value =
+                e.target.value === ''
+                  ? 0
+                  : Number(e.target.value)
+
+              setForm(prev => ({
+
+                ...prev,
+
+                offerPrice:
+                  value,
+
+                // Keep salePrice synchronized
+                // for older UI code, but the offer
+                // logic uses offerPrice.
+                salePrice:
+                  value,
+
+                discountPrice:
+                  value
+
+              }))
+
+            }}
+
+            className="
+              w-full
+              mt-2
+              p-4
+              rounded-2xl
+              bg-yellow-50
+              text-black
+              font-black
+              text-xl
+              border-2
+              border-yellow-500
+              focus:outline-none
+              focus:ring-2
+              focus:ring-yellow-400
+            "
+
+          />
+
+          {
+
+            originalPrice > 0 &&
+            offerPrice > 0 &&
+            offerPrice >= originalPrice && (
+
+              <div className="text-red-400 font-bold mt-2">
+
+                يجب أن يكون سعر العرض أقل من سعر المنتج
+                في المخزن.
+
+              </div>
+
+            )
+
+          }
+
+          {
+
+            originalPrice > 0 &&
+            offerPrice > 0 &&
+            offerPrice < originalPrice && (
+
+              <div className="text-green-400 font-bold mt-2">
+
+                ✓ سعر العرض أقل من سعر المخزن
+
+              </div>
+
+            )
+
+          }
+
+        </div>
+
+
+        {/* ==================================================
+            DISCOUNT PRICE
+        ================================================== */}
 
         <div>
 
@@ -233,16 +438,15 @@ export default function ProductPricingSection({
 
             type="number"
 
-            value={form.discountPrice}
+            value={
+              form.discountPrice ?? offerPrice
+            }
 
-            onChange={(e)=>
+            onChange={(e) =>
 
               update(
-
                 'discountPrice',
-
                 e.target.value
-
               )
 
             }
@@ -263,6 +467,11 @@ export default function ProductPricingSection({
 
       </div>
 
+
+      {/* ==================================================
+          CALCULATIONS
+      ================================================== */}
+
       <div
 
         className="
@@ -272,6 +481,10 @@ export default function ProductPricingSection({
         "
 
       >
+
+        {/* ==================================================
+            TOTAL COST
+        ================================================== */}
 
         <div
 
@@ -297,6 +510,11 @@ export default function ProductPricingSection({
 
         </div>
 
+
+        {/* ==================================================
+            PROFIT
+        ================================================== */}
+
         <div
 
           className="
@@ -309,17 +527,30 @@ export default function ProductPricingSection({
 
           <div className="text-gray-400">
 
-            الربح
+            الربح من العرض
 
           </div>
 
-          <div className="text-3xl font-black text-green-400">
+          <div
+
+            className="
+              text-3xl
+              font-black
+              text-green-400
+            "
+
+          >
 
             {profit.toFixed(2)}
 
           </div>
 
         </div>
+
+
+        {/* ==================================================
+            PROFIT MARGIN
+        ================================================== */}
 
         <div
 
@@ -337,7 +568,15 @@ export default function ProductPricingSection({
 
           </div>
 
-          <div className="text-3xl font-black text-cyan-400">
+          <div
+
+            className="
+              text-3xl
+              font-black
+              text-cyan-400
+            "
+
+          >
 
             {profitMargin.toFixed(1)}%
 

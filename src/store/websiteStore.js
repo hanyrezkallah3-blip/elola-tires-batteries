@@ -68,14 +68,54 @@ export const useWebsiteStore = create(
 
       rolePermissions,
 
-      // ================= SYSTEM =================
-
       maintenanceMode: false,
 
       setMaintenanceMode: (value) =>
-
         set({
           maintenanceMode: Boolean(value)
+        }),
+
+      // ================= HOME DISPLAY SETTINGS =================
+      //
+      // These settings control only what the customer sees
+      // on the Home page.
+      //
+      // They do NOT change real inventory quantities.
+      // They do NOT change offer availability.
+      // They do NOT change cart stock validation.
+      // They do NOT change warehouse data.
+      //
+
+      homeShowProductQuantity: false,
+
+      setHomeShowProductQuantity: (value) =>
+        set({
+          homeShowProductQuantity:
+            Boolean(value)
+        }),
+
+      homeShowProductWarehouse: false,
+
+      setHomeShowProductWarehouse: (value) =>
+        set({
+          homeShowProductWarehouse:
+            Boolean(value)
+        }),
+
+      homeShowOfferQuantity: false,
+
+      setHomeShowOfferQuantity: (value) =>
+        set({
+          homeShowOfferQuantity:
+            Boolean(value)
+        }),
+
+      homeShowOfferWarehouse: false,
+
+      setHomeShowOfferWarehouse: (value) =>
+        set({
+          homeShowOfferWarehouse:
+            Boolean(value)
         }),
 
       // ================= SERVICES =================
@@ -83,40 +123,29 @@ export const useWebsiteStore = create(
       services: [],
 
       setServices: (services) =>
-
         set({
-
           services:
             Array.isArray(services)
               ? services
               : []
-
         }),
 
       addService: (service) =>
-
         set((state) => ({
-
-          services: appendListItemWithId(
-            state.services,
-            service
-          )
-
+          services:
+            appendListItemWithId(
+              state.services,
+              service
+            )
         })),
 
       deleteService: (id) =>
-
         set((state) => ({
-
           services:
-
             state.services.filter(
-
               (s) =>
                 s.id !== id
-
             )
-
         })),
 
       // ================= VIDEOS =================
@@ -124,54 +153,41 @@ export const useWebsiteStore = create(
       videos: [],
 
       setVideos: (videos) =>
-
         set({
-
           videos:
             Array.isArray(videos)
               ? videos
               : []
-
         }),
 
       addVideo: (video) =>
-
         set((state) => ({
-
-          videos: appendListItemWithId(
-            state.videos,
-            video
-          )
-
+          videos:
+            appendListItemWithId(
+              state.videos,
+              video
+            )
         })),
 
       deleteVideo: (id) =>
-
         set((state) => ({
-
           videos:
-
             state.videos.filter(
-
               (v) =>
                 v.id !== id
-
             )
-
         })),
-              // ================= PERMISSIONS =================
+
+      // ================= PERMISSIONS =================
 
       permissions: [],
 
       setPermissions: (permissions) =>
-
         set({
-
           permissions:
             Array.isArray(permissions)
               ? permissions
               : []
-
         }),
 
       // ================= WALLETS =================
@@ -179,24 +195,17 @@ export const useWebsiteStore = create(
       wallets: [],
 
       setWallets: (wallets) =>
-
         set({
-
           wallets:
             Array.isArray(wallets)
               ? wallets
               : []
-
         }),
 
       addWallet: (wallet) =>
-
         set((state) => ({
-
           wallets: [
-
             {
-
               id: generateId(),
 
               balance: 0,
@@ -207,13 +216,10 @@ export const useWebsiteStore = create(
                 new Date().toISOString(),
 
               ...wallet
-
             },
 
             ...state.wallets
-
           ]
-
         })),
 
       // ================= WALLET SETTINGS =================
@@ -222,14 +228,16 @@ export const useWebsiteStore = create(
 
       setWalletEnabled: (value) =>
         set({
-          walletEnabled: Boolean(value)
+          walletEnabled:
+            Boolean(value)
         }),
 
       cashbackPercentage: 0,
 
       setCashbackPercentage: (value) =>
         set({
-          cashbackPercentage: Number(value) || 0
+          cashbackPercentage:
+            Number(value) || 0
         }),
 
       walletTransactions: [],
@@ -243,26 +251,19 @@ export const useWebsiteStore = create(
         }),
 
       addWalletTransaction: (transaction) =>
-
         set((state) => ({
-
           walletTransactions: [
-
             {
-
               id: generateId(),
 
               createdAt:
                 new Date().toISOString(),
 
               ...transaction
-
             },
 
             ...(state.walletTransactions || [])
-
           ]
-
         })),
 
       addWalletBalance: ({
@@ -277,24 +278,21 @@ export const useWebsiteStore = create(
 
         const index =
           wallets.findIndex(
-            (w) => w.phone === phone
+            (w) =>
+              w.phone === phone
           )
 
         if (index === -1)
           return false
 
         wallets[index] = {
-
           ...wallets[index],
 
           balance:
-
             Number(
               wallets[index].balance || 0
             ) +
-
             Number(amount || 0)
-
         }
 
         set({
@@ -302,9 +300,7 @@ export const useWebsiteStore = create(
         })
 
         get().addWalletTransaction({
-
           phone,
-
           customerName,
 
           amount:
@@ -314,11 +310,9 @@ export const useWebsiteStore = create(
 
           reason:
             reason || 'إضافة رصيد'
-
         })
 
         return true
-
       },
 
       deductWalletBalance: ({
@@ -333,7 +327,8 @@ export const useWebsiteStore = create(
 
         const index =
           wallets.findIndex(
-            (w) => w.phone === phone
+            (w) =>
+              w.phone === phone
           )
 
         if (index === -1)
@@ -348,21 +343,15 @@ export const useWebsiteStore = create(
           balance <
           Number(amount || 0)
         ) {
-
           return false
-
         }
 
         wallets[index] = {
-
           ...wallets[index],
 
           balance:
-
             balance -
-
             Number(amount || 0)
-
         }
 
         set({
@@ -370,9 +359,7 @@ export const useWebsiteStore = create(
         })
 
         get().addWalletTransaction({
-
           phone,
-
           customerName,
 
           amount:
@@ -382,27 +369,18 @@ export const useWebsiteStore = create(
 
           reason:
             reason || 'خصم رصيد'
-
         })
 
         return true
-
       },
 
       deleteWallet: (phone) =>
-
         set((state) => ({
-
           wallets:
-
             state.wallets.filter(
-
               (wallet) =>
-
                 wallet.phone !== phone
-
             )
-
         })),
 
       // ================= AUDIT =================
@@ -410,26 +388,19 @@ export const useWebsiteStore = create(
       auditLogs: [],
 
       addAuditLog: (log) =>
-
         set((state) => ({
-
           auditLogs: [
-
             {
-
               id: generateId(),
 
               createdAt:
                 new Date().toISOString(),
 
               ...log
-
             },
 
             ...state.auditLogs
-
           ]
-
         })),
 
       // ================= ERP =================
@@ -437,51 +408,33 @@ export const useWebsiteStore = create(
       erpMode: true,
 
       setERPMode: (value) =>
-
         set({
-
           erpMode:
             Boolean(value)
-
         }),
-              // ================= USERS =================
 
-      users: [
+      // ================= USERS =================
 
-        // Temporary during migration.
-        // Remove after all pages use useUserStore.
-      ],
+      users: [],
 
       setUsers: (users) =>
-
         set({
-
           users:
-
             Array.isArray(users)
-
               ? users
-
               : []
-
         }),
 
       addUser: (user) =>
-
         set((state) => ({
-
           users: [
-
             ...state.users,
-
             {
-
               id: generateId(),
 
               active: true,
 
               permissions:
-
                 rolePermissions[
                   user.role
                 ] || [],
@@ -508,11 +461,8 @@ export const useWebsiteStore = create(
                 new Date().toISOString(),
 
               ...user
-
             }
-
           ]
-
         })),
 
       // ================= ORDERS =================
@@ -520,17 +470,13 @@ export const useWebsiteStore = create(
       orders: [],
 
       setOrders: (orders) =>
-
         set({
-
           orders:
             Array.isArray(orders)
               ? orders
               : []
-
         }),
-
-      addOrder: (order) =>
+              addOrder: (order) =>
 
         set((state) => {
 
@@ -546,7 +492,9 @@ export const useWebsiteStore = create(
 
           const commission =
 
-            Number(order.total || 0) * rate
+            Number(
+              order.total || 0
+            ) * rate
 
           const newOrder = {
 
@@ -567,12 +515,14 @@ export const useWebsiteStore = create(
               .getState()
               .addWalletBalance({
 
-                phone: order.phone,
+                phone:
+                  order.phone,
 
                 customerName:
                   order.customerName,
 
-                amount: commission,
+                amount:
+                  commission,
 
                 reason:
                   'كاش باك من عملية شراء'
@@ -604,74 +554,100 @@ export const useWebsiteStore = create(
             state.orders.find(
 
               (o) =>
-
                 o.id === orderId
 
             )
 
           if (!order)
-
             return {}
+
           const inventory =
             useInventoryStore.getState()
 
-          ;(order.items || []).forEach((item) => {
+          ;(order.items || []).forEach(
 
-            const stockItem =
-              inventory.stockItems.find(
+            (item) => {
 
-                (s) =>
+              const stockItem =
+                inventory.stockItems.find(
 
-                  String(s.productId) ===
-                    String(item.productId) ||
+                  (s) =>
 
-                  String(s.productId) ===
-                    String(item.id)
+                    String(
+                      s.productId
+                    ) ===
+                    String(
+                      item.productId
+                    )
 
-              )
+                    ||
 
-            if (!stockItem)
-              return
-
-            inventory.increaseStock({
-
-              itemId: stockItem.id,
-
-              quantity:
-                Number(item.quantity || 1),
-
-              note:
-                `مرتجع - حذف الطلب ${order.id}`
-
-            })
-
-            inventory.updateStockItem(
-
-              stockItem.id,
-
-              {
-
-                sold: Math.max(
-
-                  0,
-
-                  Number(stockItem.sold || 0) -
-
-                  Number(item.quantity || 1)
+                    String(
+                      s.productId
+                    ) ===
+                    String(
+                      item.id
+                    )
 
                 )
 
-              }
+              if (!stockItem)
+                return
 
-            )
+              inventory.increaseStock({
 
-          })
+                itemId:
+                  stockItem.id,
+
+                quantity:
+                  Number(
+                    item.quantity || 1
+                  ),
+
+                note:
+                  `مرتجع - حذف الطلب ${order.id}`
+
+              })
+
+              inventory.updateStockItem(
+
+                stockItem.id,
+
+                {
+
+                  sold:
+
+                    Math.max(
+
+                      0,
+
+                      Number(
+                        stockItem.sold || 0
+                      ) -
+
+                      Number(
+                        item.quantity || 1
+                      )
+
+                    )
+
+                }
+
+              )
+
+            }
+
+          )
 
           return {
 
             orders:
+
               state.orders.filter(
-                (o) => o.id !== orderId
+
+                (o) =>
+                  o.id !== orderId
+
               )
 
           }
@@ -687,6 +663,7 @@ export const useWebsiteStore = create(
         set({
 
           products:
+
             Array.isArray(products)
               ? products
               : []
@@ -701,7 +678,8 @@ export const useWebsiteStore = create(
 
             {
 
-              id: generateId(),
+              id:
+                generateId(),
 
               createdAt:
                 new Date().toISOString(),
@@ -770,6 +748,7 @@ export const useWebsiteStore = create(
         set({
 
           transfers:
+
             Array.isArray(transfers)
               ? transfers
               : []
@@ -780,10 +759,15 @@ export const useWebsiteStore = create(
 
         set((state) => ({
 
-          transfers: appendListItemWithId(
-            state.transfers,
-            transfer
-          )
+          transfers:
+
+            appendListItemWithId(
+
+              state.transfers,
+
+              transfer
+
+            )
 
         })),
 
@@ -802,7 +786,8 @@ export const useWebsiteStore = create(
             )
 
         })),
-              // ================= SLIDES =================
+
+      // ================= SLIDES =================
 
       slides: [],
 
@@ -811,6 +796,7 @@ export const useWebsiteStore = create(
         set({
 
           slides:
+
             Array.isArray(slides)
               ? slides
               : []
@@ -821,14 +807,22 @@ export const useWebsiteStore = create(
 
         set((state) => ({
 
-          slides: appendListItemWithId(
-            state.slides,
-            slide
-          )
+          slides:
+
+            appendListItemWithId(
+
+              state.slides,
+
+              slide
+
+            )
 
         })),
 
-      updateSlide: (id, data) =>
+      updateSlide: (
+        id,
+        data
+      ) =>
 
         set((state) => ({
 
@@ -879,6 +873,7 @@ export const useWebsiteStore = create(
         set({
 
           offers:
+
             Array.isArray(offers)
               ? offers
               : []
@@ -889,14 +884,22 @@ export const useWebsiteStore = create(
 
         set((state) => ({
 
-          offers: appendListItemWithId(
-            state.offers,
-            offer
-          )
+          offers:
+
+            appendListItemWithId(
+
+              state.offers,
+
+              offer
+
+            )
 
         })),
 
-      updateOffer: (id, data) =>
+      updateOffer: (
+        id,
+        data
+      ) =>
 
         set((state) => ({
 
@@ -946,16 +949,18 @@ export const useWebsiteStore = create(
 
         set((state) => {
 
-          const cart = [...state.cart]
+          const cart =
+            [...state.cart]
 
-          const index = cart.findIndex(
+          const index =
+            cart.findIndex(
 
-            (i) =>
+              (i) =>
 
-              String(i.id) ===
-              String(item.id)
+                String(i.id) ===
+                String(item.id)
 
-          )
+            )
 
           if (index !== -1) {
 
@@ -971,7 +976,9 @@ export const useWebsiteStore = create(
 
             }
 
-            return { cart }
+            return {
+              cart
+            }
 
           }
 
@@ -987,7 +994,8 @@ export const useWebsiteStore = create(
 
                 quantity: 1,
 
-                cartId: generateId()
+                cartId:
+                  generateId()
 
               }
 
@@ -1090,7 +1098,8 @@ export const useWebsiteStore = create(
           cart: []
 
         }),
-              // ================= COMPANY =================
+
+      // ================= COMPANY =================
 
       companyName:
         'شركة العلا للإطارات والبطاريات',
@@ -1216,7 +1225,8 @@ export const useWebsiteStore = create(
 
             {
 
-              id: generateId(),
+              id:
+                generateId(),
 
               title,
 
@@ -1232,8 +1242,7 @@ export const useWebsiteStore = create(
           ]
 
         })),
-
-      // ================= WALLET SYSTEM =================
+              // ================= WALLET SYSTEM =================
 
       walletEnabled: true,
 
@@ -1273,7 +1282,8 @@ export const useWebsiteStore = create(
 
             {
 
-              id: generateId(),
+              id:
+                generateId(),
 
               createdAt:
                 new Date().toISOString(),
@@ -1329,7 +1339,8 @@ export const useWebsiteStore = create(
 
               {
 
-                id: generateId(),
+                id:
+                  generateId(),
 
                 phone,
 
@@ -1338,7 +1349,8 @@ export const useWebsiteStore = create(
                 amount:
                   Number(amount || 0),
 
-                type: 'add',
+                type:
+                  'add',
 
                 reason,
 
@@ -1401,7 +1413,8 @@ export const useWebsiteStore = create(
 
               {
 
-                id: generateId(),
+                id:
+                  generateId(),
 
                 phone,
 
@@ -1410,7 +1423,8 @@ export const useWebsiteStore = create(
                 amount:
                   Number(amount || 0),
 
-                type: 'deduct',
+                type:
+                  'deduct',
 
                 reason,
 
@@ -1434,24 +1448,32 @@ export const useWebsiteStore = create(
         set((state) => ({
 
           wallets:
+
             state.wallets.filter(
+
               (w) =>
                 w.phone !== phone
+
             ),
 
           walletTransactions:
+
             (state.walletTransactions || [])
               .filter(
+
                 (t) =>
                   t.phone !== phone
+
               )
 
         })),
-            }),
+
+    }),
 
     {
 
-      name: 'elola-store-v4-clean',
+      name:
+        'elola-store-v4-clean',
 
       partialize: (state) => ({
 
@@ -1527,12 +1549,13 @@ export const useWebsiteStore = create(
       }),
 
       onRehydrateStorage:
-
         () => (state) => {
 
           if (state) {
 
-            state.setHydrated(true)
+            state.setHydrated(
+              true
+            )
 
           }
 

@@ -3,20 +3,37 @@
 // Cart Helpers
 // ======================================================
 
+
+// ======================================================
+// PRICE
+// ======================================================
+
 export function getItemPrice(item) {
+
+  const value =
+
+    item?.offerPrice ??
+
+    item?.salePrice ??
+
+    item?.price ??
+
+    0
+
 
   return Number(
 
-    String(
+    String(value)
 
-      item?.price || ''
-
-    ).replace(/[^\d]/g, '')
+      .replace(/[^\d.-]/g, '')
 
   )
 
 }
 
+
+// ======================================================
+// QUANTITY
 // ======================================================
 
 export function getItemQuantity(item) {
@@ -29,6 +46,9 @@ export function getItemQuantity(item) {
 
 }
 
+
+// ======================================================
+// ITEM TOTAL
 // ======================================================
 
 export function calculateItemTotal(item) {
@@ -43,9 +63,16 @@ export function calculateItemTotal(item) {
 
 }
 
+
+// ======================================================
+// CART TOTAL
 // ======================================================
 
-export function calculateCartTotal(cart = []) {
+export function calculateCartTotal(
+
+  cart = []
+
+) {
 
   return cart.reduce(
 
@@ -61,6 +88,16 @@ export function calculateCartTotal(cart = []) {
 
 }
 
+
+// ======================================================
+// FIND STOCK ITEM
+//
+// PRIMARY KEY:
+// productId + warehouseId
+//
+// This is critical for offers.
+// An offer is NOT a warehouse product itself.
+// It points to the original warehouse product.
 // ======================================================
 
 export function findStockItem(
@@ -71,36 +108,115 @@ export function findStockItem(
 
 ) {
 
-  return stockItems.find(
+  if (
+    !Array.isArray(stockItems) ||
+    !item
+  ) {
 
-    stock =>
+    return null
 
-      String(
+  }
 
-        stock.productId
 
-      ) ===
+  const productId =
 
-      String(
+    item?.productId ||
 
-        item.id
+    item?.sourceProductId ||
+
+
+    item?.id
+
+
+  const warehouseId =
+
+    item?.warehouseId ||
+
+
+    item?.sourceWarehouseId ||
+
+
+    item?.warehouse?.id ||
+
+
+    null
+
+
+  // --------------------------------------------------
+  // EXACT PRODUCT + WAREHOUSE
+  // --------------------------------------------------
+
+  if (
+    productId &&
+    warehouseId
+  ) {
+
+    const exact =
+
+      stockItems.find(
+
+        stock =>
+
+          String(
+
+            stock?.productId ?? ''
+
+          ) ===
+
+          String(productId) &&
+
+          String(
+
+            stock?.warehouseId ?? ''
+
+          ) ===
+
+          String(warehouseId)
 
       )
 
-      ||
 
-      String(
+    if (exact) {
 
-        stock.productId
+      return exact
 
-      ) ===
+    }
 
-      String(
+  }
 
-        item.productId
 
-      )
+  // --------------------------------------------------
+  // PRODUCT ONLY FALLBACK
+  //
+  // Used only for legacy cart items that have no
+  // warehouse information.
+  // --------------------------------------------------
 
-  )
+  if (productId) {
+
+    return (
+
+      stockItems.find(
+
+        stock =>
+
+          String(
+
+            stock?.productId ?? ''
+
+          ) ===
+
+          String(productId)
+
+      ) ||
+
+      null
+
+    )
+
+  }
+
+
+  return null
 
 }

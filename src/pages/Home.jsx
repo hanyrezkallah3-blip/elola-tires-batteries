@@ -30,11 +30,6 @@ export default function Home() {
       state => state.slides || []
     )
 
-  const products =
-    useWebsiteStore(
-      state => state.products || []
-    )
-
   const offers =
     useWebsiteStore(
       state => state.offers || []
@@ -123,6 +118,18 @@ export default function Home() {
 
   // ====================================================
   // WAREHOUSES
+  //
+  // IMPORTANT RULE:
+  //
+  // The warehouse is the source of truth for:
+  //
+  // - Product existence
+  // - Product data
+  // - Normal sale price
+  // - Actual availability
+  //
+  // Products are NOT created here.
+  // They must already exist in a warehouse.
   // ====================================================
 
   const warehouses =
@@ -136,14 +143,6 @@ export default function Home() {
 
   // ====================================================
   // WAREHOUSE PRODUCTS
-  //
-  // Warehouses are the source of:
-  // - Products available for sale
-  // - Sale price when there is no active website offer
-  // - Actual availability
-  //
-  // Internal warehouse information is never exposed
-  // to the customer.
   // ====================================================
 
   const warehouseProducts =
@@ -183,15 +182,13 @@ export default function Home() {
   // ====================================================
   // WAREHOUSE PRODUCT INDEX
   //
-  // Same product can exist in multiple warehouses.
+  // One logical product can exist in several warehouses.
   //
-  // The index keeps:
-  // - One public product source
-  // - Total quantity
-  // - The first usable warehouse product as the
-  //   base product data
+  // The customer sees one product.
   //
-  // Warehouse-specific data remains internal.
+  // Quantity is combined across warehouses.
+  //
+  // The normal sale price comes from the warehouse product.
   // ====================================================
 
   const warehouseProductIndex =
@@ -263,6 +260,18 @@ export default function Home() {
 
   // ====================================================
   // ACTIVE OFFERS INDEX
+  //
+  // IMPORTANT:
+  //
+  // Offers modify an EXISTING warehouse product.
+  //
+  // They do NOT create a new product.
+  //
+  // If an offer has a valid offer price:
+  //
+  // warehouse.salePrice = old/base price
+  // offer price        = new/current price
+  //
   // ====================================================
 
   const activeOffersByProduct =
@@ -345,6 +354,13 @@ export default function Home() {
             String(productId)
 
 
+          /*
+           * Only the first active offer is used.
+           *
+           * The product itself must already exist
+           * inside a warehouse.
+           */
+
           if (!map.has(key)) {
 
             map.set(
@@ -363,75 +379,27 @@ export default function Home() {
 
 
   // ====================================================
-  // WEBSITE PRODUCT INDEX
-  //
-  // Website products are used ONLY as a reference for:
-  // - Active offers
-  //
-  // The normal sale price remains the warehouse price.
-  // ====================================================
-
-  const websiteProductIndex =
-    useMemo(() => {
-
-      const map =
-        new Map()
-
-      products.forEach(
-        product => {
-
-          if (!product) {
-            return
-          }
-
-          const productId =
-            product.id ??
-            product.productId
-
-          if (
-            productId === null ||
-            productId === undefined
-          ) {
-            return
-          }
-
-          map.set(
-            String(productId),
-            product
-          )
-
-        }
-      )
-
-      return map
-
-    }, [products])
-
-
-  // ====================================================
   // PUBLIC PRODUCT VIEW
   //
   // SOURCE:
-  //   Warehouse products
+  //   WAREHOUSE
   //
-  // PRICE:
-  //   Warehouse salePrice normally
+  // NORMAL PRICE:
+  //   warehouse.salePrice
   //
-  // ACTIVE WEBSITE OFFER:
-  //   Website product salePrice becomes the old/base
-  //   price and the website offer determines the final
-  //   price.
+  // OFFER:
+  //   offer.offerPrice / offer.salePrice / offer.newPrice
   //
-  // AVAILABILITY:
-  //   Total stock across all warehouses.
+  // WHEN OFFER EXISTS:
   //
-  // INTERNAL DATA NEVER EXPOSED:
-  // - warehouseId
-  // - warehouseName
-  // - purchasePrice
-  // - realCost
-  // - warehouse quantities
-  // - profit
+  //   oldPrice  = warehouse.salePrice
+  //   salePrice = offerPrice
+  //
+  // WHEN NO OFFER EXISTS:
+  //
+  //   salePrice = warehouse.salePrice
+  //   oldPrice  = null
+  //
   // ====================================================
 
   const visibleProducts =
@@ -457,12 +425,21 @@ export default function Home() {
 
 
           // ------------------------------------------
-          // WEBSITE PRODUCT REFERENCE
+          // NORMAL WAREHOUSE SALE PRICE
           // ------------------------------------------
 
-          const websiteProduct =
-            websiteProductIndex.get(key) ||
-            null
+          let warehouseSalePrice =
+            Number(
+              warehouseProduct.salePrice ?? 0
+            )
+
+          if (
+            !Number.isFinite(
+              warehouseSalePrice
+            )
+          ) {
+            warehouseSalePrice = 0
+          }
 
 
           // ------------------------------------------
@@ -472,27 +449,6 @@ export default function Home() {
           const offer =
             activeOffersByProduct.get(key) ||
             null
-
-
-          // ------------------------------------------
-          // BASE SALE PRICE
-          //
-          // Normally ALWAYS comes from warehouse.
-          // ------------------------------------------
-
-          let salePrice =
-            Number(
-              warehouseProduct.salePrice ??
-              0
-            )
-
-          if (
-            !Number.isFinite(
-              salePrice
-            )
-          ) {
-            salePrice = 0
-          }
 
 
           // ------------------------------------------
@@ -508,31 +464,6 @@ export default function Home() {
 
           if (offer) {
 
-            /*
-             * When there is an active website offer,
-             * the website product sale price becomes
-             * the old/base price.
-             *
-             * This is the only case where the normal
-             * warehouse sale price is replaced.
-             */
-
-            const websiteSalePrice =
-              Number(
-                websiteProduct?.salePrice ??
-                websiteProduct?.price ??
-                NaN
-              )
-
-
-            const offerBasePrice =
-              Number.isFinite(
-                websiteSalePrice
-              )
-                ? websiteSalePrice
-                : salePrice
-
-
             const explicitOfferPrice =
               Number(
                 offer.offerPrice ??
@@ -542,6 +473,10 @@ export default function Home() {
               )
 
 
+            // ----------------------------------------
+            // EXPLICIT OFFER PRICE
+            // ----------------------------------------
+
             if (
               Number.isFinite(
                 explicitOfferPrice
@@ -549,18 +484,41 @@ export default function Home() {
               explicitOfferPrice >= 0
             ) {
 
-              offerPrice =
-                explicitOfferPrice
+              /*
+               * CRITICAL RULE:
+               *
+               * Old price ALWAYS comes from the
+               * warehouse product.
+               *
+               * We never use websiteProduct.salePrice.
+               */
 
-              oldPrice =
-                offerBasePrice
+              if (
+                warehouseSalePrice > 0
+              ) {
 
-            } else {
+                offerPrice =
+                  explicitOfferPrice
+
+                oldPrice =
+                  warehouseSalePrice
+
+              }
+
+            }
+
+
+            // ----------------------------------------
+            // DISCOUNT-BASED OFFER
+            // ----------------------------------------
+
+            if (
+              offerPrice === null
+            ) {
 
               const discount =
                 Number(
-                  offer.discount ??
-                  0
+                  offer.discount ?? 0
                 )
 
               if (
@@ -569,19 +527,19 @@ export default function Home() {
                 ) &&
                 discount > 0 &&
                 discount < 100 &&
-                offerBasePrice > 0
+                warehouseSalePrice > 0
               ) {
 
                 offerPrice =
-                  offerBasePrice -
+                  warehouseSalePrice -
                   (
-                    offerBasePrice *
+                    warehouseSalePrice *
                     discount /
                     100
                   )
 
                 oldPrice =
-                  offerBasePrice
+                  warehouseSalePrice
 
               }
 
@@ -590,12 +548,35 @@ export default function Home() {
           }
 
 
+          // ------------------------------------------
+          // FINAL CUSTOMER PRICE
+          // ------------------------------------------
+
+          const hasOffer =
+            Boolean(
+              offerPrice !== null &&
+              Number.isFinite(
+                offerPrice
+              )
+            )
+
+
+          const finalPrice =
+            hasOffer
+              ? offerPrice
+              : warehouseSalePrice
+
+
+          // ------------------------------------------
+          // AVAILABILITY
+          // ------------------------------------------
+
           const available =
             totalQuantity > 0
 
 
           // ------------------------------------------
-          // PUBLIC PRODUCT OBJECT
+          // PUBLIC PRODUCT
           // ------------------------------------------
 
           result.push({
@@ -684,36 +665,72 @@ export default function Home() {
 
 
             // ----------------------------------------
-            // CONSUMER PRICING
+            // CUSTOMER PRICING
             // ----------------------------------------
 
-            salePrice,
+            /*
+             * salePrice is ALWAYS the final customer
+             * price.
+             *
+             * No offer:
+             *   salePrice = warehouse.salePrice
+             *
+             * Offer:
+             *   salePrice = offerPrice
+             */
 
-            offerPrice,
+            salePrice:
+              finalPrice,
 
-            oldPrice,
+            /*
+             * offerPrice is populated only when there
+             * is a real active offer.
+             */
 
-            hasOffer:
-              Boolean(
-                offer &&
-                offerPrice !== null
-              ),
+            offerPrice:
+              hasOffer
+                ? offerPrice
+                : null,
+
+            /*
+             * oldPrice is the warehouse's normal sale
+             * price only when an offer is active.
+             */
+
+            oldPrice:
+              hasOffer
+                ? oldPrice
+                : null,
+
+            hasOffer,
 
             offerTitle:
-              offer?.title ||
-              '',
+              hasOffer
+                ? (
+                    offer?.title ||
+                    ''
+                  )
+                : '',
 
             offerDescription:
-              offer?.description ||
-              '',
+              hasOffer
+                ? (
+                    offer?.description ||
+                    ''
+                  )
+                : '',
 
             offerId:
-              offer?.id ??
-              null,
+              hasOffer
+                ? (
+                    offer?.id ??
+                    null
+                  )
+                : null,
 
 
             // ----------------------------------------
-            // CONSUMER AVAILABILITY
+            // CUSTOMER AVAILABILITY
             // ----------------------------------------
 
             available,
@@ -747,18 +764,15 @@ export default function Home() {
       )
 
 
-      return result
-
-        .filter(
-          product =>
-            product.active &&
-            !product.hidden &&
-            product.publishedToHome !== false
-        )
+      return result.filter(
+        product =>
+          product.active &&
+          !product.hidden &&
+          product.publishedToHome !== false
+      )
 
     }, [
       warehouseProductIndex,
-      websiteProductIndex,
       activeOffersByProduct
     ])
 

@@ -5,18 +5,23 @@
 //
 // PRIMARY SOURCE
 // ------------------------------------------------------
-// The project's own VehicleRepository is the authoritative
-// source for vehicle OEM specifications.
+// VehicleRepository remains the local authoritative
+// vehicle source.
+//
+// This provider normalizes the vehicle record into the
+// OEM specification contract used by OEMCompatibilityEngine.
+//
+// IMPORTANT
+// ------------------------------------------------------
+// We do NOT invent battery or oil specifications.
+// We only read values that actually exist on the vehicle
+// record.
 //
 // Supported:
-// - Tire OEM sizes
-// - Tire optional sizes
-// - Battery specifications
-// - Oil specifications
-// - Vehicle years
-//
-// External providers are NOT required for local vehicle
-// compatibility.
+// - tire
+// - battery
+// - oil
+// - years
 // ======================================================
 
 import VehicleRepository
@@ -24,7 +29,7 @@ import VehicleRepository
 
 
 // ======================================================
-// NORMALIZE
+// NORMALIZE TEXT
 // ======================================================
 
 const normalize = value =>
@@ -35,6 +40,38 @@ const normalize = value =>
     .replace(/أ|إ|آ/g, 'ا')
     .replace(/ة/g, 'ه')
     .replace(/ى/g, 'ي')
+
+
+// ======================================================
+// GET ALL VEHICLES
+// ======================================================
+
+const getAllVehicles = () => {
+
+  try {
+
+    const vehicles =
+      VehicleRepository.getAllVehicles?.()
+
+    return Array.isArray(
+      vehicles
+    )
+      ? vehicles
+      : []
+
+  }
+  catch (error) {
+
+    console.error(
+      'VehicleSpecificationProvider.getAllVehicles failed:',
+      error
+    )
+
+    return []
+
+  }
+
+}
 
 
 // ======================================================
@@ -62,39 +99,217 @@ const findLocalVehicle = ({
 
 
   const vehicles =
-
-    VehicleRepository.getAllVehicles()
+    getAllVehicles()
 
 
   const wantedMake =
-
-    normalize(make)
+    normalize(
+      make
+    )
 
 
   const wantedModel =
-
-    normalize(model)
+    normalize(
+      model
+    )
 
 
   const requestedYear =
-
-    Number(year)
-
-
-  return vehicles.find(vehicle => {
-
-    const vehicleMake =
-
-      normalize(
-        vehicle?.brand ??
-        vehicle?.make ??
-        vehicle?.brandName ??
-        ''
-      )
+    Number(
+      year
+    )
 
 
-    const vehicleModel =
+  return (
 
+    vehicles.find(
+      vehicle => {
+
+        const vehicleMake =
+          normalize(
+            vehicle?.brand ??
+            vehicle?.make ??
+            vehicle?.brandName ??
+            ''
+          )
+
+
+        const models =
+          Array.isArray(
+            vehicle?.models
+          )
+            ? vehicle.models
+            : []
+
+
+        if (
+          vehicleMake !==
+          wantedMake
+        ) {
+
+          return false
+
+        }
+
+
+        const modelData =
+          models.find(
+            item =>
+              normalize(
+                item?.name ??
+                item?.model ??
+                item?.modelName ??
+                ''
+              ) === wantedModel
+          )
+
+
+        if (!modelData) {
+
+          return false
+
+        }
+
+
+        // =================================================
+        // YEAR
+        // =================================================
+
+        if (
+          Number.isFinite(
+            requestedYear
+          )
+        ) {
+
+          const years =
+
+            Array.isArray(
+              modelData?.years
+            )
+              ? modelData.years
+              : Array.isArray(
+                  vehicle?.years
+                )
+                  ? vehicle.years
+                  : []
+
+
+          if (
+            years.length > 0
+          ) {
+
+            return years.some(
+              item =>
+                Number(item) ===
+                requestedYear
+            )
+
+          }
+
+
+          const yearFrom =
+            Number(
+              modelData?.yearFrom ??
+              modelData?.year_from ??
+              modelData?.startYear ??
+              vehicle?.yearFrom ??
+              vehicle?.year_from ??
+              vehicle?.startYear ??
+              NaN
+            )
+
+
+          const yearTo =
+            Number(
+              modelData?.yearTo ??
+              modelData?.year_to ??
+              modelData?.endYear ??
+              vehicle?.yearTo ??
+              vehicle?.year_to ??
+              vehicle?.endYear ??
+              NaN
+            )
+
+
+          if (
+            Number.isFinite(yearFrom) &&
+            Number.isFinite(yearTo)
+          ) {
+
+            return (
+              requestedYear >= yearFrom &&
+              requestedYear <= yearTo
+            )
+
+          }
+
+
+          if (
+            Number.isFinite(yearFrom)
+          ) {
+
+            return (
+              requestedYear >= yearFrom
+            )
+
+          }
+
+
+          if (
+            Number.isFinite(yearTo)
+          ) {
+
+            return (
+              requestedYear <= yearTo
+            )
+
+          }
+
+        }
+
+
+        return true
+
+      }
+    ) ||
+
+    null
+
+  )
+
+}
+
+
+// ======================================================
+// GET MODEL DATA
+// ======================================================
+
+const getModelData = vehicle => {
+
+  if (!vehicle) {
+
+    return null
+
+  }
+
+
+  if (
+    vehicle?.modelData &&
+    typeof vehicle.modelData === 'object'
+  ) {
+
+    return vehicle.modelData
+
+  }
+
+
+  if (
+    Array.isArray(
+      vehicle?.models
+    )
+  ) {
+
+    const wantedModel =
       normalize(
         vehicle?.model ??
         vehicle?.modelName ??
@@ -102,94 +317,303 @@ const findLocalVehicle = ({
       )
 
 
-    if (
-      vehicleMake !== wantedMake ||
-      vehicleModel !== wantedModel
-    ) {
+    if (wantedModel) {
 
-      return false
+      return (
 
-    }
+        vehicle.models.find(
+          item =>
+            normalize(
+              item?.name ??
+              item?.model ??
+              item?.modelName ??
+              ''
+            ) === wantedModel
+        ) ||
 
+        null
 
-    // --------------------------------------------------
-    // YEAR
-    // --------------------------------------------------
-
-    if (
-      Number.isFinite(
-        requestedYear
       )
+
+    }
+
+  }
+
+
+  return null
+
+}
+
+
+// ======================================================
+// GET FIRST EXISTING VALUE
+// ======================================================
+
+const firstExisting = (
+
+  objects,
+
+  keys
+
+) => {
+
+  for (
+    const object of objects
+  ) {
+
+    if (
+      !object ||
+      typeof object !== 'object'
     ) {
 
-      if (
-        Array.isArray(
-          vehicle?.years
-        ) &&
-        vehicle.years.length > 0
-      ) {
+      continue
 
-        return vehicle.years.includes(
-          requestedYear
-        )
-
-      }
+    }
 
 
-      const yearFrom =
-        Number(
-          vehicle?.yearFrom ??
-          vehicle?.year_from ??
-          vehicle?.startYear ??
-          NaN
-        )
+    for (
+      const key of keys
+    ) {
 
-
-      const yearTo =
-        Number(
-          vehicle?.yearTo ??
-          vehicle?.year_to ??
-          vehicle?.endYear ??
-          NaN
-        )
+      const value =
+        object?.[key]
 
 
       if (
-        Number.isFinite(yearFrom) &&
-        Number.isFinite(yearTo)
+        value !== undefined &&
+        value !== null &&
+        value !== ''
       ) {
 
-        return (
-          requestedYear >= yearFrom &&
-          requestedYear <= yearTo
-        )
-
-      }
-
-
-      if (
-        Number.isFinite(yearFrom)
-      ) {
-
-        return requestedYear >= yearFrom
-
-      }
-
-
-      if (
-        Number.isFinite(yearTo)
-      ) {
-
-        return requestedYear <= yearTo
+        return value
 
       }
 
     }
 
+  }
 
-    return true
 
-  }) || null
+  return null
+
+}
+
+
+// ======================================================
+// TIRE SPECIFICATION
+// ======================================================
+
+const getTireSpecification = vehicle => {
+
+  const model =
+    getModelData(
+      vehicle
+    )
+
+
+  const sources = [
+
+    model,
+
+    vehicle
+
+  ]
+
+
+  const direct =
+    firstExisting(
+
+      sources,
+
+      [
+
+        'tire',
+
+        'tireSpec',
+
+        'tireSpecification',
+
+        'tireSpecifications',
+
+        'tireSize',
+
+        'tireSizes',
+
+        'oemTire',
+
+        'oemTires',
+
+        'oemTireSize',
+
+        'oemTireSizes'
+
+      ]
+
+    )
+
+
+  if (
+    direct !== null
+  ) {
+
+    return direct
+
+  }
+
+
+  return null
+
+}
+
+
+// ======================================================
+// BATTERY SPECIFICATION
+// ======================================================
+
+const getBatterySpecification = vehicle => {
+
+  const model =
+    getModelData(
+      vehicle
+    )
+
+
+  const sources = [
+
+    model?.batterySpecifications,
+
+    model?.batterySpecification,
+
+    model?.batterySpec,
+
+    model?.battery,
+
+    vehicle?.batterySpecifications,
+
+    vehicle?.batterySpecification,
+
+    vehicle?.batterySpec,
+
+    vehicle?.battery,
+
+    model,
+
+    vehicle
+
+  ]
+
+
+  return firstExisting(
+
+    sources,
+
+    [
+
+      'battery',
+
+      'batterySpec',
+
+      'batterySpecification',
+
+      'batterySpecifications',
+
+      'oemBattery',
+
+      'oemBatterySpec',
+
+      'batterySize',
+
+      'batteryCapacity',
+
+      'batteryCapacityAh',
+
+      'capacity',
+
+      'capacityAh',
+
+      'ampereHour',
+
+      'ampHours',
+
+      'ah'
+
+    ]
+
+  )
+
+}
+
+
+// ======================================================
+// OIL SPECIFICATION
+// ======================================================
+
+const getOilSpecification = vehicle => {
+
+  const model =
+    getModelData(
+      vehicle
+    )
+
+
+  const sources = [
+
+    model?.oilSpecifications,
+
+    model?.oilSpecification,
+
+    model?.oilSpec,
+
+    model?.oil,
+
+    vehicle?.oilSpecifications,
+
+    vehicle?.oilSpecification,
+
+    vehicle?.oilSpec,
+
+    vehicle?.oil,
+
+    model,
+
+    vehicle
+
+  ]
+
+
+  return firstExisting(
+
+    sources,
+
+    [
+
+      'oil',
+
+      'oilSpec',
+
+      'oilSpecification',
+
+      'oilSpecifications',
+
+      'oemOil',
+
+      'oemOilSpec',
+
+      'oilViscosity',
+
+      'viscosity',
+
+      'oilGrade',
+
+      'grade',
+
+      'grades',
+
+      'viscosities'
+
+    ]
+
+  )
 
 }
 
@@ -199,6 +623,7 @@ const findLocalVehicle = ({
 // ======================================================
 
 export default class VehicleSpecificationProvider {
+
 
   // ====================================================
   // OEM DATA
@@ -215,7 +640,6 @@ export default class VehicleSpecificationProvider {
   }) {
 
     const vehicle =
-
       findLocalVehicle({
 
         make,
@@ -234,21 +658,46 @@ export default class VehicleSpecificationProvider {
     }
 
 
-    return {
+    const modelData =
+      getModelData({
+
+        ...vehicle,
+
+        model
+
+      })
+
+
+    const normalizedVehicle = {
 
       ...vehicle,
 
+      model:
+        modelData?.name ??
+        vehicle?.model ??
+        model
+
+    }
+
+
+    return {
+
+      ...normalizedVehicle,
+
       tire:
-        vehicle?.tire ??
-        null,
+        getTireSpecification(
+          normalizedVehicle
+        ),
 
       battery:
-        vehicle?.battery ??
-        null,
+        getBatterySpecification(
+          normalizedVehicle
+        ),
 
       oil:
-        vehicle?.oil ??
-        null
+        getOilSpecification(
+          normalizedVehicle
+        )
 
     }
 

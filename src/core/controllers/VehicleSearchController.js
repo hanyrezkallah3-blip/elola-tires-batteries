@@ -10,31 +10,97 @@ import ProductsRepository
   from '../../repositories/ProductsRepository'
 
 import {
-  useInventoryStore
-} from '../../store/inventoryStore'
-
-import {
   useWarehouseStore
 } from '../../store/warehouseStore'
 
-import {
-  useWebsiteStore
-} from '../../store/websiteStore'
+
+// ======================================================
+// NORMALIZE TEXT
+// ======================================================
+
+const normalizeText = value => {
+
+  return String(
+    value ?? ''
+  )
+    .trim()
+    .toLowerCase()
+
+}
 
 
 // ======================================================
-// HELPERS
+// NORMALIZE TYPE
 // ======================================================
 
-const numberValue = (value) => {
+const normalizeType = value => {
+
+  const type =
+    normalizeText(value)
 
   if (
-    value === undefined ||
-    value === null ||
-    value === ''
+    [
+      'tire',
+      'tires',
+      'tyre',
+      'tyres',
+      'اطار',
+      'اطارات',
+      'إطار',
+      'إطارات'
+    ].includes(type)
+  ) {
+    return 'tire'
+  }
+
+
+  if (
+    [
+      'battery',
+      'batteries',
+      'بطاريه',
+      'بطاريات',
+      'بطارية'
+    ].includes(type)
+  ) {
+    return 'battery'
+  }
+
+
+  if (
+    [
+      'oil',
+      'oils',
+      'زيت',
+      'زيوت'
+    ].includes(type)
+  ) {
+    return 'oil'
+  }
+
+
+  return type
+
+}
+
+
+// ======================================================
+// NUMBER VALUE
+// ======================================================
+
+const numberValue = value => {
+
+  if (
+    value ===
+    null ||
+    value ===
+    undefined ||
+    value ===
+    ''
   ) {
     return null
   }
+
 
   const normalized =
     Number(
@@ -43,119 +109,85 @@ const numberValue = (value) => {
         .replace(',', '.')
     )
 
-  return Number.isFinite(normalized)
+
+  return Number.isFinite(
+    normalized
+  )
     ? normalized
     : null
-}
 
-
-const normalizeText = (value) =>
-  String(value ?? '')
-    .trim()
-    .toLowerCase()
-
-
-// ======================================================
-// NORMALIZE TIRE SIZE
-// ======================================================
-
-const normalizeTireSize = (value) => {
-
-  return String(value ?? '')
-    .trim()
-    .replace(/\s+/g, '')
-    .replace(/×/g, '*')
-    .replace(/x/gi, '*')
-    .replace(/-/g, '/')
 }
 
 
 // ======================================================
-// PARSE TIRE SIZE
+// GET PRODUCT TYPE
 // ======================================================
 
-const parseTireSize = (value) => {
+const getProductType = product => {
 
-  const normalized =
-    normalizeTireSize(value)
+  return normalizeType(
+    product?.type ||
+    product?.productType ||
+    product?.category
+  )
 
-  if (!normalized) {
-    return null
-  }
-
-  // ----------------------------------------------------
-  // Three-part format
-  // Examples:
-  // 205/55/16
-  // 205*55*16
-  // 205/55.5/16
-  // ----------------------------------------------------
-
-  const threePart =
-    normalized.match(
-      /^(\d+(?:\.\d+)?)[/*](\d+(?:\.\d+)?)[/*](\d+(?:\.\d+)?)$/
-    )
-
-  if (threePart) {
-
-    return {
-
-      width:
-        numberValue(
-          threePart[1]
-        ),
-
-      profile:
-        numberValue(
-          threePart[2]
-        ),
-
-      rim:
-        numberValue(
-          threePart[3]
-        ),
-
-      format:
-        'three-part'
-    }
-  }
+}
 
 
-  // ----------------------------------------------------
-  // Two-part format
-  // Examples:
-  // 205/16
-  // 205*16
-  // ----------------------------------------------------
+// ======================================================
+// GET TIRE DATA
+// ======================================================
 
-  const twoPart =
-    normalized.match(
-      /^(\d+(?:\.\d+)?)[/*](\d+(?:\.\d+)?)$/
-    )
+const getProductTire = product => {
 
-  if (twoPart) {
+  return (
+    product?.tire ||
+    product?.tireData ||
+    product?.tireSpecification ||
+    product?.tireSpecifications ||
+    product?.specifications?.tire ||
+    product?.attributes?.tire ||
+    {}
+  )
 
-    return {
+}
 
-      width:
-        numberValue(
-          twoPart[1]
-        ),
 
-      profile:
-        null,
+// ======================================================
+// GET BATTERY DATA
+// ======================================================
 
-      rim:
-        numberValue(
-          twoPart[2]
-        ),
+const getProductBattery = product => {
 
-      format:
-        'two-part'
-    }
-  }
+  return (
+    product?.battery ||
+    product?.batteryData ||
+    product?.batterySpecification ||
+    product?.batterySpecifications ||
+    product?.specifications?.battery ||
+    product?.attributes?.battery ||
+    {}
+  )
 
-  return null
+}
+
+
+// ======================================================
+// GET OIL DATA
+// ======================================================
+
+const getProductOil = product => {
+
+  return (
+    product?.oil ||
+    product?.oilData ||
+    product?.oilSpecification ||
+    product?.oilSpecifications ||
+    product?.specifications?.oil ||
+    product?.attributes?.oil ||
+    {}
+  )
+
 }
 
 
@@ -175,367 +207,53 @@ const getTireValue = (
     const value =
       tire?.[key]
 
+
     if (
-      value !== undefined &&
-      value !== null &&
-      value !== ''
+      value !==
+        undefined &&
+      value !==
+        null &&
+      value !==
+        ''
     ) {
 
       return value
+
     }
+
   }
+
 
   return null
+
 }
 
 
 // ======================================================
-// GET PRODUCT TIRE DATA
-// ======================================================
-
-const getProductTire = (
-  product
-) => {
-
-  return (
-    product?.tire ||
-    product?.tireData ||
-    product?.tireSpecification ||
-    product?.tireSpecifications ||
-    product?.specifications?.tire ||
-    product?.specification?.tire ||
-    product?.attributes?.tire ||
-    {}
-  )
-}
-
-
-// ======================================================
-// GET POSSIBLE SIZE VALUES
-// ======================================================
-
-const getProductSizeValues = (
-  product,
-  tire
-) => {
-
-  return [
-
-    product?.tireSize,
-    product?.size,
-    product?.dimension,
-    product?.dimensions,
-    product?.sizeCode,
-    product?.skuSize,
-    product?.name,
-    product?.productName,
-
-    product?.specifications?.tireSize,
-    product?.specifications?.size,
-    product?.specifications?.dimension,
-
-    product?.specification?.tireSize,
-    product?.specification?.size,
-
-    product?.attributes?.tireSize,
-    product?.attributes?.size,
-
-    tire?.size,
-    tire?.tireSize,
-    tire?.dimension,
-    tire?.dimensions,
-    tire?.sizeCode
-
-  ].filter(
-    value =>
-      value !== undefined &&
-      value !== null &&
-      value !== ''
-  )
-}
-
-
-// ======================================================
-// EXTRACT PRODUCT TIRE
-// ======================================================
-
-const extractProductTire = (
-  product
-) => {
-
-  const tire =
-    getProductTire(
-      product
-    )
-
-  let width =
-    numberValue(
-      getTireValue(
-        tire,
-        [
-          'width',
-          'sectionWidth',
-          'tireWidth'
-        ]
-      )
-    )
-
-  let profile =
-    numberValue(
-      getTireValue(
-        tire,
-        [
-          'height',
-          'profile',
-          'aspectRatio',
-          'aspect'
-        ]
-      )
-    )
-
-  let rim =
-    numberValue(
-      getTireValue(
-        tire,
-        [
-          'rim',
-          'rimSize',
-          'wheelDiameter',
-          'diameter'
-        ]
-      )
-    )
-
-
-  // ----------------------------------------------------
-  // FALLBACK: PARSE SIZE STRING
-  // ----------------------------------------------------
-
-  if (
-    width === null ||
-    rim === null
-  ) {
-
-    const sizeValues =
-      getProductSizeValues(
-        product,
-        tire
-      )
-
-    for (
-      const value of sizeValues
-    ) {
-
-      const parsed =
-        parseTireSize(
-          value
-        )
-
-      if (!parsed) {
-        continue
-      }
-
-      width =
-        width ??
-        parsed.width
-
-      profile =
-        profile ??
-        parsed.profile
-
-      rim =
-        rim ??
-        parsed.rim
-
-      if (
-        width !== null &&
-        rim !== null
-      ) {
-        break
-      }
-    }
-  }
-
-  return {
-
-    width,
-    profile,
-    rim
-  }
-}
-
-
-// ======================================================
-// IS TIRE PRODUCT
-// ======================================================
-
-const isTireProduct = (
-  product
-) => {
-
-  const type =
-    normalizeText(
-      product?.type
-    )
-
-  if (
-    type === 'tire' ||
-    type === 'tyre' ||
-    type === 'tires' ||
-    type === 'إطار' ||
-    type === 'اطار' ||
-    type === 'إطارات' ||
-    type === 'اطارات'
-  ) {
-
-    return true
-  }
-
-
-  const tire =
-    getProductTire(
-      product
-    )
-
-  const extracted =
-    extractProductTire(
-      product
-    )
-
-
-  if (
-    extracted.width !== null &&
-    extracted.rim !== null
-  ) {
-
-    return true
-  }
-
-
-  if (
-    Object.keys(tire).length > 0
-  ) {
-
-    return true
-  }
-
-
-  return false
-}
-
-
-// ======================================================
-// GET WAREHOUSE PRODUCTS
+// GET ALL WAREHOUSE PRODUCTS
 // ======================================================
 
 const getWarehouseProducts = () => {
+
+  let warehouses = []
+
 
   try {
 
     const state =
       useWarehouseStore.getState()
 
-    const warehouses =
+
+    if (
       Array.isArray(
         state?.warehouses
       )
-        ? state.warehouses
-        : []
+    ) {
 
+      warehouses =
+        state.warehouses
 
-    const products = []
-
-
-    warehouses.forEach(
-      warehouse => {
-
-        const warehouseProducts =
-          Array.isArray(
-            warehouse?.products
-          )
-            ? warehouse.products
-            : []
-
-
-        warehouseProducts.forEach(
-          product => {
-
-            if (!product) {
-              return
-            }
-
-
-            const productId =
-              String(
-                product?.productId ??
-                product?.id ??
-                ''
-              )
-
-
-            if (!productId) {
-              return
-            }
-
-
-            products.push({
-
-              ...product,
-
-              id:
-                productId,
-
-              productId:
-                productId,
-
-              name:
-                product?.name ||
-                product?.productName ||
-                '',
-
-              productName:
-                product?.productName ||
-                product?.name ||
-                '',
-
-              warehouseId:
-                product?.warehouseId ??
-                warehouse?.id,
-
-              warehouseName:
-                product?.warehouseName ||
-                warehouse?.name ||
-                '',
-
-              quantity:
-                Number(
-                  product?.quantity ??
-                  product?.availableQuantity ??
-                  0
-                ),
-
-              availableQuantity:
-                Number(
-                  product?.availableQuantity ??
-                  product?.quantity ??
-                  0
-                ),
-
-              salePrice:
-                Number(
-                  product?.salePrice ??
-                  product?.sellingPrice ??
-                  product?.price ??
-                  0
-                )
-            })
-          }
-        )
-      }
-    )
-
-
-    return products
+    }
 
   }
   catch (error) {
@@ -546,65 +264,141 @@ const getWarehouseProducts = () => {
     )
 
     return []
+
   }
+
+
+  const products = []
+
+
+  warehouses.forEach(
+    warehouse => {
+
+      const warehouseProducts =
+        Array.isArray(
+          warehouse?.products
+        )
+          ? warehouse.products
+          : []
+
+
+      warehouseProducts.forEach(
+        product => {
+
+          if (!product) {
+            return
+          }
+
+
+          const productId =
+            String(
+              product?.productId ??
+              product?.id ??
+              ''
+            )
+
+
+          if (!productId) {
+            return
+          }
+
+
+          const quantity =
+            Number(
+              product?.availableQuantity ??
+              product?.quantity ??
+              0
+            )
+
+
+          products.push({
+
+            ...product,
+
+            id:
+              productId,
+
+            productId,
+
+            name:
+              product?.name ||
+              product?.productName ||
+              '',
+
+            productName:
+              product?.productName ||
+              product?.name ||
+              '',
+
+            type:
+              normalizeType(
+                product?.type ||
+                product?.productType ||
+                product?.category
+              ),
+
+            warehouseId:
+              warehouse?.id,
+
+            warehouseName:
+              warehouse?.name ||
+              '',
+
+            quantity,
+
+            stock:
+              quantity,
+
+            availableQuantity:
+              quantity,
+
+            salePrice:
+              Number(
+                product?.salePrice ??
+                product?.sellingPrice ??
+                product?.consumerPrice ??
+                product?.price ??
+                0
+              ),
+
+            price:
+              Number(
+                product?.salePrice ??
+                product?.sellingPrice ??
+                product?.consumerPrice ??
+                product?.price ??
+                0
+              )
+
+          })
+
+        }
+      )
+
+    }
+  )
+
+
+  return products
+
 }
 
 
 // ======================================================
-// GET ALL PRODUCTS
+// GET REPOSITORY PRODUCTS
 // ======================================================
 
-const getAllProducts = async () => {
-
-  let repositoryProducts = []
-
+const getRepositoryProducts = async () => {
 
   try {
 
-    const result =
+    const data =
       await ProductsRepository.getAll()
 
 
-    /*
-     * ProductsRepository.getAll()
-     * now returns:
-     *
-     * {
-     *   success: true,
-     *   data: [...]
-     * }
-     *
-     * but we also keep support for
-     * an old direct-array response.
-     */
-
-    if (
-      Array.isArray(result)
-    ) {
-
-      repositoryProducts =
-        result
-    }
-    else if (
-      result?.success !== false &&
-      Array.isArray(
-        result?.data
-      )
-    ) {
-
-      repositoryProducts =
-        result.data
-    }
-    else if (
-      result?.success === false
-    ) {
-
-      console.error(
-        'ProductsRepository returned an error:',
-        result?.message,
-        result?.errors
-      )
-    }
+    return Array.isArray(data)
+      ? data
+      : []
 
   }
   catch (error) {
@@ -613,45 +407,40 @@ const getAllProducts = async () => {
       'ProductsRepository.getAll failed:',
       error
     )
-  }
 
-
-  const warehouseProducts =
-    getWarehouseProducts()
-
-
-  let websiteProducts = []
-
-
-  try {
-
-    const state =
-      useWebsiteStore.getState()
-
-
-    if (
-      Array.isArray(
-        state?.products
-      )
-    ) {
-
-      websiteProducts =
-        state.products
-    }
+    return []
 
   }
-  catch (error) {
 
-    console.error(
-      'Website products read failed:',
-      error
+}
+
+
+// ======================================================
+// GET ALL PRODUCTS
+// ======================================================
+//
+// المصدر الأساسي:
+// warehouseStore
+//
+// ProductsRepository يبقى مصدرًا إضافيًا
+// حتى لا نكسر المنتجات القديمة.
+// ======================================================
+
+const getAllProducts = async () => {
+
+  const [
+    repositoryProducts,
+    warehouseProducts
+  ] = await Promise.all([
+
+    getRepositoryProducts(),
+
+    Promise.resolve(
+      getWarehouseProducts()
     )
-  }
 
+  ])
 
-  // ====================================================
-  // MERGE
-  // ====================================================
 
   const map =
     new Map()
@@ -671,12 +460,10 @@ const getAllProducts = async () => {
 
       const id =
         String(
-          product?.id ??
           product?.productId ??
-          product?.sku ??
-          product?.barcode ??
+          product?.id ??
           ''
-        ).trim()
+        )
 
 
       if (!id) {
@@ -693,80 +480,47 @@ const getAllProducts = async () => {
           id,
 
           productId:
-            product?.productId ??
-            id
+            id,
+
+          type:
+            normalizeType(
+              product?.type ||
+              product?.productType ||
+              product?.category
+            )
+
         }
       )
+
     }
   )
 
 
   // ====================================================
-  // SECOND: WEBSITE
+  // SECOND: WAREHOUSE
   // ====================================================
-
-  websiteProducts.forEach(
-    product => {
-
-      if (!product) {
-        return
-      }
-
-
-      const id =
-        String(
-          product?.id ??
-          product?.productId ??
-          product?.sku ??
-          product?.barcode ??
-          ''
-        ).trim()
-
-
-      if (!id) {
-        return
-      }
-
-
-      map.set(
-        id,
-        {
-
-          ...map.get(id),
-
-          ...product,
-
-          id,
-
-          productId:
-            product?.productId ??
-            id
-        }
-      )
-    }
-  )
-
-
-  // ====================================================
-  // THIRD: WAREHOUSE
+  //
+  // بيانات المخزن لها الأولوية:
+  //
+  // - المنتج
+  // - السعر
+  // - الكمية
+  // - نوع المنتج
+  // - بيانات البطارية
+  // - بيانات الزيت
+  // - بيانات الإطار
+  //
   // ====================================================
 
   warehouseProducts.forEach(
     product => {
 
-      if (!product) {
-        return
-      }
-
-
       const id =
         String(
           product?.productId ??
           product?.id ??
-          product?.sku ??
-          product?.barcode ??
           ''
-        ).trim()
+        )
 
 
       if (!id) {
@@ -775,7 +529,8 @@ const getAllProducts = async () => {
 
 
       const existing =
-        map.get(id)
+        map.get(id) ||
+        {}
 
 
       map.set(
@@ -806,64 +561,217 @@ const getAllProducts = async () => {
             '',
 
           type:
-            product?.type ||
-            existing?.type ||
-            '',
-
-          brand:
-            product?.brand ||
-            existing?.brand ||
-            '',
+            normalizeType(
+              product?.type ||
+              product?.productType ||
+              product?.category ||
+              existing?.type ||
+              existing?.productType ||
+              existing?.category
+            ),
 
           salePrice:
             Number(
               product?.salePrice ??
+              product?.sellingPrice ??
+              product?.consumerPrice ??
+              product?.price ??
               existing?.salePrice ??
+              existing?.sellingPrice ??
+              existing?.consumerPrice ??
+              existing?.price ??
+              0
+            ),
+
+          price:
+            Number(
+              product?.salePrice ??
+              product?.sellingPrice ??
+              product?.consumerPrice ??
+              product?.price ??
+              existing?.salePrice ??
+              existing?.sellingPrice ??
+              existing?.consumerPrice ??
+              existing?.price ??
+              0
+            ),
+
+          quantity:
+            Number(
+              product?.quantity ??
+              product?.availableQuantity ??
+              product?.stock ??
+              0
+            ),
+
+          stock:
+            Number(
+              product?.quantity ??
+              product?.availableQuantity ??
+              product?.stock ??
+              0
+            ),
+
+          availableQuantity:
+            Number(
+              product?.quantity ??
+              product?.availableQuantity ??
+              product?.stock ??
               0
             )
+
         }
       )
+
     }
   )
 
 
+  // ====================================================
+  // BUILD WAREHOUSE AVAILABILITY
+  // ====================================================
+
+  const availabilityMap =
+    new Map()
+
+
+  warehouseProducts.forEach(
+    product => {
+
+      const id =
+        String(
+          product?.productId ??
+          product?.id ??
+          ''
+        )
+
+
+      if (!id) {
+        return
+      }
+
+
+      if (
+        !availabilityMap.has(id)
+      ) {
+
+        availabilityMap.set(
+          id,
+          []
+        )
+
+      }
+
+
+      const quantity =
+        Number(
+          product?.quantity ??
+          product?.availableQuantity ??
+          product?.stock ??
+          0
+        )
+
+
+      availabilityMap
+        .get(id)
+        .push({
+
+          id:
+            product?.warehouseId,
+
+          warehouseId:
+            product?.warehouseId,
+
+          name:
+            product?.warehouseName ||
+            'المخزن',
+
+          warehouseName:
+            product?.warehouseName ||
+            'المخزن',
+
+          quantity
+
+        })
+
+    }
+  )
+
+
+  // ====================================================
+  // FINAL PRODUCTS
+  // ====================================================
+
   return Array.from(
     map.values()
   )
-}
+    .map(
+      product => {
+
+        const productId =
+          String(
+            product?.productId ??
+            product?.id ??
+            ''
+          )
 
 
-// ======================================================
-// GET WAREHOUSE STOCK FOR PRODUCT
-// ======================================================
+        const warehouses =
+          availabilityMap.get(
+            productId
+          ) || []
 
-const getWarehouseStockForProduct = (
-  productId
-) => {
 
-  const normalizedId =
-    String(
-      productId ?? ''
+        const totalStock =
+          warehouses.reduce(
+            (
+              total,
+              warehouse
+            ) =>
+              total +
+              Number(
+                warehouse?.quantity ||
+                0
+              ),
+            0
+          )
+
+
+        return {
+
+          ...product,
+
+          id:
+            productId,
+
+          productId,
+
+          stock:
+            totalStock,
+
+          quantity:
+            totalStock,
+
+          availableQuantity:
+            totalStock,
+
+          availability: {
+
+            available:
+              totalStock > 0,
+
+            quantity:
+              totalStock,
+
+            warehouses
+
+          }
+
+        }
+
+      }
     )
 
-
-  if (!normalizedId) {
-    return []
-  }
-
-
-  const warehouseProducts =
-    getWarehouseProducts()
-
-
-  return warehouseProducts.filter(
-    product =>
-      String(
-        product?.productId ??
-        product?.id ??
-        ''
-      ) === normalizedId
-  )
 }
 
 
@@ -879,10 +787,15 @@ class VehicleSearchController {
   // ====================================================
 
   static async searchVehicle({
+
     vehicleType,
+
     make,
+
     model,
+
     year
+
   }) {
 
     const products =
@@ -892,12 +805,17 @@ class VehicleSearchController {
     return VehicleEngine.search({
 
       vehicleType,
+
       make,
+
       model,
+
       year,
 
       products
+
     })
+
   }
 
 
@@ -906,10 +824,15 @@ class VehicleSearchController {
   // ====================================================
 
   static async searchTire({
+
     width,
+
     profile,
+
     rim,
+
     format
+
   }) {
 
     const products =
@@ -917,327 +840,378 @@ class VehicleSearchController {
 
 
     const requestedWidth =
-      numberValue(width)
+      numberValue(
+        width
+      )
+
 
     const requestedProfile =
-      numberValue(profile)
+      numberValue(
+        profile
+      )
+
 
     const requestedRim =
-      numberValue(rim)
+      numberValue(
+        rim
+      )
 
 
     if (
-      requestedWidth === null ||
-      requestedRim === null
+      requestedWidth ===
+      null ||
+
+      requestedRim ===
+      null
     ) {
 
       return []
+
     }
 
 
-    const inventoryState =
-      useInventoryStore.getState()
+    return products
 
+      // ----------------------------------------------
+      // TYPE
+      // ----------------------------------------------
 
-    const stockItems =
-      Array.isArray(
-        inventoryState?.stockItems
+      .filter(
+        product =>
+          getProductType(
+            product
+          ) ===
+          'tire'
       )
-        ? inventoryState.stockItems
-        : []
 
 
-    const matchedProducts =
-      products
+      // ----------------------------------------------
+      // SIZE
+      // ----------------------------------------------
 
-        // ------------------------------------------------
-        // ONLY TIRES
-        // ------------------------------------------------
+      .filter(
+        product => {
 
-        .filter(
-          product =>
-            isTireProduct(
+          const tire =
+            getProductTire(
               product
             )
-        )
 
-        // ------------------------------------------------
-        // MATCH SIZE
-        // ------------------------------------------------
 
-        .filter(
-          product => {
-
-            const tire =
-              extractProductTire(
-                product
+          const productWidth =
+            numberValue(
+              getTireValue(
+                tire,
+                [
+                  'width',
+                  'sectionWidth',
+                  'tireWidth'
+                ]
               )
-
-
-            if (
-              tire.width !==
-              requestedWidth
-            ) {
-
-              return false
-            }
-
-
-            if (
-              tire.rim !==
-              requestedRim
-            ) {
-
-              return false
-            }
-
-
-            // --------------------------------------------
-            // TWO-PART SEARCH
-            // --------------------------------------------
-
-            if (
-              format ===
-              'two-part'
-            ) {
-
-              return true
-            }
-
-
-            // --------------------------------------------
-            // THREE-PART SEARCH
-            // --------------------------------------------
-
-            return (
-
-              tire.profile !== null &&
-
-              requestedProfile !== null &&
-
-              tire.profile ===
-              requestedProfile
-
             )
+
+
+          const productProfile =
+            numberValue(
+              getTireValue(
+                tire,
+                [
+                  'profile',
+                  'height',
+                  'aspectRatio',
+                  'aspect'
+                ]
+              )
+            )
+
+
+          const productRim =
+            numberValue(
+              getTireValue(
+                tire,
+                [
+                  'rim',
+                  'rimSize',
+                  'wheelDiameter',
+                  'diameter'
+                ]
+              )
+            )
+
+
+          if (
+            productWidth !==
+            requestedWidth
+          ) {
+
+            return false
+
           }
-        )
 
 
-    // ==================================================
-    // ADD INVENTORY
-    // ==================================================
+          if (
+            productRim !==
+            requestedRim
+          ) {
 
-    return matchedProducts.map(
-      product => {
+            return false
 
-        const productId =
-          String(
-            product?.productId ??
-            product?.id ??
-            ''
-          )
-
-
-        const warehouseRows =
-          getWarehouseStockForProduct(
-            productId
-          )
-
-
-        const inventoryRows =
-          stockItems.filter(
-            item =>
-
-              String(
-                item?.productId ??
-                ''
-              ) === productId
-
-              &&
-
-              Number(
-                item?.quantity || 0
-              ) > 0
-          )
-
-
-        const sourceRows =
-          warehouseRows.length > 0
-            ? warehouseRows
-            : inventoryRows
-
-
-        const totalStock =
-          sourceRows.reduce(
-            (
-              total,
-              item
-            ) =>
-
-              total +
-
-              Number(
-                item?.quantity ??
-                item?.availableQuantity ??
-                0
-              ),
-
-            0
-          )
-
-
-        const warehouses =
-          sourceRows.map(
-            item => ({
-
-              id:
-                item?.warehouseId,
-
-              name:
-                item?.warehouseName ||
-                item?.warehouse?.name ||
-                'المخزن',
-
-              quantity:
-                Number(
-                  item?.quantity ??
-                  item?.availableQuantity ??
-                  0
-                )
-            })
-          )
-
-
-        const price =
-          Number(
-            product?.salePrice ??
-            product?.sellingPrice ??
-            product?.price ??
-            product?.consumerPrice ??
-            0
-          )
-
-
-        return {
-
-          ...product,
-
-          id:
-            productId,
-
-          productId,
-
-          price,
-
-          salePrice:
-            price,
-
-          stock:
-            totalStock,
-
-          quantity:
-            totalStock,
-
-          availability: {
-
-            available:
-              totalStock > 0,
-
-            quantity:
-              totalStock,
-
-            warehouses
           }
+
+
+          // المقاسات ذات جزئين:
+          // 1200/24
+          //
+          // لا يوجد Profile.
+
+          if (
+            format ===
+            'two-part'
+          ) {
+
+            return true
+
+          }
+
+
+          return (
+
+            productProfile !==
+              null &&
+
+            requestedProfile !==
+              null &&
+
+            productProfile ===
+            requestedProfile
+
+          )
+
         }
-      }
-    )
-  }
-
-
-  // ====================================================
-  // BATTERY
-  // ====================================================
-
-  static async searchBattery({
-    capacity
-  }) {
-
-    const products =
-      await getAllProducts()
-
-
-    const requestedCapacity =
-      numberValue(
-        capacity
       )
 
 
-    if (
-      requestedCapacity === null
-    ) {
-
-      return []
-    }
-
-
-    return products
+      // ----------------------------------------------
+      // AVAILABLE STOCK
+      // ----------------------------------------------
 
       .filter(
         product =>
-          normalizeText(
-            product?.type
-          ) === 'battery'
+          Number(
+            product?.availability
+              ?.quantity ??
+            product?.quantity ??
+            product?.stock ??
+            0
+          ) > 0
       )
 
-      .filter(
-        product =>
-          numberValue(
-            product?.battery?.capacity
-          ) === requestedCapacity
-      )
-  }
-
-
-  // ====================================================
-  // OIL
-  // ====================================================
-
-  static async searchOil({
-    viscosity
-  }) {
-
-    const products =
-      await getAllProducts()
-
-
-    const requestedViscosity =
-      normalizeText(
-        viscosity
-      )
-
-
-    if (!requestedViscosity) {
-      return []
-    }
-
-
-    return products
-
-      .filter(
-        product =>
-          normalizeText(
-            product?.type
-          ) === 'oil'
-      )
-
-      .filter(
-        product =>
-          normalizeText(
-            product?.oil?.viscosity
-          ) === requestedViscosity
-      )
-  }
 }
 
+
+// ====================================================
+// BATTERY
+// ====================================================
+
+static async searchBattery({
+
+  capacity
+
+}) {
+
+  const products =
+    await getAllProducts()
+
+
+  const requestedCapacity =
+    numberValue(
+      capacity
+    )
+
+
+  if (
+    requestedCapacity ===
+    null
+  ) {
+
+    return []
+
+  }
+
+
+  return products
+
+    // ----------------------------------------------
+    // TYPE
+    // ----------------------------------------------
+
+    .filter(
+      product =>
+        getProductType(
+          product
+        ) ===
+        'battery'
+    )
+
+
+    // ----------------------------------------------
+    // CAPACITY
+    // ----------------------------------------------
+
+    .filter(
+      product => {
+
+        const battery =
+          getProductBattery(
+            product
+          )
+
+
+        const productCapacity =
+          numberValue(
+
+            battery?.capacity ??
+            battery?.ampereHour ??
+            battery?.ah ??
+            battery?.amp ??
+            battery?.ampHours ??
+            product?.capacity ??
+            product?.ampereHour ??
+            product?.ah ??
+            product?.amp ??
+            product?.ampHours
+
+          )
+
+
+        return (
+          productCapacity ===
+          requestedCapacity
+        )
+
+      }
+    )
+
+
+    // ----------------------------------------------
+    // AVAILABLE STOCK
+    // ----------------------------------------------
+
+    .filter(
+      product =>
+        Number(
+          product?.availability
+            ?.quantity ??
+          product?.quantity ??
+          product?.stock ??
+          0
+        ) > 0
+    )
+
+}
+
+
+// ====================================================
+// OIL
+// ====================================================
+
+static async searchOil({
+
+  viscosity
+
+}) {
+
+  const products =
+    await getAllProducts()
+
+
+  const requestedViscosity =
+    normalizeText(
+      viscosity
+    )
+
+
+  if (
+    !requestedViscosity
+  ) {
+
+    return []
+
+  }
+
+
+  return products
+
+    // ----------------------------------------------
+    // TYPE
+    // ----------------------------------------------
+
+    .filter(
+      product =>
+        getProductType(
+          product
+        ) ===
+        'oil'
+    )
+
+
+    // ----------------------------------------------
+    // VISCOSITY
+    // ----------------------------------------------
+
+    .filter(
+      product => {
+
+        const oil =
+          getProductOil(
+            product
+          )
+
+
+        const productViscosity =
+          normalizeText(
+
+            oil?.viscosity ??
+            oil?.grade ??
+            oil?.oilGrade ??
+            product?.viscosity ??
+            product?.grade ??
+            product?.oilGrade
+
+          )
+
+
+        return (
+          productViscosity ===
+          requestedViscosity
+        )
+
+      }
+    )
+
+
+    // ----------------------------------------------
+    // AVAILABLE STOCK
+    // ----------------------------------------------
+
+    .filter(
+      product =>
+        Number(
+          product?.availability
+            ?.quantity ??
+          product?.quantity ??
+          product?.stock ??
+          0
+        ) > 0
+    )
+
+}
+
+}
+
+
+// ======================================================
+// EXPORT
+// ======================================================
 
 export default VehicleSearchController

@@ -10,10 +10,6 @@ import {
   useWebsiteStore
 } from '../../store/websiteStore'
 
-import {
-  useWarehouseStore
-} from '../../store/warehouseStore'
-
 import ProductEngine
   from '../../core/engines/product/ProductEngine'
 
@@ -44,14 +40,14 @@ export default function useProductsActions() {
     )
 
 
-  const updateWarehouseProduct =
-    useWarehouseStore(
-      state => state.updateWarehouseProduct
+  const addOffer =
+    useWebsiteStore(
+      state => state.addOffer
     )
 
 
   // ======================================================
-  // ADD / UPDATE PRODUCT
+  // ADD / UPDATE
   // ======================================================
 
   const handleAddProduct =
@@ -60,96 +56,42 @@ export default function useProductsActions() {
       try {
 
         // ==================================================
-        // UPDATE EXISTING WAREHOUSE PRODUCT
+        // OFFER
+        //
+        // Products page uses an existing warehouse product
+        // as the source of the offer.
+        //
+        // IMPORTANT:
+        // NEVER update the warehouse product here.
+        // NEVER call ProductEngine.update().
+        // NEVER call ProductEngine.create() for an offer.
         // ==================================================
 
         if (
-          product?.selectedProductId &&
-          product?.warehouseId
+          product?.isOffer === true
         ) {
 
-          const productId =
-            product.selectedProductId
+          const sourceProductId =
+            product.sourceProductId ||
+            product.selectedProductId ||
+            product.productId ||
+            ''
 
 
-          const warehouseProductId =
-            product.selectedWarehouseProductId ||
-            productId
+          const warehouseId =
+            product.warehouseId ||
+            ''
 
 
-          const updatedProduct = {
-
-            ...product,
-
-            id:
-              productId,
-
-            productId,
-
-            productName:
-              product.name ||
-              product.productName ||
-              '',
-
-            name:
-              product.name ||
-              product.productName ||
-              '',
-
-            quantity:
-              Number(
-                product.quantity || 0
-              ),
-
-            availableQuantity:
-              Number(
-                product.availableQuantity ??
-                product.quantity ??
-                0
-              ),
-
-            purchasePrice:
-              Number(
-                product.purchasePrice || 0
-              ),
-
-            salePrice:
-              Number(
-                product.salePrice || 0
-              ),
-
-            updatedAt:
-              new Date().toISOString()
-
-          }
-
-
-          // ==================================================
-          // UPDATE FIRESTORE PRODUCT
-          // ==================================================
-
-          const result =
-            await ProductEngine.update(
-
-              productId,
-
-              updatedProduct
-
-            )
-
-
-          if (
-            !result?.success
-          ) {
+          if (!sourceProductId) {
 
             console.error(
-              'ProductEngine.update failed:',
-              result
+              'Offer creation failed: missing source product id',
+              product
             )
 
             alert(
-              result?.message ||
-              'فشل تحديث المنتج'
+              'لم يتم تحديد المنتج الأصلي من المخزن'
             )
 
             return null
@@ -157,54 +99,187 @@ export default function useProductsActions() {
           }
 
 
-          // ==================================================
-          // UPDATE LOCAL PRODUCT STORE
-          // ==================================================
+          if (!warehouseId) {
 
-          updateProduct(
+            console.error(
+              'Offer creation failed: missing warehouse id',
+              product
+            )
 
-            productId,
+            alert(
+              'لم يتم تحديد المخزن'
+            )
 
-            updatedProduct
-
-          )
-
-
-          // ==================================================
-          // UPDATE WAREHOUSE STORE
-          // ==================================================
-
-          updateWarehouseProduct(
-
-            product.warehouseId,
-
-            warehouseProductId,
-
-            updatedProduct
-
-          )
-
-
-          // ==================================================
-          // RETURN UPDATED PRODUCT
-          // ==================================================
-
-          return {
-
-            ...(result.data || {}),
-
-            ...updatedProduct,
-
-            id:
-              productId
+            return null
 
           }
+
+
+          const originalPrice =
+            Number(
+              product.originalPrice ??
+              product.originalSalePrice ??
+              product.warehouseSalePrice ??
+              0
+            )
+
+
+          const offerPrice =
+            Number(
+              product.offerPrice ??
+              product.salePrice ??
+              0
+            )
+
+
+          if (
+            !Number.isFinite(
+              originalPrice
+            ) ||
+            originalPrice <= 0
+          ) {
+
+            alert(
+              'سعر المنتج الأصلي في المخزن غير صحيح'
+            )
+
+            return null
+
+          }
+
+
+          if (
+            !Number.isFinite(
+              offerPrice
+            ) ||
+            offerPrice <= 0
+          ) {
+
+            alert(
+              'يجب إدخال سعر العرض'
+            )
+
+            return null
+
+          }
+
+
+          if (
+            offerPrice >= originalPrice
+          ) {
+
+            alert(
+              'سعر العرض يجب أن يكون أقل من سعر المنتج الأصلي'
+            )
+
+            return null
+
+          }
+
+
+          const now =
+            new Date().toISOString()
+
+
+          const offer = {
+
+            ...product,
+
+            id:
+              product.id ||
+              undefined,
+
+            productId:
+              sourceProductId,
+
+            sourceProductId,
+
+            selectedProductId:
+              sourceProductId,
+
+            warehouseId,
+
+            warehouseName:
+              product.warehouseName ||
+              '',
+
+            originalPrice,
+
+            oldPrice:
+              originalPrice,
+
+            originalSalePrice:
+              originalPrice,
+
+            warehouseSalePrice:
+              originalPrice,
+
+            offerPrice,
+
+            salePrice:
+              offerPrice,
+
+            price:
+              offerPrice,
+
+            discount:
+              Number(
+                (
+                  (
+                    originalPrice -
+                    offerPrice
+                  ) /
+                  originalPrice
+                ) *
+                100
+              ),
+
+            isOffer:
+              true,
+
+            source:
+              'warehouse',
+
+            createdAt:
+              product.createdAt ||
+              now,
+
+            updatedAt:
+              now
+
+          }
+
+
+          // ==================================================
+          // SAVE OFFER ONLY
+          // ==================================================
+
+          addOffer(
+            offer
+          )
+
+
+          // ==================================================
+          // IMPORTANT
+          //
+          // No ProductEngine.create()
+          // No ProductEngine.update()
+          // No ProductStore update
+          // No WarehouseStore update
+          //
+          // The warehouse product remains untouched.
+          // ==================================================
+
+          return offer
 
         }
 
 
         // ==================================================
-        // NEW PRODUCT
+        // NORMAL PRODUCT CREATION
+        //
+        // This branch remains available for existing code
+        // that creates a real product outside the offer flow.
         // ==================================================
 
         const result =
@@ -252,7 +327,7 @@ export default function useProductsActions() {
 
 
         // ==================================================
-        // SYNCHRONIZE LOCAL STORE
+        // SYNCHRONIZE LOCAL PRODUCT STORE
         // ==================================================
 
         const currentProducts =
@@ -294,9 +369,7 @@ export default function useProductsActions() {
 
       setProducts,
 
-      updateProduct,
-
-      updateWarehouseProduct
+      addOffer
 
     ])
 
@@ -355,7 +428,9 @@ export default function useProductsActions() {
         }
 
 
-        deleteProduct(id)
+        deleteProduct(
+          id
+        )
 
       }
 

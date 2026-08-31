@@ -25,7 +25,6 @@ import {
 // ======================================================
 
 const norm = value =>
-
   String(value ?? '')
     .trim()
     .toLowerCase()
@@ -33,6 +32,7 @@ const norm = value =>
     .replace(/ة/g, 'ه')
     .replace(/ى/g, 'ي')
     .replace(/يَ|يُ|يِ|َ|ُ|ِ|ّ|ْ/g, '')
+    .replace(/\s+/g, '')
 
 
 // ======================================================
@@ -464,9 +464,7 @@ const publicWarehouseProduct =
         warehousePrice
       ) &&
       warehousePrice > 0
-
         ? warehousePrice
-
         : (
             Number.isFinite(
               catalogPrice
@@ -539,6 +537,7 @@ const publicWarehouseProduct =
     return {
 
       ...(websiteProduct || {}),
+
       ...product,
 
       id:
@@ -852,7 +851,6 @@ const tireMatches = (
     product?.skuSize,
     product?.name,
     product?.productName,
-
     tire?.size,
     tire?.tireSize,
     tire?.dimension,
@@ -892,22 +890,53 @@ const tireMatches = (
 
 
 // ======================================================
-// VALUE MATCH
+// COLLECT VALUES
 // ======================================================
 
-const valueMatches = (
+const collectValues = (
   product,
-  value,
   fields
 ) => {
 
-  const wanted =
-    norm(value)
+  const values = []
 
-  if (
-    !wanted
-  ) {
-    return false
+  const add = value => {
+
+    if (
+      value == null
+    ) {
+      return
+    }
+
+    if (
+      Array.isArray(value)
+    ) {
+
+      value.forEach(
+        item =>
+          add(item)
+      )
+
+      return
+    }
+
+    if (
+      typeof value === 'object'
+    ) {
+
+      Object.values(
+        value
+      ).forEach(
+        item =>
+          add(item)
+      )
+
+      return
+    }
+
+    values.push(
+      String(value)
+    )
   }
 
   const specifications =
@@ -926,101 +955,155 @@ const valueMatches = (
     product?.oil ||
     {}
 
-  const candidates = []
-
   fields.forEach(
     field => {
 
-      candidates.push(
+      add(
         product?.[field]
       )
 
-      candidates.push(
+      add(
         battery?.[field]
       )
 
-      candidates.push(
+      add(
         oil?.[field]
       )
 
-      candidates.push(
+      add(
         specifications?.[field]
       )
 
-      candidates.push(
+      add(
         attributes?.[field]
       )
 
-      candidates.push(
+      add(
         specifications?.battery?.[field]
       )
 
-      candidates.push(
+      add(
         specifications?.oil?.[field]
       )
 
-      candidates.push(
+      add(
         attributes?.battery?.[field]
       )
 
-      candidates.push(
+      add(
         attributes?.oil?.[field]
       )
     }
   )
 
-  return candidates.some(
-    candidate => {
-
-      const actual =
-        norm(candidate)
-
-      if (
-        !actual
-      ) {
-        return false
-      }
-
-      return (
-
-        actual === wanted ||
-
-        actual.includes(
-          wanted
-        ) ||
-
-        wanted.includes(
-          actual
-        )
-
-      )
-    }
-  )
+  return values
 }
 
 
 // ======================================================
-// BATTERY MATCH
+// NORMALIZE OIL INPUT
 // ======================================================
 
-const batteryMatches = (
-  product,
-  capacity
-) => {
+const normalizeOilValue = value => {
 
-  return valueMatches(
-    product,
-    capacity,
-    [
+  return norm(value)
+    .replace(/–|—/g, '-')
+    .replace(/[\/\\]/g, '-')
+    .replace(/_/g, '-')
+    .replace(/-/g, '-')
+}
 
-      'capacity',
-      'ampereHour',
-      'ah',
-      'amp',
-      'ampHours'
 
-    ]
-  )
+// ======================================================
+// OIL GRADE EXTRACTION
+// ======================================================
+
+const extractOilGrades = value => {
+
+  const text =
+    normalizeOilValue(
+      value
+    )
+
+  if (
+    !text
+  ) {
+    return []
+  }
+
+  const grades = []
+
+  // 20W-50
+  const rangeMatches =
+    text.match(
+      /\b\d{1,3}w-?\d{1,3}\b/gi
+    )
+
+  if (
+    Array.isArray(
+      rangeMatches
+    )
+  ) {
+
+    rangeMatches.forEach(
+      item => {
+
+        grades.push(
+          norm(item)
+            .replace(
+              /-/g,
+              '-'
+            )
+        )
+      }
+    )
+  }
+
+  // 20W
+  const wMatches =
+    text.match(
+      /\b\d{1,3}w\b/gi
+    )
+
+  if (
+    Array.isArray(
+      wMatches
+    )
+  ) {
+
+    wMatches.forEach(
+      item =>
+        grades.push(
+          norm(item)
+        )
+    )
+  }
+
+  // Plain number such as 20
+  const numberMatches =
+    text.match(
+      /\b\d{1,3}\b/g
+    )
+
+  if (
+    Array.isArray(
+      numberMatches
+    )
+  ) {
+
+    numberMatches.forEach(
+      item =>
+        grades.push(
+          norm(item)
+        )
+    )
+  }
+
+  return [
+    ...new Set(
+      grades.filter(Boolean)
+    )
+  ]
 }
 
 
@@ -1033,16 +1116,410 @@ const oilMatches = (
   viscosity
 ) => {
 
-  return valueMatches(
-    product,
-    viscosity,
-    [
+  const wanted =
+    normalizeOilValue(
+      viscosity
+    )
 
-      'viscosity',
-      'grade',
-      'oilGrade'
+  if (
+    !wanted
+  ) {
+    return false
+  }
 
-    ]
+  const values =
+    collectValues(
+      product,
+      [
+
+        'viscosity',
+        'viscosityGrade',
+        'grade',
+        'oilGrade',
+        'oilViscosity',
+        'sae',
+        'SAE',
+        'weight',
+        'oilWeight',
+        'specification',
+        'description',
+        'name',
+        'productName',
+        'title',
+        'code',
+        'sku'
+
+      ]
+    )
+
+  const wantedGrades =
+    extractOilGrades(
+      wanted
+    )
+
+  return values.some(
+    value => {
+
+      const actual =
+        normalizeOilValue(
+          value
+        )
+
+      if (
+        !actual
+      ) {
+        return false
+      }
+
+      // Exact complete match
+      if (
+        actual === wanted
+      ) {
+        return true
+      }
+
+      // Search for requested grade inside a larger value.
+      if (
+        actual.includes(
+          wanted
+        )
+      ) {
+        return true
+      }
+
+      // Compare extracted grades.
+      const actualGrades =
+        extractOilGrades(
+          actual
+        )
+
+      return wantedGrades.some(
+        wantedGrade => {
+
+          return actualGrades.some(
+            actualGrade => {
+
+              if (
+                actualGrade ===
+                wantedGrade
+              ) {
+                return true
+              }
+
+              // 20 should match 20W
+              if (
+                /^\d+$/.test(
+                  wantedGrade
+                ) &&
+                /^\d+w$/.test(
+                  actualGrade
+                )
+              ) {
+
+                return (
+                  actualGrade.slice(
+                    0,
+                    -1
+                  ) ===
+                  wantedGrade
+                )
+              }
+
+              // 20W should match 20W-50
+              if (
+                /^\d+w$/.test(
+                  wantedGrade
+                ) &&
+                actualGrade.startsWith(
+                  wantedGrade
+                )
+              ) {
+                return true
+              }
+
+              return false
+            }
+          )
+        }
+      )
+    }
+  )
+}
+
+
+// ======================================================
+// NORMALIZE BATTERY VALUE
+// ======================================================
+
+const normalizeBatteryValue = value => {
+
+  return norm(value)
+    .replace(/–|—/g, '-')
+    .replace(/[\/\\]/g, '-')
+}
+
+
+// ======================================================
+// BATTERY CODE EXTRACTION
+// ======================================================
+
+const extractBatteryCodes = value => {
+
+  const text =
+    normalizeBatteryValue(
+      value
+    )
+
+  if (
+    !text
+  ) {
+    return []
+  }
+
+  const codes = []
+
+  /*
+   * Battery codes:
+   *
+   * N
+   * N40
+   * N50
+   * N55
+   * N70
+   * N70L
+   * N70R
+   *
+   * Also allow common numeric capacity
+   * values such as 70 / 70Ah.
+   */
+
+  const matches =
+    text.match(
+      /\bn\d{0,3}[a-z]?\b|\b\d{1,3}ah\b|\b\d{1,3}\b/gi
+    )
+
+  if (
+    Array.isArray(
+      matches
+    )
+  ) {
+
+    matches.forEach(
+      item => {
+
+        const normalized =
+          normalizeBatteryValue(
+            item
+          )
+
+        if (
+          normalized
+        ) {
+          codes.push(
+            normalized
+          )
+        }
+      }
+    )
+  }
+
+  return [
+    ...new Set(
+      codes
+    )
+  ]
+}
+
+
+// ======================================================
+// BATTERY MATCH
+// ======================================================
+
+const batteryMatches = (
+  product,
+  capacity
+) => {
+
+  const wanted =
+    normalizeBatteryValue(
+      capacity
+    )
+
+  if (
+    !wanted
+  ) {
+    return false
+  }
+
+  const values =
+    collectValues(
+      product,
+      [
+
+        'capacity',
+        'batteryCapacity',
+        'ampereHour',
+        'ah',
+        'amp',
+        'ampHours',
+        'batteryType',
+        'typeCode',
+        'batteryCode',
+        'code',
+        'model',
+        'batteryModel',
+        'group',
+        'groupSize',
+        'size',
+        'sizeCode',
+        'name',
+        'productName',
+        'title',
+        'description',
+        'sku'
+
+      ]
+    )
+
+  const wantedCodes =
+    extractBatteryCodes(
+      wanted
+    )
+
+  return values.some(
+    value => {
+
+      const actual =
+        normalizeBatteryValue(
+          value
+        )
+
+      if (
+        !actual
+      ) {
+        return false
+      }
+
+      // Exact value
+      if (
+        actual === wanted
+      ) {
+        return true
+      }
+
+      // Direct containment
+      if (
+        actual.includes(
+          wanted
+        )
+      ) {
+        return true
+      }
+
+      if (
+        wanted.includes(
+          actual
+        )
+      ) {
+        return true
+      }
+
+      const actualCodes =
+        extractBatteryCodes(
+          actual
+        )
+
+      return wantedCodes.some(
+        wantedCode => {
+
+          return actualCodes.some(
+            actualCode => {
+
+              if (
+                actualCode ===
+                wantedCode
+              ) {
+                return true
+              }
+
+              /*
+               * N70 should match N70L / N70R.
+               */
+              if (
+                wantedCode.startsWith('n') &&
+                actualCode.startsWith(
+                  wantedCode
+                )
+              ) {
+                return true
+              }
+
+              /*
+               * 70 should match 70Ah.
+               */
+              if (
+                /^\d+$/.test(
+                  wantedCode
+                ) &&
+                actualCode ===
+                  `${wantedCode}ah`
+              ) {
+                return true
+              }
+
+              return false
+            }
+          )
+        }
+      )
+    }
+  )
+}
+
+
+// ======================================================
+// VALUE MATCH
+// ======================================================
+
+const valueMatches = (
+  product,
+  value,
+  fields
+) => {
+
+  const wanted =
+    norm(value)
+
+  if (
+    !wanted
+  ) {
+    return false
+  }
+
+  const values =
+    collectValues(
+      product,
+      fields
+    )
+
+  return values.some(
+    candidate => {
+
+      const actual =
+        norm(candidate)
+
+      if (
+        !actual
+      ) {
+        return false
+      }
+
+      return (
+        actual === wanted ||
+        actual.includes(wanted) ||
+        wanted.includes(actual)
+      )
+    }
   )
 }
 
@@ -1054,7 +1531,12 @@ const oilMatches = (
 const productType = product => {
 
   return normalizeType(
-    product?.type
+    product?.type ??
+    product?.productType ??
+    product?.category ??
+    product?.categoryType ??
+    product?.kind ??
+    ''
   )
 }
 
@@ -1621,7 +2103,6 @@ const mergeProducts = products => {
               existing?.price ??
               0
             )
-
         }
       )
     }
@@ -1689,6 +2170,7 @@ const mergeWarehouseSearchResults = (
       )
   }
 
+
   // ====================================================
   // BATTERY
   // ====================================================
@@ -1699,28 +2181,43 @@ const mergeWarehouseSearchResults = (
 
     warehouseMatches =
       warehouse.filter(
-        product =>
-          productType(
-            product
-          ) === 'battery' &&
-          batteryMatches(
-            product,
-            form.capacity
+        product => {
+
+          const type =
+            productType(
+              product
+            )
+
+          return (
+            type === 'battery' &&
+            batteryMatches(
+              product,
+              form.capacity
+            )
           )
+        }
       )
 
     catalogMatches =
       catalog.filter(
-        product =>
-          productType(
-            product
-          ) === 'battery' &&
-          batteryMatches(
-            product,
-            form.capacity
+        product => {
+
+          const type =
+            productType(
+              product
+            )
+
+          return (
+            type === 'battery' &&
+            batteryMatches(
+              product,
+              form.capacity
+            )
           )
+        }
       )
   }
+
 
   // ====================================================
   // OIL
@@ -1732,28 +2229,43 @@ const mergeWarehouseSearchResults = (
 
     warehouseMatches =
       warehouse.filter(
-        product =>
-          productType(
-            product
-          ) === 'oil' &&
-          oilMatches(
-            product,
-            form.viscosity
+        product => {
+
+          const type =
+            productType(
+              product
+            )
+
+          return (
+            type === 'oil' &&
+            oilMatches(
+              product,
+              form.viscosity
+            )
           )
+        }
       )
 
     catalogMatches =
       catalog.filter(
-        product =>
-          productType(
-            product
-          ) === 'oil' &&
-          oilMatches(
-            product,
-            form.viscosity
+        product => {
+
+          const type =
+            productType(
+              product
+            )
+
+          return (
+            type === 'oil' &&
+            oilMatches(
+              product,
+              form.viscosity
+            )
           )
+        }
       )
   }
+
 
   // ====================================================
   // VEHICLE
@@ -1782,6 +2294,11 @@ const mergeWarehouseSearchResults = (
       )
   }
 
+
+  // ====================================================
+  // NORMALIZE RESULTS
+  // ====================================================
+
   const normalizedWarehouse =
     warehouseMatches.map(
       publicWarehouseProduct
@@ -1800,6 +2317,11 @@ const mergeWarehouseSearchResults = (
           publicWarehouseProduct
         )
       : []
+
+
+  // ====================================================
+  // FINAL MERGE
+  // ====================================================
 
   return mergeProducts(
     [
@@ -1914,8 +2436,11 @@ export default function useVehicleSearch() {
 
         }),
       [
+
         form.vehicleType,
+
         form.brand
+
       ]
     )
 
@@ -1937,8 +2462,11 @@ export default function useVehicleSearch() {
 
         }),
       [
+
         form.brand,
+
         form.model
+
       ]
     )
 
@@ -2007,13 +2535,17 @@ export default function useVehicleSearch() {
                 response
               )
 
-          } catch (
+          }
+          catch (
             controllerError
           ) {
 
             console.warn(
+
               'Vehicle controller search failed. Using local product compatibility search.',
+
               controllerError
+
             )
 
             controllerResults =
@@ -2061,7 +2593,9 @@ export default function useVehicleSearch() {
             setResults([])
 
             setTireSearchError(
-              'اكتب مقاس الإطار بهذا الشكل: 205/55/16 أو 1200/24'
+
+              'اكتب مقاس الإطار بهذا الشكل: 205/55/16 أو 205*55*16 أو 24.9/24'
+
             )
 
             return []
@@ -2095,13 +2629,17 @@ export default function useVehicleSearch() {
                 response
               )
 
-          } catch (
+          }
+          catch (
             error
           ) {
 
             console.warn(
+
               'Tire controller search failed. Using local product search.',
+
               error
+
             )
 
             controllerResults =
@@ -2156,13 +2694,17 @@ export default function useVehicleSearch() {
                 response
               )
 
-          } catch (
+          }
+          catch (
             error
           ) {
 
             console.warn(
+
               'Battery controller search failed. Using local product search.',
+
               error
+
             )
 
             controllerResults =
@@ -2217,13 +2759,17 @@ export default function useVehicleSearch() {
                 response
               )
 
-          } catch (
+          }
+          catch (
             error
           ) {
 
             console.warn(
+
               'Oil controller search failed. Using local product search.',
+
               error
+
             )
 
             controllerResults =
@@ -2265,8 +2811,11 @@ export default function useVehicleSearch() {
       ) {
 
         console.error(
+
           'Vehicle search failed:',
+
           error
+
         )
 
         setResults([])
@@ -2280,6 +2829,10 @@ export default function useVehicleSearch() {
       }
     }
 
+
+  // ====================================================
+  // RETURN
+  // ====================================================
 
   return {
 

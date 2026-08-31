@@ -3,9 +3,16 @@
 // Cart Stock
 // ======================================================
 
-import { StockEngine } from '../../core'
-import { findStockItem } from './CartHelpers'
+import { StockEngine }
+  from '../../core'
 
+import {
+  findStockItem
+} from './CartHelpers'
+
+
+// ======================================================
+// VALIDATE STOCK
 // ======================================================
 
 export function validateStock(
@@ -16,25 +23,58 @@ export function validateStock(
 
   for (const item of cart) {
 
+    const productId =
+
+      item?.productId ||
+
+      item?.sourceProductId ||
+
+      item?.id
+
+
+    const warehouseId =
+
+      item?.warehouseId ||
+
+
+      item?.sourceWarehouseId ||
+
+
+      item?.warehouse?.id ||
+
+
+      null
+
+
+    const quantity =
+
+      Number(
+
+        item?.quantity || 1
+
+      )
+
+
+    // --------------------------------------------------
+    // IMPORTANT
+    //
+    // Offers must use the ORIGINAL warehouse product.
+    // The offer ID must NEVER be used as the inventory
+    // product ID when productId already exists.
+    // --------------------------------------------------
+
     const result =
 
       StockEngine.validateSale({
 
-        productId:
+        productId,
 
-          item.productId ||
+        warehouseId,
 
-          item.id,
-
-        quantity:
-
-          Number(
-
-            item.quantity || 1
-
-          )
+        quantity
 
       })
+
 
     if (!result.success) {
 
@@ -44,13 +84,14 @@ export function validateStock(
 
         message:
 
-          `${item.name}\n${result.message}`
+          `${item?.name || 'المنتج'}\n${result.message}`
 
       }
 
     }
 
   }
+
 
   return {
 
@@ -60,6 +101,9 @@ export function validateStock(
 
 }
 
+
+// ======================================================
+// UPDATE INVENTORY
 // ======================================================
 
 export function updateInventory({
@@ -78,6 +122,13 @@ export function updateInventory({
 
   for (const cartItem of cart) {
 
+    // --------------------------------------------------
+    // Find the EXACT stock record.
+    //
+    // The warehouseId is important for offers because
+    // the same product may exist in multiple warehouses.
+    // --------------------------------------------------
+
     const stockItem =
 
       findStockItem(
@@ -88,9 +139,60 @@ export function updateInventory({
 
       )
 
-    if (!stockItem)
+
+    if (!stockItem) {
 
       continue
+
+    }
+
+
+    const quantity =
+
+      Number(
+
+        cartItem?.quantity || 1
+
+      )
+
+
+    if (
+      quantity <= 0
+    ) {
+
+      continue
+
+    }
+
+
+    // --------------------------------------------------
+    // Safety check
+    //
+    // Never allow the inventory quantity to become
+    // negative.
+    // --------------------------------------------------
+
+    const available =
+
+      Number(
+
+        stockItem.quantity || 0
+
+      )
+
+
+    if (
+      quantity > available
+    ) {
+
+      continue
+
+    }
+
+
+    // --------------------------------------------------
+    // DECREASE REAL WAREHOUSE STOCK
+    // --------------------------------------------------
 
     decreaseStock({
 
@@ -98,19 +200,18 @@ export function updateInventory({
 
         stockItem.id,
 
-      quantity:
-
-        Number(
-
-          cartItem.quantity || 1
-
-        ),
+      quantity,
 
       note:
 
-        `بيع - الطلب ${customerName}`
+        `بيع - الطلب ${customerName || ''}`
 
     })
+
+
+    // --------------------------------------------------
+    // UPDATE SOLD COUNT
+    // --------------------------------------------------
 
     updateStockItem(
 
@@ -126,11 +227,7 @@ export function updateInventory({
 
           ) +
 
-          Number(
-
-            cartItem.quantity || 1
-
-          )
+          quantity
 
       }
 

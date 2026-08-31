@@ -1,15 +1,31 @@
-import InventoryService from '../services/InventoryService'
-import { useWebsiteStore } from '../../store/websiteStore'
+// ======================================================
+// Elola ERP Enterprise
+// Stock Engine
+// ======================================================
 
-const inventoryService = new InventoryService()
+import InventoryService
+  from '../services/InventoryService'
+
+import {
+  useWebsiteStore
+} from '../../store/websiteStore'
+
+
+const inventoryService =
+  new InventoryService()
+
 
 export const StockEngine = {
 
-  // ================= SET QUANTITY =================
+  // ====================================================
+  // SET QUANTITY
+  // ====================================================
 
   setQuantity({
 
     productId,
+
+    warehouseId = null,
 
     quantity
 
@@ -21,35 +37,61 @@ export const StockEngine = {
 
         productId,
 
+        warehouseId,
+
         quantity
 
       })
 
-    if (!success)
+
+    if (!success) {
 
       return false
 
-    useWebsiteStore
+    }
 
-      .getState()
 
-      .updateProduct(
+    // --------------------------------------------------
+    // Keep website product stock synchronized only for
+    // legacy product-level stock updates.
+    // Warehouse-specific stock remains controlled by
+    // inventoryStore.
+    // --------------------------------------------------
 
-        productId,
+    if (
+      warehouseId === null ||
+      warehouseId === undefined ||
+      warehouseId === ''
+    ) {
 
-        {
+      useWebsiteStore
 
-          stock: quantity
+        .getState()
 
-        }
+        .updateProduct(
 
-      )
+          productId,
+
+          {
+
+            stock:
+              Number(quantity || 0)
+
+          }
+
+        )
+
+    }
+
 
     return true
 
   },
 
-  // ================= INCREASE =================
+
+  // ====================================================
+  // INCREASE
+  // ====================================================
 
   increase(data) {
 
@@ -59,7 +101,10 @@ export const StockEngine = {
 
   },
 
-  // ================= DECREASE =================
+
+  // ====================================================
+  // DECREASE
+  // ====================================================
 
   decrease(data) {
 
@@ -69,7 +114,10 @@ export const StockEngine = {
 
   },
 
-  // ================= TRANSFER =================
+
+  // ====================================================
+  // TRANSFER
+  // ====================================================
 
   transfer(data) {
 
@@ -79,51 +127,116 @@ export const StockEngine = {
 
   },
 
-  // ================= GET QUANTITY =================
 
-  getQuantity(productId) {
+  // ====================================================
+  // GET QUANTITY
+  // ====================================================
 
-    return inventoryService
+  getQuantity(
 
-      .getQuantity(productId)
+    productId,
 
-  },
+    warehouseId = null
 
-  // ================= GET ITEM =================
-
-  getItem(productId) {
-
-    return inventoryService
-
-      .getItemByProduct(productId)
-
-  },
-
-  // ================= EXISTS =================
-
-  exists(productId) {
+  ) {
 
     return inventoryService
 
-      .exists(productId)
+      .getQuantity(
+
+        productId,
+
+        warehouseId
+
+      )
 
   },
 
-  // ================= HAS STOCK =================
 
-  hasStock(productId) {
+  // ====================================================
+  // GET ITEM
+  // ====================================================
+
+  getItem(
+
+    productId,
+
+    warehouseId = null
+
+  ) {
 
     return inventoryService
 
-      .hasStock(productId)
+      .getItemByProduct(
+
+        productId,
+
+        warehouseId
+
+      )
 
   },
 
-  // ================= CAN SELL =================
+
+  // ====================================================
+  // EXISTS
+  // ====================================================
+
+  exists(
+
+    productId,
+
+    warehouseId = null
+
+  ) {
+
+    return inventoryService
+
+      .exists(
+
+        productId,
+
+        warehouseId
+
+      )
+
+  },
+
+
+  // ====================================================
+  // HAS STOCK
+  // ====================================================
+
+  hasStock(
+
+    productId,
+
+    warehouseId = null
+
+  ) {
+
+    return inventoryService
+
+      .hasStock(
+
+        productId,
+
+        warehouseId
+
+      )
+
+  },
+
+
+  // ====================================================
+  // CAN SELL
+  // ====================================================
 
   canSell({
 
     productId,
+
+    warehouseId = null,
 
     quantity
 
@@ -135,43 +248,98 @@ export const StockEngine = {
 
         productId,
 
+        warehouseId,
+
         quantity
 
       })
 
   },
 
-  // ================= VALIDATE SALE =================
+
+  // ====================================================
+  // VALIDATE SALE
+  // ====================================================
 
   validateSale({
 
     productId,
 
+    warehouseId = null,
+
     quantity
 
   }) {
 
-    if (!this.exists(productId)) {
+    if (
+      !productId
+    ) {
 
       return {
 
         success: false,
 
-        message: 'المنتج غير موجود'
+        message:
+          'معرف المنتج غير موجود'
 
       }
 
     }
 
-    if (
 
-      !this.canSell({
+    // --------------------------------------------------
+    // PRODUCT + WAREHOUSE
+    // --------------------------------------------------
+
+    if (
+      !inventoryService.exists(
 
         productId,
 
-        quantity
+        warehouseId
 
-      })
+      )
+    ) {
+
+      return {
+
+        success: false,
+
+        message:
+
+          warehouseId
+
+            ? 'المنتج غير موجود في هذا المخزن'
+
+            : 'المنتج غير موجود'
+
+      }
+
+    }
+
+
+    // --------------------------------------------------
+    // AVAILABLE STOCK
+    // --------------------------------------------------
+
+    const available =
+
+      inventoryService.getQuantity(
+
+        productId,
+
+        warehouseId
+
+      )
+
+
+    // --------------------------------------------------
+    // VALIDATE QUANTITY
+    // --------------------------------------------------
+
+    if (
+
+      Number(quantity || 0) <= 0
 
     ) {
 
@@ -179,15 +347,39 @@ export const StockEngine = {
 
         success: false,
 
-        message: 'الكمية غير متوفرة'
+        message:
+          'الكمية المطلوبة غير صحيحة'
 
       }
 
     }
 
+
+    if (
+
+      available <
+      Number(quantity)
+
+    ) {
+
+      return {
+
+        success: false,
+
+        message:
+
+          `الكمية غير متوفرة. المتاح: ${available}`
+
+      }
+
+    }
+
+
     return {
 
-      success: true
+      success: true,
+
+      available
 
     }
 
