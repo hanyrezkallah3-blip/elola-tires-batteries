@@ -25,6 +25,10 @@ const normalizeText = value => {
   )
     .trim()
     .toLowerCase()
+    .replace(/أ|إ|آ/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي')
+    .replace(/[\u064B-\u065F\u0670]/g, '')
 
 }
 
@@ -45,12 +49,12 @@ const normalizeType = value => {
       'tyre',
       'tyres',
       'اطار',
-      'اطارات',
-      'إطار',
-      'إطارات'
+      'اطارات'
     ].includes(type)
   ) {
+
     return 'tire'
+
   }
 
 
@@ -63,7 +67,9 @@ const normalizeType = value => {
       'بطارية'
     ].includes(type)
   ) {
+
     return 'battery'
+
   }
 
 
@@ -75,7 +81,9 @@ const normalizeType = value => {
       'زيوت'
     ].includes(type)
   ) {
+
     return 'oil'
+
   }
 
 
@@ -91,14 +99,13 @@ const normalizeType = value => {
 const numberValue = value => {
 
   if (
-    value ===
-    null ||
-    value ===
-    undefined ||
-    value ===
-    ''
+    value === null ||
+    value === undefined ||
+    value === ''
   ) {
+
     return null
+
   }
 
 
@@ -125,11 +132,58 @@ const numberValue = value => {
 
 const getProductType = product => {
 
-  return normalizeType(
-    product?.type ||
-    product?.productType ||
-    product?.category
-  )
+  if (!product) {
+
+    return ''
+
+  }
+
+
+  const candidates = [
+
+    product?.type,
+
+    product?.productType,
+
+    product?.category,
+
+    product?.categoryType,
+
+    product?.itemType,
+
+    product?.kind,
+
+    product?.productCategory,
+
+    product?.specifications?.type,
+
+    product?.attributes?.type
+
+  ]
+
+
+  for (
+    const value of candidates
+  ) {
+
+    const normalized =
+      normalizeType(value)
+
+
+    if (
+      normalized === 'tire' ||
+      normalized === 'battery' ||
+      normalized === 'oil'
+    ) {
+
+      return normalized
+
+    }
+
+  }
+
+
+  return ''
 
 }
 
@@ -141,13 +195,23 @@ const getProductType = product => {
 const getProductTire = product => {
 
   return (
+
     product?.tire ||
+
     product?.tireData ||
+
     product?.tireSpecification ||
+
     product?.tireSpecifications ||
+
     product?.specifications?.tire ||
+
+    product?.specification?.tire ||
+
     product?.attributes?.tire ||
+
     {}
+
   )
 
 }
@@ -160,13 +224,23 @@ const getProductTire = product => {
 const getProductBattery = product => {
 
   return (
+
     product?.battery ||
+
     product?.batteryData ||
+
     product?.batterySpecification ||
+
     product?.batterySpecifications ||
+
     product?.specifications?.battery ||
+
+    product?.specification?.battery ||
+
     product?.attributes?.battery ||
+
     {}
+
   )
 
 }
@@ -179,13 +253,23 @@ const getProductBattery = product => {
 const getProductOil = product => {
 
   return (
+
     product?.oil ||
+
     product?.oilData ||
+
     product?.oilSpecification ||
+
     product?.oilSpecifications ||
+
     product?.specifications?.oil ||
+
+    product?.specification?.oil ||
+
     product?.attributes?.oil ||
+
     {}
+
   )
 
 }
@@ -200,6 +284,16 @@ const getTireValue = (
   keys
 ) => {
 
+  if (
+    !tire ||
+    typeof tire !== 'object'
+  ) {
+
+    return null
+
+  }
+
+
   for (
     const key of keys
   ) {
@@ -209,12 +303,9 @@ const getTireValue = (
 
 
     if (
-      value !==
-        undefined &&
-      value !==
-        null &&
-      value !==
-        ''
+      value !== undefined &&
+      value !== null &&
+      value !== ''
     ) {
 
       return value
@@ -274,6 +365,13 @@ const getWarehouseProducts = () => {
   warehouses.forEach(
     warehouse => {
 
+      if (!warehouse) {
+
+        return
+
+      }
+
+
       const warehouseProducts =
         Array.isArray(
           warehouse?.products
@@ -286,7 +384,9 @@ const getWarehouseProducts = () => {
         product => {
 
           if (!product) {
+
             return
+
           }
 
 
@@ -295,11 +395,13 @@ const getWarehouseProducts = () => {
               product?.productId ??
               product?.id ??
               ''
-            )
+            ).trim()
 
 
           if (!productId) {
+
             return
+
           }
 
 
@@ -307,6 +409,17 @@ const getWarehouseProducts = () => {
             Number(
               product?.availableQuantity ??
               product?.quantity ??
+              product?.stock ??
+              0
+            )
+
+
+          const salePrice =
+            Number(
+              product?.salePrice ??
+              product?.sellingPrice ??
+              product?.consumerPrice ??
+              product?.price ??
               0
             )
 
@@ -334,7 +447,10 @@ const getWarehouseProducts = () => {
               normalizeType(
                 product?.type ||
                 product?.productType ||
-                product?.category
+                product?.category ||
+                product?.categoryType ||
+                product?.itemType ||
+                product?.kind
               ),
 
             warehouseId:
@@ -352,23 +468,10 @@ const getWarehouseProducts = () => {
             availableQuantity:
               quantity,
 
-            salePrice:
-              Number(
-                product?.salePrice ??
-                product?.sellingPrice ??
-                product?.consumerPrice ??
-                product?.price ??
-                0
-              ),
+            salePrice,
 
             price:
-              Number(
-                product?.salePrice ??
-                product?.sellingPrice ??
-                product?.consumerPrice ??
-                product?.price ??
-                0
-              )
+              salePrice
 
           })
 
@@ -392,13 +495,40 @@ const getRepositoryProducts = async () => {
 
   try {
 
-    const data =
+    const response =
       await ProductsRepository.getAll()
 
 
-    return Array.isArray(data)
-      ? data
-      : []
+    if (
+      response?.success === false
+    ) {
+
+      console.error(
+        'ProductsRepository.getAll failed:',
+        response?.message,
+        response?.errors
+      )
+
+      return []
+
+    }
+
+
+    const products =
+      Array.isArray(
+        response?.data
+      )
+        ? response.data
+        : []
+
+
+    console.log(
+      '[VehicleSearchController] Repository products:',
+      products.length
+    )
+
+
+    return products
 
   }
   catch (error) {
@@ -418,28 +548,53 @@ const getRepositoryProducts = async () => {
 // ======================================================
 // GET ALL PRODUCTS
 // ======================================================
-//
-// المصدر الأساسي:
-// warehouseStore
-//
-// ProductsRepository يبقى مصدرًا إضافيًا
-// حتى لا نكسر المنتجات القديمة.
-// ======================================================
 
 const getAllProducts = async () => {
 
-  const [
-    repositoryProducts,
-    warehouseProducts
-  ] = await Promise.all([
+  console.log(
+    '[VehicleSearchController] getAllProducts START'
+  )
 
-    getRepositoryProducts(),
+  let repositoryProducts = []
+  let warehouseProducts = []
 
-    Promise.resolve(
-      getWarehouseProducts()
+  try {
+
+    [
+      repositoryProducts,
+      warehouseProducts
+    ] = await Promise.all([
+
+      getRepositoryProducts(),
+
+      Promise.resolve(
+        getWarehouseProducts()
+      )
+
+    ])
+
+  }
+  catch (error) {
+
+    console.error(
+      '[VehicleSearchController] getAllProducts LOAD ERROR:',
+      error
     )
 
-  ])
+    return []
+
+  }
+
+
+  console.log(
+    '[VehicleSearchController] Repository count:',
+    repositoryProducts.length
+  )
+
+  console.log(
+    '[VehicleSearchController] Warehouse count:',
+    warehouseProducts.length
+  )
 
 
   const map =
@@ -447,184 +602,179 @@ const getAllProducts = async () => {
 
 
   // ====================================================
-  // FIRST: REPOSITORY
+  // FIRST: REPOSITORY CATALOG
   // ====================================================
 
-  repositoryProducts.forEach(
-    product => {
+  try {
 
-      if (!product) {
-        return
-      }
+    repositoryProducts.forEach(
+      product => {
 
+        if (!product) {
 
-      const id =
-        String(
-          product?.productId ??
-          product?.id ??
-          ''
-        )
-
-
-      if (!id) {
-        return
-      }
-
-
-      map.set(
-        id,
-        {
-
-          ...product,
-
-          id,
-
-          productId:
-            id,
-
-          type:
-            normalizeType(
-              product?.type ||
-              product?.productType ||
-              product?.category
-            )
+          return
 
         }
-      )
-
-    }
-  )
 
 
-  // ====================================================
-  // SECOND: WAREHOUSE
-  // ====================================================
-  //
-  // بيانات المخزن لها الأولوية:
-  //
-  // - المنتج
-  // - السعر
-  // - الكمية
-  // - نوع المنتج
-  // - بيانات البطارية
-  // - بيانات الزيت
-  // - بيانات الإطار
-  //
-  // ====================================================
-
-  warehouseProducts.forEach(
-    product => {
-
-      const id =
-        String(
-          product?.productId ??
-          product?.id ??
-          ''
-        )
+        const id =
+          String(
+            product?.productId ??
+            product?.id ??
+            ''
+          ).trim()
 
 
-      if (!id) {
-        return
-      }
+        if (!id) {
 
-
-      const existing =
-        map.get(id) ||
-        {}
-
-
-      map.set(
-        id,
-        {
-
-          ...existing,
-
-          ...product,
-
-          id,
-
-          productId:
-            id,
-
-          name:
-            product?.name ||
-            product?.productName ||
-            existing?.name ||
-            existing?.productName ||
-            '',
-
-          productName:
-            product?.productName ||
-            product?.name ||
-            existing?.productName ||
-            existing?.name ||
-            '',
-
-          type:
-            normalizeType(
-              product?.type ||
-              product?.productType ||
-              product?.category ||
-              existing?.type ||
-              existing?.productType ||
-              existing?.category
-            ),
-
-          salePrice:
-            Number(
-              product?.salePrice ??
-              product?.sellingPrice ??
-              product?.consumerPrice ??
-              product?.price ??
-              existing?.salePrice ??
-              existing?.sellingPrice ??
-              existing?.consumerPrice ??
-              existing?.price ??
-              0
-            ),
-
-          price:
-            Number(
-              product?.salePrice ??
-              product?.sellingPrice ??
-              product?.consumerPrice ??
-              product?.price ??
-              existing?.salePrice ??
-              existing?.sellingPrice ??
-              existing?.consumerPrice ??
-              existing?.price ??
-              0
-            ),
-
-          quantity:
-            Number(
-              product?.quantity ??
-              product?.availableQuantity ??
-              product?.stock ??
-              0
-            ),
-
-          stock:
-            Number(
-              product?.quantity ??
-              product?.availableQuantity ??
-              product?.stock ??
-              0
-            ),
-
-          availableQuantity:
-            Number(
-              product?.quantity ??
-              product?.availableQuantity ??
-              product?.stock ??
-              0
-            )
+          return
 
         }
-      )
 
-    }
-  )
+
+        map.set(
+          id,
+          {
+
+            ...product,
+
+            id,
+
+            productId:
+              id,
+
+            type:
+              getProductType(product)
+
+          }
+        )
+
+      }
+    )
+
+  }
+  catch (error) {
+
+    console.error(
+      '[VehicleSearchController] Repository catalog build ERROR:',
+      error
+    )
+
+    return []
+
+  }
+
+
+  // ====================================================
+  // SECOND: WAREHOUSE ENRICHMENT
+  // ====================================================
+
+  try {
+
+    warehouseProducts.forEach(
+      product => {
+
+        if (!product) {
+
+          return
+
+        }
+
+
+        const id =
+          String(
+            product?.productId ??
+            product?.id ??
+            ''
+          ).trim()
+
+
+        if (!id) {
+
+          return
+
+        }
+
+
+        const existing =
+          map.get(id) ||
+          {}
+
+
+        map.set(
+          id,
+          {
+
+            ...existing,
+
+            ...product,
+
+            id,
+
+            productId:
+              id,
+
+            name:
+              existing?.name ||
+              existing?.productName ||
+              product?.name ||
+              product?.productName ||
+              '',
+
+            productName:
+              existing?.productName ||
+              existing?.name ||
+              product?.productName ||
+              product?.name ||
+              '',
+
+            type:
+              getProductType(existing) ||
+              getProductType(product),
+
+            salePrice:
+              Number(
+                product?.salePrice ??
+                product?.sellingPrice ??
+                product?.consumerPrice ??
+                product?.price ??
+                existing?.salePrice ??
+                existing?.sellingPrice ??
+                existing?.consumerPrice ??
+                existing?.price ??
+                0
+              ),
+
+            price:
+              Number(
+                product?.salePrice ??
+                product?.sellingPrice ??
+                product?.consumerPrice ??
+                product?.price ??
+                existing?.salePrice ??
+                existing?.sellingPrice ??
+                existing?.consumerPrice ??
+                existing?.price ??
+                0
+              )
+
+          }
+        )
+
+      }
+    )
+
+  }
+  catch (error) {
+
+    console.error(
+      '[VehicleSearchController] Warehouse enrichment ERROR:',
+      error
+    )
+
+    return []
+
+  }
 
 
   // ====================================================
@@ -635,142 +785,195 @@ const getAllProducts = async () => {
     new Map()
 
 
-  warehouseProducts.forEach(
-    product => {
+  try {
 
-      const id =
-        String(
-          product?.productId ??
-          product?.id ??
-          ''
-        )
+    warehouseProducts.forEach(
+      product => {
+
+        if (!product) {
+
+          return
+
+        }
 
 
-      if (!id) {
-        return
+        const id =
+          String(
+            product?.productId ??
+            product?.id ??
+            ''
+          ).trim()
+
+
+        if (!id) {
+
+          return
+
+        }
+
+
+        if (
+          !availabilityMap.has(id)
+        ) {
+
+          availabilityMap.set(
+            id,
+            []
+          )
+
+        }
+
+
+        const quantity =
+          Number(
+            product?.availableQuantity ??
+            product?.quantity ??
+            product?.stock ??
+            0
+          )
+
+
+        availabilityMap
+          .get(id)
+          .push({
+
+            id:
+              product?.warehouseId,
+
+            warehouseId:
+              product?.warehouseId,
+
+            name:
+              product?.warehouseName ||
+              'المخزن',
+
+            warehouseName:
+              product?.warehouseName ||
+              'المخزن',
+
+            quantity
+
+          })
+
       }
+    )
 
+  }
+  catch (error) {
 
-      if (
-        !availabilityMap.has(id)
-      ) {
+    console.error(
+      '[VehicleSearchController] Availability build ERROR:',
+      error
+    )
 
-        availabilityMap.set(
-          id,
-          []
-        )
+    return []
 
-      }
-
-
-      const quantity =
-        Number(
-          product?.quantity ??
-          product?.availableQuantity ??
-          product?.stock ??
-          0
-        )
-
-
-      availabilityMap
-        .get(id)
-        .push({
-
-          id:
-            product?.warehouseId,
-
-          warehouseId:
-            product?.warehouseId,
-
-          name:
-            product?.warehouseName ||
-            'المخزن',
-
-          warehouseName:
-            product?.warehouseName ||
-            'المخزن',
-
-          quantity
-
-        })
-
-    }
-  )
+  }
 
 
   // ====================================================
   // FINAL PRODUCTS
   // ====================================================
 
-  return Array.from(
-    map.values()
-  )
-    .map(
-      product => {
+  let finalProducts = []
 
-        const productId =
-          String(
-            product?.productId ??
-            product?.id ??
-            ''
-          )
+  try {
+
+    finalProducts =
+      Array.from(
+        map.values()
+      )
+        .map(
+          product => {
+
+            const productId =
+              String(
+                product?.productId ??
+                product?.id ??
+                ''
+              ).trim()
 
 
-        const warehouses =
-          availabilityMap.get(
-            productId
-          ) || []
+            const warehouses =
+              availabilityMap.get(
+                productId
+              ) || []
 
 
-        const totalStock =
-          warehouses.reduce(
-            (
-              total,
-              warehouse
-            ) =>
-              total +
-              Number(
-                warehouse?.quantity ||
+            const totalStock =
+              warehouses.reduce(
+                (
+                  total,
+                  warehouse
+                ) =>
+                  total +
+                  Number(
+                    warehouse?.quantity ||
+                    0
+                  ),
                 0
-              ),
-            0
-          )
+              )
 
 
-        return {
+            return {
 
-          ...product,
+              ...product,
 
-          id:
-            productId,
+              id:
+                productId,
 
-          productId,
+              productId,
 
-          stock:
-            totalStock,
+              stock:
+                totalStock,
 
-          quantity:
-            totalStock,
+              quantity:
+                totalStock,
 
-          availableQuantity:
-            totalStock,
+              availableQuantity:
+                totalStock,
 
-          availability: {
+              availability: {
 
-            available:
-              totalStock > 0,
+                available:
+                  totalStock > 0,
 
-            quantity:
-              totalStock,
+                quantity:
+                  totalStock,
 
-            warehouses
+                warehouses
+
+              }
+
+            }
 
           }
+        )
 
-        }
+  }
+  catch (error) {
 
-      }
+    console.error(
+      '[VehicleSearchController] Final catalog build ERROR:',
+      error
     )
+
+    return []
+
+  }
+
+
+  console.log(
+    '[VehicleSearchController] Final catalog:',
+    finalProducts.length
+  )
+
+  console.log(
+    '[VehicleSearchController] getAllProducts END'
+  )
+
+
+  return finalProducts
 
 }
 
@@ -783,7 +986,7 @@ class VehicleSearchController {
 
 
   // ====================================================
-  // VEHICLE
+  // VEHICLE SEARCH
   // ====================================================
 
   static async searchVehicle({
@@ -798,29 +1001,181 @@ class VehicleSearchController {
 
   }) {
 
-    const products =
-      await getAllProducts()
+    console.log(
+      '=================================================='
+    )
+
+    console.log(
+      '[VehicleSearchController] searchVehicle START'
+    )
+
+    console.log(
+      '[VehicleSearchController] searchVehicle INPUT:',
+      {
+        vehicleType,
+        make,
+        model,
+        year
+      }
+    )
 
 
-    return VehicleEngine.search({
+    let products = []
 
-      vehicleType,
+    try {
 
-      make,
+      console.log(
+        '[VehicleSearchController] BEFORE getAllProducts'
+      )
 
-      model,
+      products =
+        await getAllProducts()
 
-      year,
+      console.log(
+        '[VehicleSearchController] AFTER getAllProducts:',
+        products.length
+      )
 
-      products
+    }
+    catch (error) {
 
-    })
+      console.error(
+        '[VehicleSearchController] getAllProducts ERROR:',
+        error
+      )
+
+      return {
+
+        vehicle: null,
+
+        oem: {},
+
+        compatibility: null,
+
+        tires: [],
+
+        batteries: [],
+
+        oils: [],
+
+        products: []
+
+      }
+
+    }
+
+
+    console.log(
+      '[VehicleSearchController] Vehicle search:',
+      {
+        vehicleType,
+        make,
+        model,
+        year,
+        productsCount:
+          products.length
+      }
+    )
+
+
+    console.log(
+      '[VehicleSearchController] BEFORE VehicleEngine.search'
+    )
+
+    console.log(
+      '[VehicleSearchController] VehicleEngine:',
+      VehicleEngine
+    )
+
+
+    try {
+
+      console.log(
+        '[VehicleSearchController] CALLING VehicleEngine.search'
+      )
+
+      const result =
+        await VehicleEngine.search({
+
+          vehicleType,
+
+          make,
+
+          model,
+
+          year,
+
+          products
+
+        })
+
+
+      console.log(
+        '[VehicleSearchController] VehicleEngine.search RETURNED',
+        {
+          products:
+            result?.products?.length ?? 0,
+
+          tires:
+            result?.tires?.length ?? 0,
+
+          batteries:
+            result?.batteries?.length ?? 0,
+
+          oils:
+            result?.oils?.length ?? 0
+        }
+      )
+
+      console.log(
+        '[VehicleSearchController] searchVehicle END'
+      )
+
+      console.log(
+        '=================================================='
+      )
+
+
+      return result
+
+    }
+    catch (error) {
+
+      console.error(
+        '[VehicleSearchController] VehicleEngine.search ERROR:',
+        error
+      )
+
+      console.log(
+        '=================================================='
+      )
+
+
+      return {
+
+        vehicle: null,
+
+        oem: {},
+
+        compatibility: null,
+
+        tires: [],
+
+        batteries: [],
+
+        oils: [],
+
+        products: []
+
+      }
+
+    }
 
   }
 
 
   // ====================================================
-  // TIRE
+  // TIRE SEARCH
   // ====================================================
 
   static async searchTire({
@@ -840,29 +1195,20 @@ class VehicleSearchController {
 
 
     const requestedWidth =
-      numberValue(
-        width
-      )
+      numberValue(width)
 
 
     const requestedProfile =
-      numberValue(
-        profile
-      )
+      numberValue(profile)
 
 
     const requestedRim =
-      numberValue(
-        rim
-      )
+      numberValue(rim)
 
 
     if (
-      requestedWidth ===
-      null ||
-
-      requestedRim ===
-      null
+      requestedWidth === null ||
+      requestedRim === null
     ) {
 
       return []
@@ -878,12 +1224,9 @@ class VehicleSearchController {
 
       .filter(
         product =>
-          getProductType(
-            product
-          ) ===
+          getProductType(product) ===
           'tire'
       )
-
 
       // ----------------------------------------------
       // SIZE
@@ -893,9 +1236,7 @@ class VehicleSearchController {
         product => {
 
           const tire =
-            getProductTire(
-              product
-            )
+            getProductTire(product)
 
 
           const productWidth =
@@ -959,11 +1300,6 @@ class VehicleSearchController {
           }
 
 
-          // المقاسات ذات جزئين:
-          // 1200/24
-          //
-          // لا يوجد Profile.
-
           if (
             format ===
             'two-part'
@@ -976,11 +1312,9 @@ class VehicleSearchController {
 
           return (
 
-            productProfile !==
-              null &&
+            productProfile !== null &&
 
-            requestedProfile !==
-              null &&
+            requestedProfile !== null &&
 
             productProfile ===
             requestedProfile
@@ -990,6 +1324,97 @@ class VehicleSearchController {
         }
       )
 
+      // ----------------------------------------------
+      // AVAILABLE STOCK
+      // ----------------------------------------------
+
+      .filter(
+        product =>
+          Number(
+            product?.availability?.quantity ??
+            product?.quantity ??
+            product?.stock ??
+            0
+          ) > 0
+      )
+
+  }
+
+
+  // ====================================================
+  // BATTERY SEARCH
+  // ====================================================
+
+  static async searchBattery({
+
+    capacity
+
+  }) {
+
+    const products =
+      await getAllProducts()
+
+
+    const requestedCapacity =
+      numberValue(capacity)
+
+
+    if (
+      requestedCapacity === null
+    ) {
+
+      return []
+
+    }
+
+
+    return products
+
+      // ----------------------------------------------
+      // TYPE
+      // ----------------------------------------------
+
+      .filter(
+        product =>
+          getProductType(product) ===
+          'battery'
+      )
+
+      // ----------------------------------------------
+      // CAPACITY
+      // ----------------------------------------------
+
+      .filter(
+        product => {
+
+          const battery =
+            getProductBattery(product)
+
+
+          const productCapacity =
+            numberValue(
+
+              battery?.capacity ??
+              battery?.ampereHour ??
+              battery?.ah ??
+              battery?.amp ??
+              battery?.ampHours ??
+              product?.capacity ??
+              product?.ampereHour ??
+              product?.ah ??
+              product?.amp ??
+              product?.ampHours
+
+            )
+
+
+          return (
+            productCapacity ===
+            requestedCapacity
+          )
+
+        }
+      )
 
       // ----------------------------------------------
       // AVAILABLE STOCK
@@ -998,214 +1423,105 @@ class VehicleSearchController {
       .filter(
         product =>
           Number(
-            product?.availability
-              ?.quantity ??
+            product?.availability?.quantity ??
             product?.quantity ??
             product?.stock ??
             0
           ) > 0
       )
 
-}
-
-
-// ====================================================
-// BATTERY
-// ====================================================
-
-static async searchBattery({
-
-  capacity
-
-}) {
-
-  const products =
-    await getAllProducts()
-
-
-  const requestedCapacity =
-    numberValue(
-      capacity
-    )
-
-
-  if (
-    requestedCapacity ===
-    null
-  ) {
-
-    return []
-
   }
 
 
-  return products
+  // ====================================================
+  // OIL SEARCH
+  // ====================================================
 
-    // ----------------------------------------------
-    // TYPE
-    // ----------------------------------------------
+  static async searchOil({
 
-    .filter(
-      product =>
-        getProductType(
-          product
-        ) ===
-        'battery'
-    )
+    viscosity
+
+  }) {
+
+    const products =
+      await getAllProducts()
 
 
-    // ----------------------------------------------
-    // CAPACITY
-    // ----------------------------------------------
+    const requestedViscosity =
+      normalizeText(viscosity)
+        .replace(/\s+/g, '')
+        .replace(/×/g, 'x')
 
-    .filter(
-      product => {
 
-        const battery =
-          getProductBattery(
-            product
+    if (!requestedViscosity) {
+
+      return []
+
+    }
+
+
+    return products
+
+      // ----------------------------------------------
+      // TYPE
+      // ----------------------------------------------
+
+      .filter(
+        product =>
+          getProductType(product) ===
+          'oil'
+      )
+
+      // ----------------------------------------------
+      // VISCOSITY
+      // ----------------------------------------------
+
+      .filter(
+        product => {
+
+          const oil =
+            getProductOil(product)
+
+
+          const productViscosity =
+            normalizeText(
+
+              oil?.viscosity ??
+              oil?.grade ??
+              oil?.oilGrade ??
+              product?.viscosity ??
+              product?.grade ??
+              product?.oilGrade ??
+              ''
+
+            )
+              .replace(/\s+/g, '')
+              .replace(/×/g, 'x')
+
+
+          return (
+            productViscosity ===
+            requestedViscosity
           )
 
+        }
+      )
 
-        const productCapacity =
-          numberValue(
+      // ----------------------------------------------
+      // AVAILABLE STOCK
+      // ----------------------------------------------
 
-            battery?.capacity ??
-            battery?.ampereHour ??
-            battery?.ah ??
-            battery?.amp ??
-            battery?.ampHours ??
-            product?.capacity ??
-            product?.ampereHour ??
-            product?.ah ??
-            product?.amp ??
-            product?.ampHours
-
-          )
-
-
-        return (
-          productCapacity ===
-          requestedCapacity
-        )
-
-      }
-    )
-
-
-    // ----------------------------------------------
-    // AVAILABLE STOCK
-    // ----------------------------------------------
-
-    .filter(
-      product =>
-        Number(
-          product?.availability
-            ?.quantity ??
-          product?.quantity ??
-          product?.stock ??
-          0
-        ) > 0
-    )
-
-}
-
-
-// ====================================================
-// OIL
-// ====================================================
-
-static async searchOil({
-
-  viscosity
-
-}) {
-
-  const products =
-    await getAllProducts()
-
-
-  const requestedViscosity =
-    normalizeText(
-      viscosity
-    )
-
-
-  if (
-    !requestedViscosity
-  ) {
-
-    return []
+      .filter(
+        product =>
+          Number(
+            product?.availability?.quantity ??
+            product?.quantity ??
+            product?.stock ??
+            0
+          ) > 0
+      )
 
   }
-
-
-  return products
-
-    // ----------------------------------------------
-    // TYPE
-    // ----------------------------------------------
-
-    .filter(
-      product =>
-        getProductType(
-          product
-        ) ===
-        'oil'
-    )
-
-
-    // ----------------------------------------------
-    // VISCOSITY
-    // ----------------------------------------------
-
-    .filter(
-      product => {
-
-        const oil =
-          getProductOil(
-            product
-          )
-
-
-        const productViscosity =
-          normalizeText(
-
-            oil?.viscosity ??
-            oil?.grade ??
-            oil?.oilGrade ??
-            product?.viscosity ??
-            product?.grade ??
-            product?.oilGrade
-
-          )
-
-
-        return (
-          productViscosity ===
-          requestedViscosity
-        )
-
-      }
-    )
-
-
-    // ----------------------------------------------
-    // AVAILABLE STOCK
-    // ----------------------------------------------
-
-    .filter(
-      product =>
-        Number(
-          product?.availability
-            ?.quantity ??
-          product?.quantity ??
-          product?.stock ??
-          0
-        ) > 0
-    )
-
-}
 
 }
 

@@ -3,618 +3,57 @@
 // Vehicle Specification Provider
 // ======================================================
 //
-// PRIMARY SOURCE
+// RESPONSIBILITY
 // ------------------------------------------------------
-// VehicleRepository remains the local authoritative
-// vehicle source.
+// Central provider for vehicle technical specifications.
 //
-// This provider normalizes the vehicle record into the
-// OEM specification contract used by OEMCompatibilityEngine.
+// PROVIDER ORDER
+// ------------------------------------------------------
+// 1. VehDB
+//    - Primary vehicle tire-fitment source.
+//    - Returns OEM tire sizes.
+//    - Returns alternative tire sizes.
+//
+// 2. CarQuery
+//    - Fallback vehicle source.
+//
+// 3. NHTSA
+//    - Final fallback vehicle source.
 //
 // IMPORTANT
 // ------------------------------------------------------
-// We do NOT invent battery or oil specifications.
-// We only read values that actually exist on the vehicle
-// record.
+// VehDB is NOT an inventory source.
+// VehDB is NOT a product source.
+// VehDB only supplies vehicle technical data.
 //
-// Supported:
-// - tire
-// - battery
-// - oil
-// - years
+// Product availability is handled separately.
 // ======================================================
 
-import VehicleRepository
-  from '../../../data/vehicles/VehicleRepository'
 
+import VehDBFitmentProvider
+  from './VehDBFitmentProvider'
 
-// ======================================================
-// NORMALIZE TEXT
-// ======================================================
+import CarQueryProvider
+  from './CarQueryProvider'
 
-const normalize = value =>
-
-  String(value ?? '')
-    .trim()
-    .toLowerCase()
-    .replace(/أ|إ|آ/g, 'ا')
-    .replace(/ة/g, 'ه')
-    .replace(/ى/g, 'ي')
+import NHTSAProvider
+  from './NHTSAProvider'
 
 
 // ======================================================
-// GET ALL VEHICLES
+// NORMALIZE
 // ======================================================
 
-const getAllVehicles = () => {
-
-  try {
-
-    const vehicles =
-      VehicleRepository.getAllVehicles?.()
-
-    return Array.isArray(
-      vehicles
-    )
-      ? vehicles
-      : []
-
-  }
-  catch (error) {
-
-    console.error(
-      'VehicleSpecificationProvider.getAllVehicles failed:',
-      error
-    )
-
-    return []
-
-  }
-
-}
-
-
-// ======================================================
-// FIND VEHICLE
-// ======================================================
-
-const findLocalVehicle = ({
-
-  make,
-
-  model,
-
-  year
-
-}) => {
+const normalizeValue = value => {
 
   if (
-    !make ||
-    !model
+    value === null ||
+    value === undefined
   ) {
-
-    return null
-
+    return ''
   }
 
-
-  const vehicles =
-    getAllVehicles()
-
-
-  const wantedMake =
-    normalize(
-      make
-    )
-
-
-  const wantedModel =
-    normalize(
-      model
-    )
-
-
-  const requestedYear =
-    Number(
-      year
-    )
-
-
-  return (
-
-    vehicles.find(
-      vehicle => {
-
-        const vehicleMake =
-          normalize(
-            vehicle?.brand ??
-            vehicle?.make ??
-            vehicle?.brandName ??
-            ''
-          )
-
-
-        const models =
-          Array.isArray(
-            vehicle?.models
-          )
-            ? vehicle.models
-            : []
-
-
-        if (
-          vehicleMake !==
-          wantedMake
-        ) {
-
-          return false
-
-        }
-
-
-        const modelData =
-          models.find(
-            item =>
-              normalize(
-                item?.name ??
-                item?.model ??
-                item?.modelName ??
-                ''
-              ) === wantedModel
-          )
-
-
-        if (!modelData) {
-
-          return false
-
-        }
-
-
-        // =================================================
-        // YEAR
-        // =================================================
-
-        if (
-          Number.isFinite(
-            requestedYear
-          )
-        ) {
-
-          const years =
-
-            Array.isArray(
-              modelData?.years
-            )
-              ? modelData.years
-              : Array.isArray(
-                  vehicle?.years
-                )
-                  ? vehicle.years
-                  : []
-
-
-          if (
-            years.length > 0
-          ) {
-
-            return years.some(
-              item =>
-                Number(item) ===
-                requestedYear
-            )
-
-          }
-
-
-          const yearFrom =
-            Number(
-              modelData?.yearFrom ??
-              modelData?.year_from ??
-              modelData?.startYear ??
-              vehicle?.yearFrom ??
-              vehicle?.year_from ??
-              vehicle?.startYear ??
-              NaN
-            )
-
-
-          const yearTo =
-            Number(
-              modelData?.yearTo ??
-              modelData?.year_to ??
-              modelData?.endYear ??
-              vehicle?.yearTo ??
-              vehicle?.year_to ??
-              vehicle?.endYear ??
-              NaN
-            )
-
-
-          if (
-            Number.isFinite(yearFrom) &&
-            Number.isFinite(yearTo)
-          ) {
-
-            return (
-              requestedYear >= yearFrom &&
-              requestedYear <= yearTo
-            )
-
-          }
-
-
-          if (
-            Number.isFinite(yearFrom)
-          ) {
-
-            return (
-              requestedYear >= yearFrom
-            )
-
-          }
-
-
-          if (
-            Number.isFinite(yearTo)
-          ) {
-
-            return (
-              requestedYear <= yearTo
-            )
-
-          }
-
-        }
-
-
-        return true
-
-      }
-    ) ||
-
-    null
-
-  )
-
-}
-
-
-// ======================================================
-// GET MODEL DATA
-// ======================================================
-
-const getModelData = vehicle => {
-
-  if (!vehicle) {
-
-    return null
-
-  }
-
-
-  if (
-    vehicle?.modelData &&
-    typeof vehicle.modelData === 'object'
-  ) {
-
-    return vehicle.modelData
-
-  }
-
-
-  if (
-    Array.isArray(
-      vehicle?.models
-    )
-  ) {
-
-    const wantedModel =
-      normalize(
-        vehicle?.model ??
-        vehicle?.modelName ??
-        ''
-      )
-
-
-    if (wantedModel) {
-
-      return (
-
-        vehicle.models.find(
-          item =>
-            normalize(
-              item?.name ??
-              item?.model ??
-              item?.modelName ??
-              ''
-            ) === wantedModel
-        ) ||
-
-        null
-
-      )
-
-    }
-
-  }
-
-
-  return null
-
-}
-
-
-// ======================================================
-// GET FIRST EXISTING VALUE
-// ======================================================
-
-const firstExisting = (
-
-  objects,
-
-  keys
-
-) => {
-
-  for (
-    const object of objects
-  ) {
-
-    if (
-      !object ||
-      typeof object !== 'object'
-    ) {
-
-      continue
-
-    }
-
-
-    for (
-      const key of keys
-    ) {
-
-      const value =
-        object?.[key]
-
-
-      if (
-        value !== undefined &&
-        value !== null &&
-        value !== ''
-      ) {
-
-        return value
-
-      }
-
-    }
-
-  }
-
-
-  return null
-
-}
-
-
-// ======================================================
-// TIRE SPECIFICATION
-// ======================================================
-
-const getTireSpecification = vehicle => {
-
-  const model =
-    getModelData(
-      vehicle
-    )
-
-
-  const sources = [
-
-    model,
-
-    vehicle
-
-  ]
-
-
-  const direct =
-    firstExisting(
-
-      sources,
-
-      [
-
-        'tire',
-
-        'tireSpec',
-
-        'tireSpecification',
-
-        'tireSpecifications',
-
-        'tireSize',
-
-        'tireSizes',
-
-        'oemTire',
-
-        'oemTires',
-
-        'oemTireSize',
-
-        'oemTireSizes'
-
-      ]
-
-    )
-
-
-  if (
-    direct !== null
-  ) {
-
-    return direct
-
-  }
-
-
-  return null
-
-}
-
-
-// ======================================================
-// BATTERY SPECIFICATION
-// ======================================================
-
-const getBatterySpecification = vehicle => {
-
-  const model =
-    getModelData(
-      vehicle
-    )
-
-
-  const sources = [
-
-    model?.batterySpecifications,
-
-    model?.batterySpecification,
-
-    model?.batterySpec,
-
-    model?.battery,
-
-    vehicle?.batterySpecifications,
-
-    vehicle?.batterySpecification,
-
-    vehicle?.batterySpec,
-
-    vehicle?.battery,
-
-    model,
-
-    vehicle
-
-  ]
-
-
-  return firstExisting(
-
-    sources,
-
-    [
-
-      'battery',
-
-      'batterySpec',
-
-      'batterySpecification',
-
-      'batterySpecifications',
-
-      'oemBattery',
-
-      'oemBatterySpec',
-
-      'batterySize',
-
-      'batteryCapacity',
-
-      'batteryCapacityAh',
-
-      'capacity',
-
-      'capacityAh',
-
-      'ampereHour',
-
-      'ampHours',
-
-      'ah'
-
-    ]
-
-  )
-
-}
-
-
-// ======================================================
-// OIL SPECIFICATION
-// ======================================================
-
-const getOilSpecification = vehicle => {
-
-  const model =
-    getModelData(
-      vehicle
-    )
-
-
-  const sources = [
-
-    model?.oilSpecifications,
-
-    model?.oilSpecification,
-
-    model?.oilSpec,
-
-    model?.oil,
-
-    vehicle?.oilSpecifications,
-
-    vehicle?.oilSpecification,
-
-    vehicle?.oilSpec,
-
-    vehicle?.oil,
-
-    model,
-
-    vehicle
-
-  ]
-
-
-  return firstExisting(
-
-    sources,
-
-    [
-
-      'oil',
-
-      'oilSpec',
-
-      'oilSpecification',
-
-      'oilSpecifications',
-
-      'oemOil',
-
-      'oemOilSpec',
-
-      'oilViscosity',
-
-      'viscosity',
-
-      'oilGrade',
-
-      'grade',
-
-      'grades',
-
-      'viscosities'
-
-    ]
-
-  )
-
+  return String(value).trim()
 }
 
 
@@ -626,81 +65,300 @@ export default class VehicleSpecificationProvider {
 
 
   // ====================================================
-  // OEM DATA
+  // GET SPECIFICATIONS
   // ====================================================
 
   static async getSpecifications({
-
     make,
-
     model,
+    year,
+    vehicleType
+  } = {}) {
 
-    year
+    const normalizedMake =
+      normalizeValue(make)
 
-  }) {
+    const normalizedModel =
+      normalizeValue(model)
 
-    const vehicle =
-      findLocalVehicle({
-
-        make,
-
-        model,
-
-        year
-
-      })
+    const normalizedYear =
+      normalizeValue(year)
 
 
-    if (!vehicle) {
+    // ==================================================
+    // VALIDATION
+    // ==================================================
+
+    if (
+      !normalizedMake ||
+      !normalizedModel
+    ) {
+
+      console.warn(
+        '[VehicleSpecificationProvider] Missing vehicle:',
+        {
+          make: normalizedMake,
+          model: normalizedModel,
+          year: normalizedYear
+        }
+      )
 
       return null
-
     }
 
 
-    const modelData =
-      getModelData({
+    // ==================================================
+    // 1. VEHDB
+    // ==================================================
 
-        ...vehicle,
+    try {
 
-        model
-
-      })
-
-
-    const normalizedVehicle = {
-
-      ...vehicle,
-
-      model:
-        modelData?.name ??
-        vehicle?.model ??
-        model
-
-    }
+      console.log(
+        '[VehicleSpecificationProvider] Searching VehDB:',
+        {
+          make: normalizedMake,
+          model: normalizedModel,
+          year: normalizedYear,
+          vehicleType
+        }
+      )
 
 
-    return {
+      // IMPORTANT
+      // ------------------------------------------------
+      // VehDBFitmentProvider exposes findTireFitment().
+      // It does NOT expose getSpecifications().
+      //
+      // The previous call to:
+      //
+      // VehDBFitmentProvider.getSpecifications()
+      //
+      // caused a TypeError and forced execution into
+      // the CarQuery fallback.
+      // =================================================
 
-      ...normalizedVehicle,
+      const vehdbResult =
+        await VehDBFitmentProvider
+          .findTireFitment({
+            make: normalizedMake,
+            model: normalizedModel,
+            year: normalizedYear
+          })
 
-      tire:
-        getTireSpecification(
-          normalizedVehicle
-        ),
 
-      battery:
-        getBatterySpecification(
-          normalizedVehicle
-        ),
+      // ==================================================
+      // VEHDB SUCCESS
+      // ==================================================
 
-      oil:
-        getOilSpecification(
-          normalizedVehicle
+      if (
+        vehdbResult
+      ) {
+
+        console.log(
+          '[VehicleSpecificationProvider] VehDB fitment found:',
+          {
+            source:
+              vehdbResult.source,
+
+            make:
+              vehdbResult.make,
+
+            model:
+              vehdbResult.model,
+
+            year:
+              vehdbResult.year,
+
+            oemSizes:
+              vehdbResult.oemSizes || [],
+
+            alternateSizes:
+              vehdbResult.alternateSizes || [],
+
+            sizes:
+              vehdbResult.sizes || [],
+
+            fitments:
+              vehdbResult.fitments || []
+          }
         )
 
+
+        return {
+
+          ...vehdbResult,
+
+          source:
+            'vehdb',
+
+          vehicleType:
+            vehicleType || null
+
+        }
+      }
+
+
+      // ==================================================
+      // VEHDB NO DATA
+      // ==================================================
+
+      console.warn(
+        '[VehicleSpecificationProvider] VehDB returned no fitment:',
+        {
+          make: normalizedMake,
+          model: normalizedModel,
+          year: normalizedYear
+        }
+      )
+
+    } catch (error) {
+
+      console.error(
+        '[VehicleSpecificationProvider] VehDB failed:',
+        error
+      )
+
     }
 
-  }
 
+    // ==================================================
+    // 2. CARQUERY FALLBACK
+    // ==================================================
+
+    try {
+
+      console.log(
+        '[VehicleSpecificationProvider] Trying CarQuery fallback:',
+        {
+          make: normalizedMake,
+          model: normalizedModel,
+          year: normalizedYear
+        }
+      )
+
+
+      const carQueryResult =
+        await CarQueryProvider.findVehicle({
+          make: normalizedMake,
+          model: normalizedModel,
+          year: normalizedYear
+        })
+
+
+      if (
+        carQueryResult
+      ) {
+
+        console.log(
+          '[VehicleSpecificationProvider] Using CarQuery fallback.'
+        )
+
+
+        return {
+
+          ...carQueryResult,
+
+          vehicleType:
+            vehicleType || null,
+
+          source:
+            carQueryResult.source ||
+            'carquery'
+
+        }
+      }
+
+
+      console.warn(
+        '[VehicleSpecificationProvider] CarQuery returned no vehicle.'
+      )
+
+    } catch (error) {
+
+      console.warn(
+        '[VehicleSpecificationProvider] CarQuery failed:',
+        error
+      )
+
+    }
+
+
+    // ==================================================
+    // 3. NHTSA FALLBACK
+    // ==================================================
+
+    try {
+
+      console.log(
+        '[VehicleSpecificationProvider] Trying NHTSA fallback:',
+        {
+          make: normalizedMake,
+          model: normalizedModel,
+          year: normalizedYear
+        }
+      )
+
+
+      const nhtsaResult =
+        await NHTSAProvider.findVehicle({
+          make: normalizedMake,
+          model: normalizedModel,
+          year: normalizedYear
+        })
+
+
+      if (
+        nhtsaResult
+      ) {
+
+        console.log(
+          '[VehicleSpecificationProvider] Using NHTSA fallback.'
+        )
+
+
+        return {
+
+          ...nhtsaResult,
+
+          vehicleType:
+            vehicleType || null,
+
+          source:
+            nhtsaResult.source ||
+            'nhtsa'
+
+        }
+      }
+
+
+      console.warn(
+        '[VehicleSpecificationProvider] NHTSA returned no vehicle.'
+      )
+
+    } catch (error) {
+
+      console.warn(
+        '[VehicleSpecificationProvider] NHTSA failed:',
+        error
+      )
+
+    }
+
+
+    // ==================================================
+    // NOTHING FOUND
+    // ==================================================
+
+    console.warn(
+      '[VehicleSpecificationProvider] No specification source returned data:',
+      {
+        make: normalizedMake,
+        model: normalizedModel,
+        year: normalizedYear
+      }
+    )
+
+
+    return null
+  }
 }

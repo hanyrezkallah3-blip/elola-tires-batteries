@@ -1,0 +1,11998 @@
+﻿
+
+============================================================
+FILE: src\components\home\HomeVehicleSearch.jsx
+============================================================
+
+// ======================================================
+// EL OLA ERP
+// Home Vehicle Search
+// ======================================================
+
+import { useState } from 'react'
+
+import useVehicleSearch
+  from '../../hooks/useVehicleSearch'
+
+import VehicleSearchForm
+  from './VehicleSearchForm'
+
+import HomeSearchResults
+  from './HomeSearchResults'
+
+
+export default function HomeVehicleSearch({
+  onAddToCart
+}) {
+
+  const [
+    tab,
+    setTab
+  ] = useState('vehicle')
+
+
+  const [
+    searched,
+    setSearched
+  ] = useState(false)
+
+
+  const {
+    loading,
+    results,
+    form,
+    setForm,
+    vehicleTypes,
+    brands,
+    models,
+    years,
+    tireSearchError,
+    search
+  } = useVehicleSearch()
+
+
+  // ====================================================
+  // ADD TO CART
+  // ====================================================
+
+  const handleAddToCart = product => {
+
+    if (
+      typeof onAddToCart !==
+      'function'
+    ) {
+      return
+    }
+
+
+    onAddToCart({
+
+      ...product,
+
+      id:
+        product?.id ??
+        product?.productId,
+
+      name:
+        product?.name ||
+        product?.productName ||
+        'ظ…ظ†طھط¬',
+
+      price:
+        product?.offerPrice ??
+        product?.salePrice ??
+        product?.price ??
+        0
+
+    })
+
+  }
+
+
+  // ====================================================
+  // SEARCH
+  // ====================================================
+
+  const handleSearch = async searchTab => {
+
+    setSearched(true)
+
+    await search(
+      searchTab
+    )
+
+  }
+
+
+  // ====================================================
+  // CHANGE TAB
+  // ====================================================
+
+  const changeTab = nextTab => {
+
+    setTab(nextTab)
+
+    setSearched(false)
+
+  }
+
+
+  // ====================================================
+  // SEARCH RESULT TITLE
+  // ====================================================
+
+  const resultTitle = {
+
+    vehicle:
+      'ط§ظ„ظ…ظ†طھط¬ط§طھ ط§ظ„ظ…ظ†ط§ط³ط¨ط© ظ„ظ„ظ…ط±ظƒط¨ط©',
+
+    tire:
+      'ط§ظ„ط¥ط·ط§ط±ط§طھ ط§ظ„ظ…ظ†ط§ط³ط¨ط© ظ„ظ„ظ…ظ‚ط§ط³',
+
+    battery:
+      'ط§ظ„ط¨ط·ط§ط±ظٹط§طھ ط§ظ„ظ…ظ†ط§ط³ط¨ط©',
+
+    oil:
+      'ط§ظ„ط²ظٹظˆطھ ط§ظ„ظ…ظ†ط§ط³ط¨ط©'
+
+  }[tab]
+
+
+  // ====================================================
+  // EMPTY MESSAGE
+  // ====================================================
+
+  const emptyMessage = {
+
+    vehicle:
+      'ظ„ط§ طھظˆط¬ط¯ ظ…ظ†طھط¬ط§طھ ظ…طھظˆط§ظپظ‚ط© ظ…ط¹ ط§ظ„ظ…ط±ظƒط¨ط© ط§ظ„ظ…ط­ط¯ط¯ط©',
+
+    tire:
+      'ظ„ط§ طھظˆط¬ط¯ ط¥ط·ط§ط±ط§طھ ظ…ط·ط§ط¨ظ‚ط© ظ„ظ„ظ…ظ‚ط§ط³ ط§ظ„ظ…ط­ط¯ط¯',
+
+    battery:
+      'ظ„ط§ طھظˆط¬ط¯ ط¨ط·ط§ط±ظٹط§طھ ظ…ط·ط§ط¨ظ‚ط© ظ„ظ„ط³ط¹ط© ط§ظ„ظ…ط­ط¯ط¯ط©',
+
+    oil:
+      'ظ„ط§ طھظˆط¬ط¯ ط²ظٹظˆطھ ظ…ط·ط§ط¨ظ‚ط© ظ„ظ„ط²ظˆط¬ط© ط§ظ„ظ…ط­ط¯ط¯ط©'
+
+  }[tab]
+
+
+  // ====================================================
+  // TABS
+  // ====================================================
+
+  const tabs = [
+
+    {
+      id: 'vehicle',
+      label: 'ط­ط³ط¨ ط§ظ„ظ…ط±ظƒط¨ط©'
+    },
+
+    {
+      id: 'tire',
+      label: 'ط­ط³ط¨ ظ…ظ‚ط§ط³ ط§ظ„ط¥ط·ط§ط±'
+    },
+
+    {
+      id: 'battery',
+      label: 'ط­ط³ط¨ ط§ظ„ط¨ط·ط§ط±ظٹط©'
+    },
+
+    {
+      id: 'oil',
+      label: 'ط­ط³ط¨ ط§ظ„ط²ظٹطھ'
+    }
+
+  ]
+
+
+  // ====================================================
+  // RENDER
+  // ====================================================
+
+  return (
+
+    <section
+      className="
+        bg-slate-950
+        py-12
+        px-4
+        border-y
+        border-yellow-500
+      "
+    >
+
+      <div
+        className="
+          max-w-7xl
+          mx-auto
+        "
+      >
+
+        {/* ==================================================
+            TITLE
+        ================================================== */}
+
+        <h2
+          className="
+            text-4xl
+            md:text-5xl
+            font-black
+            text-center
+            text-yellow-400
+          "
+        >
+          ط§ط¨ط­ط« ط¹ظ† ط§ظ„ظ…ظ†طھط¬ ط§ظ„ظ…ظ†ط§ط³ط¨
+        </h2>
+
+
+        <p
+          className="
+            text-center
+            text-gray-300
+            mt-4
+            mb-10
+          "
+        >
+          ط§ط®طھط± ط·ط±ظٹظ‚ط© ط§ظ„ط¨ط­ط« ظ„ظ„ظˆطµظˆظ„ ط¥ظ„ظ‰ ط§ظ„ظ…ظ†طھط¬ ط§ظ„ظ…ظ†ط§ط³ط¨
+        </p>
+
+
+        {/* ==================================================
+            SEARCH TABS
+        ================================================== */}
+
+        <div
+          className="
+            grid
+            grid-cols-2
+            lg:grid-cols-4
+            gap-4
+            mb-8
+          "
+        >
+
+          {
+            tabs.map(tabItem => (
+
+              <button
+                key={tabItem.id}
+                type="button"
+                onClick={() =>
+                  changeTab(
+                    tabItem.id
+                  )
+                }
+                className={`
+                  rounded-2xl
+                  py-4
+                  px-4
+                  font-black
+                  transition
+                  border
+                  ${
+                    tab === tabItem.id
+                      ? `
+                        bg-yellow-500
+                        text-black
+                        border-yellow-400
+                      `
+                      : `
+                        bg-slate-800
+                        text-white
+                        border-slate-700
+                        hover:border-yellow-500
+                      `
+                  }
+                `}
+              >
+                {tabItem.label}
+              </button>
+
+            ))
+          }
+
+        </div>
+
+
+        {/* ==================================================
+            SEARCH CONTAINER
+        ================================================== */}
+
+        <div
+          className="
+            bg-slate-900
+            rounded-[30px]
+            p-6
+            md:p-8
+            border
+            border-slate-700
+          "
+        >
+
+          {/* ==================================================
+              VEHICLE SEARCH
+          ================================================== */}
+
+          {
+            tab === 'vehicle' && (
+
+              <div
+                className="
+                  max-w-5xl
+                  mx-auto
+                "
+              >
+
+                <div
+                  className="
+                    mb-6
+                    text-center
+                  "
+                >
+
+                  <div
+                    className="
+                      text-yellow-400
+                      text-2xl
+                      font-black
+                    "
+                  >
+                    ط§ط®طھط± ط§ظ„ظ…ط±ظƒط¨ط©
+                  </div>
+
+                  <div
+                    className="
+                      text-gray-400
+                      mt-2
+                    "
+                  >
+                    ط­ط¯ط¯ ظ†ظˆط¹ ط§ظ„ظ…ط±ظƒط¨ط© ظˆط§ظ„ظ…ط§ط±ظƒط© ظˆط§ظ„ظ…ظˆط¯ظٹظ„ ظˆط§ظ„ط³ظ†ط©
+                  </div>
+
+                </div>
+
+
+                <VehicleSearchForm
+
+                  vehicleTypes={
+                    vehicleTypes
+                  }
+
+                  brands={
+                    brands
+                  }
+
+                  models={
+                    models
+                  }
+
+                  years={
+                    years
+                  }
+
+                  form={
+                    form
+                  }
+
+                  setForm={
+                    setForm
+                  }
+
+                  onSearch={() =>
+                    handleSearch(
+                      'vehicle'
+                    )
+                  }
+
+                />
+
+              </div>
+
+            )
+          }
+
+
+          {/* ==================================================
+              TIRE SEARCH
+          ================================================== */}
+
+          {
+            tab === 'tire' && (
+
+              <div
+                className="
+                  max-w-3xl
+                  mx-auto
+                  space-y-5
+                "
+              >
+
+                <div>
+
+                  <label
+                    className="
+                      block
+                      text-white
+                      font-black
+                      text-lg
+                      mb-3
+                    "
+                  >
+                    ظ…ظ‚ط§ط³ ط§ظ„ط¥ط·ط§ط± ط§ظ„ظ…ط·ظ„ظˆط¨
+                  </label>
+
+
+                  <input
+                    type="text"
+                    value={
+                      form.tireSize ||
+                      ''
+                    }
+                    onChange={e =>
+                      setForm(prev => ({
+
+                        ...prev,
+
+                        tireSize:
+                          e.target.value
+
+                      }))
+                    }
+                    onKeyDown={e => {
+
+                      if (
+                        e.key ===
+                        'Enter'
+                      ) {
+
+                        handleSearch(
+                          'tire'
+                        )
+
+                      }
+
+                    }}
+                    placeholder="
+                      ظ…ط«ط§ظ„: 205/55/16 ط£ظˆ 1200/24
+                    "
+                    className="
+                      w-full
+                      p-5
+                      rounded-2xl
+                      bg-slate-800
+                      border
+                      border-slate-700
+                      text-white
+                      text-xl
+                      font-bold
+                      outline-none
+                      focus:border-yellow-400
+                    "
+                  />
+
+                </div>
+
+
+                <div
+                  className="
+                    text-gray-400
+                    text-sm
+                    text-center
+                    leading-8
+                  "
+                >
+
+                  ط£ظ…ط«ظ„ط©:
+
+                  <span
+                    className="
+                      text-yellow-400
+                      font-bold
+                      mx-1
+                    "
+                  >
+                    205/55/16
+                  </span>
+
+                  ط£ظˆ
+
+                  <span
+                    className="
+                      text-yellow-400
+                      font-bold
+                      mx-1
+                    "
+                  >
+                    205*55*16
+                  </span>
+
+                  ط£ظˆ
+
+                  <span
+                    className="
+                      text-yellow-400
+                      font-bold
+                      mx-1
+                    "
+                  >
+                    1200/24
+                  </span>
+
+                </div>
+
+
+                {
+                  tireSearchError && (
+
+                    <div
+                      className="
+                        bg-red-950
+                        border
+                        border-red-600
+                        text-red-300
+                        rounded-2xl
+                        p-4
+                        text-center
+                        font-bold
+                      "
+                    >
+                      {tireSearchError}
+                    </div>
+
+                  )
+                }
+
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleSearch(
+                      'tire'
+                    )
+                  }
+                  disabled={loading}
+                  className="
+                    w-full
+                    rounded-2xl
+                    bg-yellow-500
+                    hover:bg-yellow-400
+                    disabled:opacity-50
+                    text-black
+                    py-5
+                    font-black
+                    text-xl
+                    transition
+                  "
+                >
+
+                  {
+                    loading
+                      ? 'ط¬ط§ط±ظچ ط§ظ„ط¨ط­ط«...'
+                      : 'ًں”چ ط¨ط­ط« ط¹ظ† ط§ظ„ط¥ط·ط§ط±'
+                  }
+
+                </button>
+
+              </div>
+
+            )
+          }
+
+
+          {/* ==================================================
+              BATTERY SEARCH
+          ================================================== */}
+
+          {
+            tab === 'battery' && (
+
+              <div
+                className="
+                  max-w-3xl
+                  mx-auto
+                  space-y-5
+                "
+              >
+
+                <div>
+
+                  <label
+                    className="
+                      block
+                      text-white
+                      font-black
+                      text-lg
+                      mb-3
+                    "
+                  >
+                    ط³ط¹ط© ط§ظ„ط¨ط·ط§ط±ظٹط© ط§ظ„ظ…ط·ظ„ظˆط¨ط©
+                  </label>
+
+
+                  <input
+                    type="text"
+                    value={
+                      form.capacity ||
+                      ''
+                    }
+                    onChange={e =>
+                      setForm(prev => ({
+
+                        ...prev,
+
+                        capacity:
+                          e.target.value
+
+                      }))
+                    }
+                    onKeyDown={e => {
+
+                      if (
+                        e.key ===
+                        'Enter'
+                      ) {
+
+                        handleSearch(
+                          'battery'
+                        )
+
+                      }
+
+                    }}
+                    placeholder="
+                      ظ…ط«ط§ظ„: 70 ط£ظˆ 70Ah
+                    "
+                    className="
+                      w-full
+                      p-5
+                      rounded-2xl
+                      bg-slate-800
+                      border
+                      border-slate-700
+                      text-white
+                      text-xl
+                      font-bold
+                      outline-none
+                      focus:border-yellow-400
+                    "
+                  />
+
+                </div>
+
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleSearch(
+                      'battery'
+                    )
+                  }
+                  disabled={loading}
+                  className="
+                    w-full
+                    rounded-2xl
+                    bg-yellow-500
+                    hover:bg-yellow-400
+                    disabled:opacity-50
+                    text-black
+                    py-5
+                    font-black
+                    text-xl
+                    transition
+                  "
+                >
+
+                  {
+                    loading
+                      ? 'ط¬ط§ط±ظچ ط§ظ„ط¨ط­ط«...'
+                      : 'ًں”چ ط¨ط­ط« ط¹ظ† ط§ظ„ط¨ط·ط§ط±ظٹط©'
+                  }
+
+                </button>
+
+              </div>
+
+            )
+          }
+
+
+          {/* ==================================================
+              OIL SEARCH
+          ================================================== */}
+
+          {
+            tab === 'oil' && (
+
+              <div
+                className="
+                  max-w-3xl
+                  mx-auto
+                  space-y-5
+                "
+              >
+
+                <div>
+
+                  <label
+                    className="
+                      block
+                      text-white
+                      font-black
+                      text-lg
+                      mb-3
+                    "
+                  >
+                    ظ„ط²ظˆط¬ط© ط§ظ„ط²ظٹطھ ط§ظ„ظ…ط·ظ„ظˆط¨ط©
+                  </label>
+
+
+                  <input
+                    type="text"
+                    value={
+                      form.viscosity ||
+                      ''
+                    }
+                    onChange={e =>
+                      setForm(prev => ({
+
+                        ...prev,
+
+                        viscosity:
+                          e.target.value
+
+                      }))
+                    }
+                    onKeyDown={e => {
+
+                      if (
+                        e.key ===
+                        'Enter'
+                      ) {
+
+                        handleSearch(
+                          'oil'
+                        )
+
+                      }
+
+                    }}
+                    placeholder="
+                      ظ…ط«ط§ظ„: 5W-30 ط£ظˆ 10W-40
+                    "
+                    className="
+                      w-full
+                      p-5
+                      rounded-2xl
+                      bg-slate-800
+                      border
+                      border-slate-700
+                      text-white
+                      text-xl
+                      font-bold
+                      outline-none
+                      focus:border-yellow-400
+                    "
+                  />
+
+                </div>
+
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleSearch(
+                      'oil'
+                    )
+                  }
+                  disabled={loading}
+                  className="
+                    w-full
+                    rounded-2xl
+                    bg-yellow-500
+                    hover:bg-yellow-400
+                    disabled:opacity-50
+                    text-black
+                    py-5
+                    font-black
+                    text-xl
+                    transition
+                  "
+                >
+
+                  {
+                    loading
+                      ? 'ط¬ط§ط±ظچ ط§ظ„ط¨ط­ط«...'
+                      : 'ًں”چ ط¨ط­ط« ط¹ظ† ط§ظ„ط²ظٹطھ'
+                  }
+
+                </button>
+
+              </div>
+
+            )
+          }
+
+
+          {/* ==================================================
+              LOADING
+          ================================================== */}
+
+          {
+            loading && (
+
+              <div
+                className="
+                  mt-8
+                  text-center
+                  text-yellow-400
+                  text-xl
+                  font-black
+                  py-6
+                "
+              >
+                ط¬ط§ط±ظچ ط§ظ„ط¨ط­ط« ط¹ظ† ط§ظ„ظ…ظ†طھط¬ط§طھ ط§ظ„ظ…ظ†ط§ط³ط¨ط©...
+              </div>
+
+            )
+          }
+
+
+          {/* ==================================================
+              VEHICLE COMPATIBLE PRODUCTS AREA
+          ================================================== */}
+
+          {
+            searched &&
+            !loading &&
+            tab === 'vehicle' && (
+
+              <div
+                className="
+                  mt-10
+                  pt-8
+                  border-t
+                  border-yellow-500/30
+                "
+              >
+
+                <div
+                  className="
+                    mb-6
+                    text-center
+                  "
+                >
+
+                  <div
+                    className="
+                      text-yellow-400
+                      text-3xl
+                      font-black
+                    "
+                  >
+                    ط§ظ„ظ…ظ†طھط¬ط§طھ ط§ظ„ظ…طھظˆط§ظپظ‚ط© ظ…ط¹ ظ…ط±ظƒط¨طھظƒ
+                  </div>
+
+                  <div
+                    className="
+                      text-gray-400
+                      mt-2
+                    "
+                  >
+                    ط§ظ„ظ…ظ†طھط¬ط§طھ ط§ظ„طھظٹ طھظ†ط§ط³ط¨ ط§ظ„ظ…ط±ظƒط¨ط© ط§ظ„طھظٹ ظ‚ظ…طھ ط¨طھط­ط¯ظٹط¯ظ‡ط§
+                  </div>
+
+                </div>
+
+
+                <HomeSearchResults
+
+                  title={
+                    resultTitle
+                  }
+
+                  results={
+                    Array.isArray(results)
+                      ? results
+                      : []
+                  }
+
+                  emptyMessage={
+                    emptyMessage
+                  }
+
+                  onAddToCart={
+                    handleAddToCart
+                  }
+
+                />
+
+              </div>
+
+            )
+          }
+
+
+          {/* ==================================================
+              OTHER SEARCH RESULTS
+          ================================================== */}
+
+          {
+            searched &&
+            !loading &&
+            tab !== 'vehicle' && (
+
+              <HomeSearchResults
+
+                title={
+                  resultTitle
+                }
+
+                results={
+                  Array.isArray(results)
+                    ? results
+                    : []
+                }
+
+                emptyMessage={
+                  emptyMessage
+                }
+
+                onAddToCart={
+                  handleAddToCart
+                }
+
+              />
+
+            )
+          }
+
+        </div>
+
+      </div>
+
+    </section>
+
+  )
+
+}
+
+
+============================================================
+FILE: src\hooks\useVehicleSearch.js
+============================================================
+
+// ======================================================
+// EL OLA ERP
+// useVehicleSearch Hook
+//
+// AI-FIRST VEHICLE SEARCH
+//
+// Supports:
+// 1. Structured vehicle search
+// 2. Free-text AI vehicle search
+// 3. Tire size search
+// 4. Battery search
+// 5. Oil search
+// ======================================================
+
+import {
+  useMemo,
+  useState
+} from 'react'
+
+import VehicleProvider
+  from '../core/vehicles/VehicleProvider'
+
+import VehicleEngine
+  from '../core/engines/VehicleEngine'
+
+import VehicleSearchController
+  from '../core/controllers/VehicleSearchController'
+
+import {
+  useWarehouseStore
+} from '../store/warehouseStore'
+
+import {
+  useWebsiteStore
+} from '../store/websiteStore'
+
+
+// ======================================================
+// NORMALIZE
+// ======================================================
+
+const norm = value =>
+  String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/ط£|ط¥|ط¢/g, 'ط§')
+    .replace(/ط©/g, 'ظ‡')
+    .replace(/ظ‰/g, 'ظٹ')
+    .replace(/ظٹظژ|ظٹظڈ|ظٹظگ|ظژ|ظڈ|ظگ|ظ‘|ظ’/g, '')
+    .replace(/\s+/g, '')
+
+
+// ======================================================
+// NORMALIZE TYPE
+// ======================================================
+
+const normalizeType = value => {
+
+  const type =
+    norm(value)
+
+  if (
+    [
+      'tire',
+      'tires',
+      'tyre',
+      'tyres',
+      'ط§ط·ط§ط±',
+      'ط§ط·ط§ط±ط§طھ'
+    ].includes(type)
+  ) {
+    return 'tire'
+  }
+
+  if (
+    [
+      'battery',
+      'batteries',
+      'ط¨ط·ط§ط±ظٹظ‡',
+      'ط¨ط·ط§ط±ظٹط§طھ'
+    ].includes(type)
+  ) {
+    return 'battery'
+  }
+
+  if (
+    [
+      'oil',
+      'oils',
+      'ط²ظٹطھ',
+      'ط²ظٹظˆطھ'
+    ].includes(type)
+  ) {
+    return 'oil'
+  }
+
+  return type
+}
+
+
+// ======================================================
+// VALUE EQUALITY
+// ======================================================
+
+const valuesMatch = (
+  actual,
+  wanted
+) => {
+
+  const left =
+    norm(actual)
+
+  const right =
+    norm(wanted)
+
+  if (
+    !left ||
+    !right
+  ) {
+    return false
+  }
+
+  return (
+    left === right ||
+    left.includes(right) ||
+    right.includes(left)
+  )
+}
+
+
+// ======================================================
+// TIRE SIZE PARSER
+// ======================================================
+
+const parseTireSize = value => {
+
+  const input =
+    String(value ?? '')
+      .trim()
+      .replace(/\s+/g, '')
+      .replace(/أ—/g, '*')
+      .replace(/x/gi, '*')
+      .replace(/-/g, '/')
+
+  if (!input) {
+    return null
+  }
+
+  const threePart =
+    input.match(
+      /^(\d+(?:\.\d+)?)[\/\\*](\d+(?:\.\d+)?)[\/\\*](\d+(?:\.\d+)?)$/
+    )
+
+  if (threePart) {
+
+    return {
+
+      width:
+        threePart[1],
+
+      profile:
+        threePart[2],
+
+      rim:
+        threePart[3],
+
+      format:
+        'three-part'
+
+    }
+  }
+
+  const twoPart =
+    input.match(
+      /^(\d+(?:\.\d+)?)[\/\\*](\d+(?:\.\d+)?)$/
+    )
+
+  if (twoPart) {
+
+    return {
+
+      width:
+        twoPart[1],
+
+      profile:
+        '',
+
+      rim:
+        twoPart[2],
+
+      format:
+        'two-part'
+
+    }
+  }
+
+  return null
+}
+
+
+// ======================================================
+// FLATTEN SEARCH RESULTS
+// ======================================================
+
+const flattenSearchResults = (
+  tab,
+  data
+) => {
+
+  if (
+    Array.isArray(data)
+  ) {
+    return data
+  }
+
+  if (
+    !data ||
+    typeof data !== 'object'
+  ) {
+    return []
+  }
+
+  if (
+    tab === 'vehicle'
+  ) {
+
+    return [
+
+      ...(Array.isArray(data.tires)
+        ? data.tires
+        : []),
+
+      ...(Array.isArray(data.batteries)
+        ? data.batteries
+        : []),
+
+      ...(Array.isArray(data.oils)
+        ? data.oils
+        : []),
+
+      ...(Array.isArray(data.parts)
+        ? data.parts
+        : []),
+
+      ...(Array.isArray(data.products)
+        ? data.products
+        : [])
+
+    ]
+  }
+
+  if (
+    tab === 'tire'
+  ) {
+
+    return Array.isArray(data.tires)
+      ? data.tires
+      : []
+  }
+
+  if (
+    tab === 'battery'
+  ) {
+
+    return Array.isArray(data.batteries)
+      ? data.batteries
+      : []
+  }
+
+  if (
+    tab === 'oil'
+  ) {
+
+    return Array.isArray(data.oils)
+      ? data.oils
+      : []
+  }
+
+  return []
+}
+
+
+// ======================================================
+// IDS
+// ======================================================
+
+const idsEqual = (
+  a,
+  b
+) => {
+
+  const left = [
+
+    a?.productId,
+    a?.id,
+    a?.sku,
+    a?.barcode
+
+  ]
+    .filter(Boolean)
+    .map(norm)
+
+  const right = [
+
+    b?.productId,
+    b?.id,
+    b?.sku,
+    b?.barcode
+
+  ]
+    .filter(Boolean)
+    .map(norm)
+
+  return left.some(
+    id =>
+      right.includes(id)
+  )
+}
+
+
+// ======================================================
+// ACTIVE OFFER
+// ======================================================
+
+const activeOfferFor = product => {
+
+  const websiteState =
+    useWebsiteStore.getState()
+
+  const websiteProducts =
+    Array.isArray(
+      websiteState?.products
+    )
+      ? websiteState.products
+      : []
+
+  const websiteProduct =
+    websiteProducts.find(
+      item =>
+        idsEqual(
+          item,
+          product
+        )
+    )
+
+  if (
+    !websiteProduct
+  ) {
+
+    return {
+
+      websiteProduct:
+        null,
+
+      offer:
+        null
+
+    }
+  }
+
+  const offers =
+    Array.isArray(
+      websiteState?.offers
+    )
+      ? websiteState.offers
+      : []
+
+  const now =
+    new Date()
+
+  const offer =
+    offers.find(
+      item => {
+
+        if (
+          !item ||
+          item.active === false ||
+          item.productId == null
+        ) {
+          return false
+        }
+
+        if (
+          !idsEqual(
+            websiteProduct,
+            {
+              productId:
+                item.productId
+            }
+          )
+        ) {
+          return false
+        }
+
+        if (
+          item.startDate
+        ) {
+
+          const date =
+            new Date(
+              item.startDate
+            )
+
+          if (
+            !Number.isNaN(
+              date.getTime()
+            ) &&
+            now < date
+          ) {
+            return false
+          }
+        }
+
+        if (
+          item.endDate
+        ) {
+
+          const date =
+            new Date(
+              item.endDate
+            )
+
+          if (
+            !Number.isNaN(
+              date.getTime()
+            ) &&
+            now > date
+          ) {
+            return false
+          }
+        }
+
+        return true
+      }
+    ) || null
+
+  return {
+
+    websiteProduct,
+
+    offer
+
+  }
+}
+
+
+// ======================================================
+// PUBLIC WAREHOUSE PRODUCT
+// ======================================================
+
+const publicWarehouseProduct =
+  product => {
+
+    const {
+      websiteProduct,
+      offer
+    } =
+      activeOfferFor(
+        product
+      )
+
+    const warehousePrice =
+      Number(
+        product?.salePrice ??
+        product?.sellingPrice ??
+        product?.price ??
+        0
+      )
+
+    const catalogPrice =
+      Number(
+        websiteProduct?.salePrice ??
+        websiteProduct?.sellingPrice ??
+        websiteProduct?.price ??
+        0
+      )
+
+    const salePrice =
+      Number.isFinite(
+        warehousePrice
+      ) &&
+      warehousePrice > 0
+
+        ? warehousePrice
+
+        : (
+            Number.isFinite(
+              catalogPrice
+            )
+              ? catalogPrice
+              : 0
+          )
+
+    let offerPrice =
+      null
+
+    if (
+      offer
+    ) {
+
+      const explicit =
+        Number(
+          offer.offerPrice ??
+          offer.salePrice ??
+          offer.newPrice ??
+          NaN
+        )
+
+      if (
+        Number.isFinite(
+          explicit
+        ) &&
+        explicit >= 0
+      ) {
+
+        offerPrice =
+          explicit
+
+      }
+      else {
+
+        const discount =
+          Number(
+            offer.discount ??
+            0
+          )
+
+        if (
+          discount > 0 &&
+          discount < 100 &&
+          salePrice > 0
+        ) {
+
+          offerPrice =
+            salePrice -
+            (
+              salePrice *
+              discount /
+              100
+            )
+        }
+      }
+    }
+
+    const quantity =
+      Math.max(
+        0,
+        Number(
+          product?.quantity ??
+          product?.availableQuantity ??
+          product?.stock ??
+          0
+        )
+      )
+
+    return {
+
+      ...(websiteProduct || {}),
+      ...product,
+
+      id:
+        product?.productId ??
+        product?.id ??
+        websiteProduct?.id,
+
+      productId:
+        product?.productId ??
+        product?.id ??
+        websiteProduct?.productId ??
+        websiteProduct?.id,
+
+      name:
+        product?.name ||
+        product?.productName ||
+        websiteProduct?.name ||
+        websiteProduct?.productName ||
+        '',
+
+      productName:
+        product?.productName ||
+        product?.name ||
+        websiteProduct?.productName ||
+        websiteProduct?.name ||
+        '',
+
+      image:
+        product?.image ||
+        websiteProduct?.image ||
+        '',
+
+      description:
+        product?.description ||
+        websiteProduct?.description ||
+        '',
+
+      brand:
+        product?.brand ||
+        websiteProduct?.brand ||
+        '',
+
+      model:
+        product?.model ||
+        websiteProduct?.model ||
+        '',
+
+      type:
+        product?.type ||
+        websiteProduct?.type ||
+        '',
+
+      tire:
+        product?.tire ||
+        websiteProduct?.tire,
+
+      battery:
+        product?.battery ||
+        websiteProduct?.battery,
+
+      oil:
+        product?.oil ||
+        websiteProduct?.oil,
+
+      compatibleVehicles:
+        product?.compatibleVehicles ||
+        websiteProduct?.compatibleVehicles ||
+        [],
+
+      vehicleCompatibility:
+        product?.vehicleCompatibility ||
+        websiteProduct?.vehicleCompatibility ||
+        [],
+
+      vehicleCompatibilities:
+        product?.vehicleCompatibilities ||
+        websiteProduct?.vehicleCompatibilities ||
+        [],
+
+      vehicles:
+        product?.vehicles ||
+        websiteProduct?.vehicles ||
+        [],
+
+      compatibility:
+        product?.compatibility ||
+        websiteProduct?.compatibility ||
+        {},
+
+      specifications:
+        product?.specifications ||
+        websiteProduct?.specifications ||
+        {},
+
+      attributes:
+        product?.attributes ||
+        websiteProduct?.attributes ||
+        {},
+
+      salePrice,
+
+      offerPrice,
+
+      oldPrice:
+        offerPrice !== null
+          ? salePrice
+          : null,
+
+      hasOffer:
+        offerPrice !== null,
+
+      offerTitle:
+        offer?.title ||
+        '',
+
+      offerDescription:
+        offer?.description ||
+        '',
+
+      offerId:
+        offer?.id ??
+        null,
+
+      quantity,
+
+      availableQuantity:
+        quantity,
+
+      available:
+        quantity > 0,
+
+      availability:
+        quantity > 0
+          ? 'ظ…طھظˆظپط±'
+          : 'ط؛ظٹط± ظ…طھظˆظپط±',
+
+      active:
+        product?.active !== false &&
+        websiteProduct?.active !== false,
+
+      hidden:
+        Boolean(
+          product?.hidden
+        )
+
+    }
+  }
+
+
+// ======================================================
+// WAREHOUSE PRODUCTS
+// ======================================================
+
+const warehouseProducts = () => {
+
+  const out = []
+
+  const state =
+    useWarehouseStore.getState()
+
+  const warehouses =
+    Array.isArray(
+      state?.warehouses
+    )
+      ? state.warehouses
+      : []
+
+  warehouses.forEach(
+    warehouse => {
+
+      const products =
+        Array.isArray(
+          warehouse?.products
+        )
+          ? warehouse.products
+          : []
+
+      products.forEach(
+        product => {
+
+          if (
+            !product
+          ) {
+            return
+          }
+
+          out.push({
+
+            ...product,
+
+            warehouseId:
+              product?.warehouseId ??
+              warehouse?.id,
+
+            warehouseName:
+              product?.warehouseName ||
+              warehouse?.name ||
+              ''
+
+          })
+        }
+      )
+    }
+  )
+
+  return out
+}
+
+
+// ======================================================
+// WEBSITE PRODUCTS
+// ======================================================
+
+const websiteProducts = () => {
+
+  const state =
+    useWebsiteStore.getState()
+
+  return Array.isArray(
+    state?.products
+  )
+    ? state.products
+    : []
+}
+
+
+// ======================================================
+// ALL SEARCHABLE PRODUCTS
+// ======================================================
+
+const allSearchableProducts = () => {
+
+  return [
+
+    ...warehouseProducts(),
+
+    ...websiteProducts()
+
+  ]
+}
+
+
+// ======================================================
+// TIRE MATCH
+// ======================================================
+
+const tireMatches = (
+  product,
+  parsed
+) => {
+
+  if (
+    !parsed
+  ) {
+    return false
+  }
+
+  const tire =
+    product?.tire ||
+    product?.tireData ||
+    product?.tireSpecification ||
+    product?.tireSpecifications ||
+    product?.specifications?.tire ||
+    product?.attributes?.tire ||
+    {}
+
+  const width =
+    norm(
+      tire?.width ??
+      tire?.sectionWidth ??
+      tire?.tireWidth ??
+      product?.width
+    )
+
+  const profile =
+    norm(
+      tire?.profile ??
+      tire?.height ??
+      tire?.aspectRatio ??
+      tire?.aspect ??
+      product?.profile
+    )
+
+  const rim =
+    norm(
+      tire?.rim ??
+      tire?.rimSize ??
+      tire?.wheelDiameter ??
+      tire?.diameter ??
+      product?.rim
+    )
+
+  const wantedWidth =
+    norm(parsed.width)
+
+  const wantedProfile =
+    norm(parsed.profile)
+
+  const wantedRim =
+    norm(parsed.rim)
+
+  if (
+    width === wantedWidth &&
+    rim === wantedRim
+  ) {
+
+    if (
+      !wantedProfile
+    ) {
+      return true
+    }
+
+    if (
+      profile === wantedProfile
+    ) {
+      return true
+    }
+  }
+
+  const sizeValues = [
+
+    product?.tireSize,
+    product?.size,
+    product?.dimension,
+    product?.dimensions,
+    product?.sizeCode,
+    product?.skuSize,
+    product?.name,
+    product?.productName,
+
+    tire?.size,
+    tire?.tireSize,
+    tire?.dimension,
+    tire?.dimensions,
+    tire?.sizeCode
+
+  ]
+
+  const wanted = [
+
+    wantedWidth,
+    wantedProfile,
+    wantedRim
+
+  ].join('/')
+
+  return sizeValues.some(
+    value => {
+
+      const size =
+        norm(value)
+          .replace(
+            /[\/\\*أ—-]/g,
+            '/'
+          )
+          .replace(
+            /\s/g,
+            ''
+          )
+
+      return (
+        size === wanted
+      )
+    }
+  )
+}
+
+
+// ======================================================
+// COLLECT VALUES
+// ======================================================
+
+const collectValues = (
+  product,
+  fields
+) => {
+
+  const values = []
+
+  const add = value => {
+
+    if (
+      value == null
+    ) {
+      return
+    }
+
+    if (
+      Array.isArray(value)
+    ) {
+
+      value.forEach(
+        item =>
+          add(item)
+      )
+
+      return
+    }
+
+    if (
+      typeof value === 'object'
+    ) {
+
+      Object.values(
+        value
+      ).forEach(
+        item =>
+          add(item)
+      )
+
+      return
+    }
+
+    values.push(
+      String(value)
+    )
+  }
+
+  const specifications =
+    product?.specifications ||
+    {}
+
+  const attributes =
+    product?.attributes ||
+    {}
+
+  const battery =
+    product?.battery ||
+    {}
+
+  const oil =
+    product?.oil ||
+    {}
+
+  fields.forEach(
+    field => {
+
+      add(
+        product?.[field]
+      )
+
+      add(
+        battery?.[field]
+      )
+
+      add(
+        oil?.[field]
+      )
+
+      add(
+        specifications?.[field]
+      )
+
+      add(
+        attributes?.[field]
+      )
+
+      add(
+        specifications?.battery?.[field]
+      )
+
+      add(
+        specifications?.oil?.[field]
+      )
+
+      add(
+        attributes?.battery?.[field]
+      )
+
+      add(
+        attributes?.oil?.[field]
+      )
+    }
+  )
+
+  return values
+}
+
+
+// ======================================================
+// NORMALIZE OIL INPUT
+// ======================================================
+
+const normalizeOilValue = value => {
+
+  return norm(value)
+    .replace(/â€“|â€”/g, '-')
+    .replace(/[\/\\]/g, '-')
+    .replace(/_/g, '-')
+}
+
+
+// ======================================================
+// OIL GRADE EXTRACTION
+// ======================================================
+
+const extractOilGrades = value => {
+
+  const text =
+    normalizeOilValue(
+      value
+    )
+
+  if (
+    !text
+  ) {
+    return []
+  }
+
+  const grades = []
+
+  const rangeMatches =
+    text.match(
+      /\b\d{1,3}w-?\d{1,3}\b/gi
+    )
+
+  if (
+    Array.isArray(
+      rangeMatches
+    )
+  ) {
+
+    rangeMatches.forEach(
+      item => {
+
+        grades.push(
+          norm(item)
+        )
+      }
+    )
+  }
+
+  const wMatches =
+    text.match(
+      /\b\d{1,3}w\b/gi
+    )
+
+  if (
+    Array.isArray(
+      wMatches
+    )
+  ) {
+
+    wMatches.forEach(
+      item =>
+        grades.push(
+          norm(item)
+        )
+    )
+  }
+
+  const numberMatches =
+    text.match(
+      /\b\d{1,3}\b/g
+    )
+
+  if (
+    Array.isArray(
+      numberMatches
+    )
+  ) {
+
+    numberMatches.forEach(
+      item =>
+        grades.push(
+          norm(item)
+        )
+    )
+  }
+
+  return [
+
+    ...new Set(
+      grades.filter(Boolean)
+    )
+
+  ]
+}
+
+
+// ======================================================
+// OIL MATCH
+// ======================================================
+
+const oilMatches = (
+  product,
+  viscosity
+) => {
+
+  const wanted =
+    normalizeOilValue(
+      viscosity
+    )
+
+  if (
+    !wanted
+  ) {
+    return false
+  }
+
+  const values =
+    collectValues(
+      product,
+      [
+        'viscosity',
+        'viscosityGrade',
+        'grade',
+        'oilGrade',
+        'oilViscosity',
+        'sae',
+        'SAE',
+        'weight',
+        'oilWeight',
+        'specification',
+        'description',
+        'name',
+        'productName',
+        'title',
+        'code',
+        'sku'
+      ]
+    )
+
+  const wantedGrades =
+    extractOilGrades(
+      wanted
+    )
+
+  return values.some(
+    value => {
+
+      const actual =
+        normalizeOilValue(
+          value
+        )
+
+      if (
+        !actual
+      ) {
+        return false
+      }
+
+      if (
+        actual === wanted
+      ) {
+        return true
+      }
+
+      if (
+        actual.includes(
+          wanted
+        )
+      ) {
+        return true
+      }
+
+      const actualGrades =
+        extractOilGrades(
+          actual
+        )
+
+      return wantedGrades.some(
+        wantedGrade =>
+          actualGrades.some(
+            actualGrade => {
+
+              if (
+                actualGrade ===
+                wantedGrade
+              ) {
+                return true
+              }
+
+              if (
+                /^\d+$/.test(
+                  wantedGrade
+                ) &&
+                /^\d+w$/.test(
+                  actualGrade
+                )
+              ) {
+
+                return (
+                  actualGrade.slice(
+                    0,
+                    -1
+                  ) ===
+                  wantedGrade
+                )
+              }
+
+              if (
+                /^\d+w$/.test(
+                  wantedGrade
+                ) &&
+                actualGrade.startsWith(
+                  wantedGrade
+                )
+              ) {
+                return true
+              }
+
+              return false
+            }
+          )
+      )
+    }
+  )
+}
+
+
+// ======================================================
+// NORMALIZE BATTERY VALUE
+// ======================================================
+
+const normalizeBatteryValue = value => {
+
+  return norm(value)
+    .replace(/â€“|â€”/g, '-')
+    .replace(/[\/\\]/g, '-')
+}
+
+
+// ======================================================
+// BATTERY CODE EXTRACTION
+// ======================================================
+
+const extractBatteryCodes = value => {
+
+  const text =
+    normalizeBatteryValue(
+      value
+    )
+
+  if (
+    !text
+  ) {
+    return []
+  }
+
+  const codes = []
+
+  const matches =
+    text.match(
+      /\bn\d{0,3}[a-z]?\b|\b\d{1,3}ah\b|\b\d{1,3}\b/gi
+    )
+
+  if (
+    Array.isArray(
+      matches
+    )
+  ) {
+
+    matches.forEach(
+      item => {
+
+        const normalized =
+          normalizeBatteryValue(
+            item
+          )
+
+        if (
+          normalized
+        ) {
+
+          codes.push(
+            normalized
+          )
+        }
+      }
+    )
+  }
+
+  return [
+
+    ...new Set(
+      codes
+    )
+
+  ]
+}
+
+
+// ======================================================
+// BATTERY MATCH
+// ======================================================
+
+const batteryMatches = (
+  product,
+  capacity
+) => {
+
+  const wanted =
+    normalizeBatteryValue(
+      capacity
+    )
+
+  if (
+    !wanted
+  ) {
+    return false
+  }
+
+  const values =
+    collectValues(
+      product,
+      [
+        'capacity',
+        'batteryCapacity',
+        'ampereHour',
+        'ah',
+        'amp',
+        'ampHours',
+        'batteryType',
+        'typeCode',
+        'batteryCode',
+        'code',
+        'model',
+        'batteryModel',
+        'group',
+        'groupSize',
+        'size',
+        'sizeCode',
+        'name',
+        'productName',
+        'title',
+        'description',
+        'sku'
+      ]
+    )
+
+  const wantedCodes =
+    extractBatteryCodes(
+      wanted
+    )
+
+  return values.some(
+    value => {
+
+      const actual =
+        normalizeBatteryValue(
+          value
+        )
+
+      if (
+        !actual
+      ) {
+        return false
+      }
+
+      if (
+        actual === wanted
+      ) {
+        return true
+      }
+
+      if (
+        actual.includes(
+          wanted
+        )
+      ) {
+        return true
+      }
+
+      if (
+        wanted.includes(
+          actual
+        )
+      ) {
+        return true
+      }
+
+      const actualCodes =
+        extractBatteryCodes(
+          actual
+        )
+
+      return wantedCodes.some(
+        wantedCode =>
+          actualCodes.some(
+            actualCode => {
+
+              if (
+                actualCode ===
+                wantedCode
+              ) {
+                return true
+              }
+
+              if (
+                wantedCode.startsWith('n') &&
+                actualCode.startsWith(
+                  wantedCode
+                )
+              ) {
+                return true
+              }
+
+              if (
+                /^\d+$/.test(
+                  wantedCode
+                ) &&
+                actualCode ===
+                  `${wantedCode}ah`
+              ) {
+                return true
+              }
+
+              return false
+            }
+          )
+      )
+    }
+  )
+}
+
+
+// ======================================================
+// VALUE MATCH
+// ======================================================
+
+const valueMatches = (
+  product,
+  value,
+  fields
+) => {
+
+  const wanted =
+    norm(value)
+
+  if (
+    !wanted
+  ) {
+    return false
+  }
+
+  const values =
+    collectValues(
+      product,
+      fields
+    )
+
+  return values.some(
+    candidate => {
+
+      const actual =
+        norm(candidate)
+
+      if (
+        !actual
+      ) {
+        return false
+      }
+
+      return (
+        actual === wanted ||
+        actual.includes(wanted) ||
+        wanted.includes(actual)
+      )
+    }
+  )
+}
+
+
+// ======================================================
+// PRODUCT TYPE
+// ======================================================
+
+const productType = product => {
+
+  return normalizeType(
+    product?.type ??
+    product?.productType ??
+    product?.category ??
+    product?.categoryType ??
+    product?.kind ??
+    ''
+  )
+}
+
+
+// ======================================================
+// VEHICLE OBJECT MATCH
+// ======================================================
+
+const vehicleObjectMatches = (
+  vehicle,
+  form
+) => {
+
+  if (
+    !vehicle ||
+    typeof vehicle !== 'object'
+  ) {
+    return false
+  }
+
+  const vehicleType =
+    vehicle?.vehicleType ??
+    vehicle?.vehicle_type ??
+    vehicle?.type ??
+    vehicle?.category ??
+    vehicle?.vehicleCategory ??
+    ''
+
+  if (
+    form?.vehicleType &&
+    vehicleType &&
+    !valuesMatch(
+      vehicleType,
+      form.vehicleType
+    )
+  ) {
+    return false
+  }
+
+  const brand =
+    vehicle?.brand ??
+    vehicle?.make ??
+    vehicle?.manufacturer ??
+    vehicle?.brandName ??
+    vehicle?.makeName ??
+    ''
+
+  if (
+    form?.brand &&
+    brand &&
+    !valuesMatch(
+      brand,
+      form.brand
+    )
+  ) {
+    return false
+  }
+
+  const model =
+    vehicle?.model ??
+    vehicle?.modelName ??
+    vehicle?.vehicleModel ??
+    vehicle?.vehicleModelName ??
+    ''
+
+  if (
+    form?.model &&
+    model &&
+    !valuesMatch(
+      model,
+      form.model
+    )
+  ) {
+    return false
+  }
+
+  if (
+    form?.year !== '' &&
+    form?.year !== null &&
+    form?.year !== undefined
+  ) {
+
+    const requestedYear =
+      Number(
+        form.year
+      )
+
+    if (
+      !Number.isFinite(
+        requestedYear
+      )
+    ) {
+      return false
+    }
+
+    const singleYear =
+      Number(
+        vehicle?.year ??
+        vehicle?.modelYear ??
+        vehicle?.productionYear ??
+        vehicle?.yearModel ??
+        NaN
+      )
+
+    if (
+      Number.isFinite(
+        singleYear
+      )
+    ) {
+
+      return (
+        requestedYear ===
+        singleYear
+      )
+    }
+
+    const from =
+      Number(
+        vehicle?.yearFrom ??
+        vehicle?.fromYear ??
+        vehicle?.from ??
+        vehicle?.startYear ??
+        vehicle?.minYear ??
+        NaN
+      )
+
+    const to =
+      Number(
+        vehicle?.yearTo ??
+        vehicle?.toYear ??
+        vehicle?.to ??
+        vehicle?.endYear ??
+        vehicle?.maxYear ??
+        NaN
+      )
+
+    if (
+      Number.isFinite(from) &&
+      Number.isFinite(to)
+    ) {
+
+      return (
+        requestedYear >= from &&
+        requestedYear <= to
+      )
+    }
+
+    if (
+      Number.isFinite(from)
+    ) {
+
+      return (
+        requestedYear >= from
+      )
+    }
+
+    if (
+      Number.isFinite(to)
+    ) {
+
+      return (
+        requestedYear <= to
+      )
+    }
+  }
+
+  return true
+}
+
+
+// ======================================================
+// VEHICLE STRING MATCH
+// ======================================================
+
+const vehicleStringMatches = (
+  value,
+  form
+) => {
+
+  const text =
+    norm(value)
+
+  if (
+    !text
+  ) {
+    return false
+  }
+
+  const requested = [
+
+    form?.vehicleType,
+    form?.brand,
+    form?.model
+
+  ]
+    .filter(Boolean)
+    .map(norm)
+
+  if (
+    requested.length === 0
+  ) {
+    return false
+  }
+
+  const basicMatch =
+    requested.every(
+      item =>
+        text.includes(item)
+    )
+
+  if (
+    !basicMatch
+  ) {
+    return false
+  }
+
+  if (
+    form?.year !== '' &&
+    form?.year !== null &&
+    form?.year !== undefined
+  ) {
+
+    const year =
+      norm(
+        form.year
+      )
+
+    if (
+      year &&
+      !text.includes(year)
+    ) {
+      return false
+    }
+  }
+
+  return true
+}
+
+
+// ======================================================
+// VEHICLE COMPATIBILITY VALUES
+// ======================================================
+
+const collectVehicleCompatibility =
+  product => {
+
+    const output = []
+
+    const add = value => {
+
+      if (
+        value == null
+      ) {
+        return
+      }
+
+      if (
+        Array.isArray(value)
+      ) {
+
+        value.forEach(
+          item =>
+            add(item)
+        )
+
+        return
+      }
+
+      if (
+        typeof value === 'object'
+      ) {
+
+        output.push(
+          value
+        )
+
+        return
+      }
+
+      if (
+        typeof value === 'string'
+      ) {
+
+        if (
+          value.trim()
+        ) {
+
+          output.push(
+            value
+          )
+        }
+      }
+    }
+
+    add(
+      product?.compatibleVehicles
+    )
+
+    add(
+      product?.vehicleCompatibility
+    )
+
+    add(
+      product?.vehicleCompatibilities
+    )
+
+    add(
+      product?.vehicles
+    )
+
+    add(
+      product?.compatibility?.vehicles
+    )
+
+    add(
+      product?.compatibility?.compatibleVehicles
+    )
+
+    add(
+      product?.compatibility?.vehicleCompatibility
+    )
+
+    add(
+      product?.compatibility?.vehicleCompatibilities
+    )
+
+    add(
+      product?.specifications?.compatibleVehicles
+    )
+
+    add(
+      product?.specifications?.vehicleCompatibility
+    )
+
+    add(
+      product?.specifications?.vehicleCompatibilities
+    )
+
+    add(
+      product?.specifications?.vehicles
+    )
+
+    add(
+      product?.attributes?.compatibleVehicles
+    )
+
+    add(
+      product?.attributes?.vehicleCompatibility
+    )
+
+    add(
+      product?.attributes?.vehicleCompatibilities
+    )
+
+    add(
+      product?.attributes?.vehicles
+    )
+
+    return output
+  }
+
+
+// ======================================================
+// VEHICLE MATCH
+// ======================================================
+
+const vehicleMatches = (
+  product,
+  form
+) => {
+
+  if (
+    !product ||
+    !form
+  ) {
+    return false
+  }
+
+  const vehicles =
+    collectVehicleCompatibility(
+      product
+    )
+
+  if (
+    vehicles.length === 0
+  ) {
+    return false
+  }
+
+  return vehicles.some(
+    vehicle => {
+
+      if (
+        typeof vehicle === 'string'
+      ) {
+
+        return vehicleStringMatches(
+          vehicle,
+          form
+        )
+      }
+
+      if (
+        typeof vehicle !== 'object'
+      ) {
+        return false
+      }
+
+      return vehicleObjectMatches(
+        vehicle,
+        form
+      )
+    }
+  )
+}
+
+
+// ======================================================
+// MERGE
+// ======================================================
+
+const mergeProducts = products => {
+
+  const map =
+    new Map()
+
+  products.forEach(
+    product => {
+
+      if (
+        !product
+      ) {
+        return
+      }
+
+      const id =
+        String(
+          product?.productId ??
+          product?.id ??
+          product?.sku ??
+          product?.barcode ??
+          ''
+        )
+          .trim()
+
+      if (
+        !id
+      ) {
+        return
+      }
+
+      const key =
+        norm(id)
+
+      const existing =
+        map.get(key)
+
+      map.set(
+        key,
+        {
+
+          ...(existing || {}),
+          ...product,
+
+          id,
+
+          productId:
+            product?.productId ??
+            existing?.productId ??
+            id,
+
+          name:
+            product?.name ||
+            product?.productName ||
+            existing?.name ||
+            existing?.productName ||
+            '',
+
+          productName:
+            product?.productName ||
+            product?.name ||
+            existing?.productName ||
+            existing?.name ||
+            '',
+
+          type:
+            product?.type ||
+            existing?.type ||
+            '',
+
+          brand:
+            product?.brand ||
+            existing?.brand ||
+            '',
+
+          compatibleVehicles:
+            product?.compatibleVehicles?.length
+              ? product.compatibleVehicles
+              : (
+                  existing?.compatibleVehicles ||
+                  []
+                ),
+
+          vehicleCompatibility:
+            product?.vehicleCompatibility?.length
+              ? product.vehicleCompatibility
+              : (
+                  existing?.vehicleCompatibility ||
+                  []
+                ),
+
+          vehicleCompatibilities:
+            product?.vehicleCompatibilities?.length
+              ? product.vehicleCompatibilities
+              : (
+                  existing?.vehicleCompatibilities ||
+                  []
+                ),
+
+          vehicles:
+            product?.vehicles?.length
+              ? product.vehicles
+              : (
+                  existing?.vehicles ||
+                  []
+                ),
+
+          compatibility:
+            product?.compatibility ||
+            existing?.compatibility ||
+            {},
+
+          specifications:
+            product?.specifications ||
+            existing?.specifications ||
+            {},
+
+          attributes:
+            product?.attributes ||
+            existing?.attributes ||
+            {},
+
+          quantity:
+            Math.max(
+              0,
+              Number(
+                product?.quantity ??
+                product?.availableQuantity ??
+                product?.stock ??
+                existing?.quantity ??
+                existing?.availableQuantity ??
+                existing?.stock ??
+                0
+              )
+            ),
+
+          salePrice:
+            Number(
+              product?.salePrice ??
+              product?.sellingPrice ??
+              product?.price ??
+              existing?.salePrice ??
+              existing?.sellingPrice ??
+              existing?.price ??
+              0
+            )
+
+        }
+      )
+    }
+  )
+
+  return Array.from(
+    map.values()
+  )
+}
+
+
+// ======================================================
+// MERGE WAREHOUSE SEARCH RESULTS
+// ======================================================
+
+const mergeWarehouseSearchResults = (
+  tab,
+  controllerResults,
+  form,
+  parsed
+) => {
+
+  const warehouse =
+    warehouseProducts()
+
+  const catalog =
+    websiteProducts()
+
+  let warehouseMatches =
+    []
+
+  let catalogMatches =
+    []
+
+  if (
+    tab === 'tire'
+  ) {
+
+    warehouseMatches =
+      warehouse.filter(
+        product =>
+          productType(
+            product
+          ) === 'tire' &&
+          tireMatches(
+            product,
+            parsed
+          )
+      )
+
+    catalogMatches =
+      catalog.filter(
+        product =>
+          productType(
+            product
+          ) === 'tire' &&
+          tireMatches(
+            product,
+            parsed
+          )
+      )
+  }
+
+
+  if (
+    tab === 'battery'
+  ) {
+
+    warehouseMatches =
+      warehouse.filter(
+        product => {
+
+          const type =
+            productType(
+              product
+            )
+
+          return (
+            type === 'battery' &&
+            batteryMatches(
+              product,
+              form.capacity
+            )
+          )
+        }
+      )
+
+    catalogMatches =
+      catalog.filter(
+        product => {
+
+          const type =
+            productType(
+              product
+            )
+
+          return (
+            type === 'battery' &&
+            batteryMatches(
+              product,
+              form.capacity
+            )
+          )
+        }
+      )
+  }
+
+
+  if (
+    tab === 'oil'
+  ) {
+
+    warehouseMatches =
+      warehouse.filter(
+        product => {
+
+          const type =
+            productType(
+              product
+            )
+
+          return (
+            type === 'oil' &&
+            oilMatches(
+              product,
+              form.viscosity
+            )
+          )
+        }
+      )
+
+    catalogMatches =
+      catalog.filter(
+        product => {
+
+          const type =
+            productType(
+              product
+            )
+
+          return (
+            type === 'oil' &&
+            oilMatches(
+              product,
+              form.viscosity
+            )
+          )
+        }
+      )
+  }
+
+
+  if (
+    tab === 'vehicle'
+  ) {
+
+    warehouseMatches =
+      warehouse.filter(
+        product =>
+          vehicleMatches(
+            product,
+            form
+          )
+      )
+
+    catalogMatches =
+      catalog.filter(
+        product =>
+          vehicleMatches(
+            product,
+            form
+          )
+      )
+  }
+
+
+  const normalizedWarehouse =
+    warehouseMatches.map(
+      publicWarehouseProduct
+    )
+
+  const normalizedCatalog =
+    catalogMatches.map(
+      publicWarehouseProduct
+    )
+
+  const normalizedController =
+    Array.isArray(
+      controllerResults
+    )
+      ? controllerResults.map(
+          publicWarehouseProduct
+        )
+      : []
+
+  return mergeProducts(
+    [
+
+      ...normalizedWarehouse,
+
+      ...normalizedCatalog,
+
+      ...normalizedController
+
+    ]
+  )
+}
+
+
+// ======================================================
+// AI VEHICLE SEARCH
+//
+// This is the important new path.
+//
+// Example:
+//
+// "طھظˆظٹظˆطھط§ ظƒط±ظˆظ„ط§ 2020"
+//
+// The text is sent directly to VehicleEngine,
+// which resolves the vehicle using VehicleAIEngine,
+// then performs OEM compatibility and product matching.
+// ======================================================
+
+const searchVehicleWithAI = async query => {
+
+  const text =
+    String(
+      query ?? ''
+    ).trim()
+
+  if (
+    !text
+  ) {
+    return {
+
+      response:
+        null,
+
+      results:
+        []
+
+    }
+  }
+
+
+  const products =
+    allSearchableProducts()
+
+
+  try {
+
+    console.log(
+      '[Vehicle AI] Searching:',
+      text
+    )
+
+
+    // --------------------------------------------------
+    // First try the AI Vehicle Engine.
+    //
+    // VehicleEngine itself calls:
+    //
+    // VehicleAIEngine
+    // VehicleProvider
+    // OEMCompatibilityEngine
+    // VehicleCompatibilityEngine
+    // --------------------------------------------------
+
+    const response =
+      await VehicleEngine.search({
+
+        vehicleType:
+          'car',
+
+        make:
+          '',
+
+        model:
+          '',
+
+        year:
+          '',
+
+        query:
+          text,
+
+        products
+
+      })
+
+
+    console.log(
+      '[Vehicle AI] Engine response:',
+      response
+    )
+
+
+    const engineProducts =
+      flattenSearchResults(
+        'vehicle',
+        response
+      )
+
+
+    if (
+      engineProducts.length > 0
+    ) {
+
+      return {
+
+        response,
+
+        results:
+          mergeProducts(
+            engineProducts.map(
+              publicWarehouseProduct
+            )
+          )
+
+      }
+    }
+
+
+    // --------------------------------------------------
+    // Fallback:
+    //
+    // Some VehicleEngine versions resolve the vehicle
+    // only from make/model/year arguments.
+    //
+    // Ask the controller using the free text as a
+    // secondary path if supported.
+    // --------------------------------------------------
+
+    try {
+
+      const controllerResponse =
+        await VehicleSearchController.searchVehicle({
+
+          query:
+            text,
+
+          vehicleType:
+            'car',
+
+          make:
+            '',
+
+          model:
+            '',
+
+          year:
+            ''
+
+        })
+
+
+      const controllerProducts =
+        flattenSearchResults(
+          'vehicle',
+          controllerResponse
+        )
+
+
+      if (
+        controllerProducts.length > 0
+      ) {
+
+        return {
+
+          response:
+            controllerResponse,
+
+          results:
+            mergeProducts(
+              controllerProducts.map(
+                publicWarehouseProduct
+              )
+            )
+
+        }
+      }
+
+    }
+    catch (
+      controllerError
+    ) {
+
+      console.warn(
+        '[Vehicle AI] Controller free-text search failed:',
+        controllerError
+      )
+    }
+
+
+    return {
+
+      response,
+
+      results:
+        []
+
+    }
+
+  }
+  catch (
+    error
+  ) {
+
+    console.error(
+      '[Vehicle AI] Search failed:',
+      error
+    )
+
+    return {
+
+      response:
+        null,
+
+      results:
+        []
+
+    }
+  }
+}
+
+
+// ======================================================
+// HOOK
+// ======================================================
+
+export default function useVehicleSearch() {
+
+  const [
+    loading,
+    setLoading
+  ] =
+    useState(false)
+
+
+  const [
+    results,
+    setResults
+  ] =
+    useState([])
+
+
+  const [
+    tireSearchError,
+    setTireSearchError
+  ] =
+    useState('')
+
+
+  const [
+    form,
+    setForm
+  ] =
+    useState({
+
+      vehicleType:
+        '',
+
+      brand:
+        '',
+
+      model:
+        '',
+
+      year:
+        '',
+
+      tireSize:
+        '',
+
+      capacity:
+        '',
+
+      viscosity:
+        '',
+
+      // ----------------------------------------------
+      // NEW
+      //
+      // Free text AI vehicle query.
+      // Example:
+      // "طھظˆظٹظˆطھط§ ظƒط±ظˆظ„ط§ 2020"
+      // ----------------------------------------------
+
+      vehicleQuery:
+        ''
+
+    })
+
+
+  // ====================================================
+  // VEHICLE TYPES
+  // ====================================================
+
+  const vehicleTypes =
+    useMemo(
+      () =>
+        VehicleProvider.getVehicleTypes(),
+      []
+    )
+
+
+  // ====================================================
+  // BRANDS
+  // ====================================================
+
+  const brands =
+    useMemo(
+      () =>
+        VehicleProvider.getBrands(
+          form.vehicleType
+        ),
+      [
+        form.vehicleType
+      ]
+    )
+
+
+  // ====================================================
+  // MODELS
+  // ====================================================
+
+  const models =
+    useMemo(
+      () =>
+        VehicleProvider.getModels({
+
+          vehicleType:
+            form.vehicleType,
+
+          brand:
+            form.brand
+
+        }),
+      [
+        form.vehicleType,
+        form.brand
+      ]
+    )
+
+
+  // ====================================================
+  // YEARS
+  // ====================================================
+
+  const years =
+    useMemo(
+      () =>
+        VehicleProvider.getYears({
+
+          brand:
+            form.brand,
+
+          model:
+            form.model
+
+        }),
+      [
+        form.brand,
+        form.model
+      ]
+    )
+
+
+  // ====================================================
+  // SEARCH
+  // ====================================================
+
+  const search =
+    async tab => {
+
+      setLoading(true)
+
+      if (
+        tab === 'tire'
+      ) {
+
+        setTireSearchError('')
+
+      }
+
+
+      try {
+
+        // ==============================================
+        // VEHICLE
+        // ==============================================
+
+        if (
+          tab === 'vehicle'
+        ) {
+
+          // --------------------------------------------
+          // AI FREE TEXT SEARCH
+          // --------------------------------------------
+          //
+          // If the user entered:
+          //
+          // طھظˆظٹظˆطھط§ ظƒط±ظˆظ„ط§ 2020
+          //
+          // do NOT require brand/model dropdown values.
+          //
+          // This was the previous blocker.
+          // --------------------------------------------
+
+          const aiQuery =
+            String(
+              form.vehicleQuery ??
+              form.query ??
+              ''
+            ).trim()
+
+
+          if (
+            aiQuery
+          ) {
+
+            console.log(
+              '[Vehicle Search] AI query:',
+              aiQuery
+            )
+
+
+            const aiResult =
+              await searchVehicleWithAI(
+                aiQuery
+              )
+
+
+            setResults(
+              Array.isArray(
+                aiResult?.results
+              )
+                ? aiResult.results
+                : []
+            )
+
+
+            return Array.isArray(
+              aiResult?.results
+            )
+              ? aiResult.results
+              : []
+          }
+
+
+          // --------------------------------------------
+          // STRUCTURED SEARCH
+          // --------------------------------------------
+
+          if (
+            !form.brand ||
+            !form.model
+          ) {
+
+            setResults([])
+
+            return []
+
+          }
+
+
+          let controllerResults =
+            []
+
+
+          try {
+
+            const response =
+              await VehicleSearchController.searchVehicle({
+
+                vehicleType:
+                  form.vehicleType,
+
+                make:
+                  form.brand,
+
+                model:
+                  form.model,
+
+                year:
+                  form.year
+
+              })
+
+
+            controllerResults =
+              flattenSearchResults(
+                'vehicle',
+                response
+              )
+
+          }
+          catch (
+            controllerError
+          ) {
+
+            console.warn(
+              'Vehicle controller search failed. Using local product compatibility search.',
+              controllerError
+            )
+
+            controllerResults =
+              []
+
+          }
+
+
+          const merged =
+            mergeWarehouseSearchResults(
+              'vehicle',
+              controllerResults,
+              form,
+              null
+            )
+
+
+          setResults(
+            merged
+          )
+
+
+          return merged
+        }
+
+
+        // ==============================================
+        // TIRE
+        // ==============================================
+
+        if (
+          tab === 'tire'
+        ) {
+
+          const parsed =
+            parseTireSize(
+              form.tireSize
+            )
+
+
+          if (
+            !parsed
+          ) {
+
+            setResults([])
+
+            setTireSearchError(
+              'ط§ظƒطھط¨ ظ…ظ‚ط§ط³ ط§ظ„ط¥ط·ط§ط± ط¨ظ‡ط°ط§ ط§ظ„ط´ظƒظ„: 205/55/16 ط£ظˆ 205*55*16 ط£ظˆ 24.9/24'
+            )
+
+            return []
+
+          }
+
+
+          let controllerResults =
+            []
+
+
+          try {
+
+            const response =
+              await VehicleSearchController.searchTire({
+
+                width:
+                  parsed.width,
+
+                profile:
+                  parsed.profile,
+
+                rim:
+                  parsed.rim,
+
+                format:
+                  parsed.format
+
+              })
+
+
+            controllerResults =
+              flattenSearchResults(
+                'tire',
+                response
+              )
+
+          }
+          catch (
+            error
+          ) {
+
+            console.warn(
+              'Tire controller search failed. Using local product search.',
+              error
+            )
+
+            controllerResults =
+              []
+
+          }
+
+
+          const merged =
+            mergeWarehouseSearchResults(
+              'tire',
+              controllerResults,
+              form,
+              parsed
+            )
+
+
+          setResults(
+            merged
+          )
+
+
+          return merged
+        }
+
+
+        // ==============================================
+        // BATTERY
+        // ==============================================
+
+        if (
+          tab === 'battery'
+        ) {
+
+          let controllerResults =
+            []
+
+
+          try {
+
+            const response =
+              await VehicleSearchController.searchBattery({
+
+                capacity:
+                  form.capacity
+
+              })
+
+
+            controllerResults =
+              flattenSearchResults(
+                'battery',
+                response
+              )
+
+          }
+          catch (
+            error
+          ) {
+
+            console.warn(
+              'Battery controller search failed. Using local product search.',
+              error
+            )
+
+            controllerResults =
+              []
+
+          }
+
+
+          const merged =
+            mergeWarehouseSearchResults(
+              'battery',
+              controllerResults,
+              form,
+              null
+            )
+
+
+          setResults(
+            merged
+          )
+
+
+          return merged
+        }
+
+
+        // ==============================================
+        // OIL
+        // ==============================================
+
+        if (
+          tab === 'oil'
+        ) {
+
+          let controllerResults =
+            []
+
+
+          try {
+
+            const response =
+              await VehicleSearchController.searchOil({
+
+                viscosity:
+                  form.viscosity
+
+              })
+
+
+            controllerResults =
+              flattenSearchResults(
+                'oil',
+                response
+              )
+
+          }
+          catch (
+            error
+          ) {
+
+            console.warn(
+              'Oil controller search failed. Using local product search.',
+              error
+            )
+
+            controllerResults =
+              []
+
+          }
+
+
+          const merged =
+            mergeWarehouseSearchResults(
+              'oil',
+              controllerResults,
+              form,
+              null
+            )
+
+
+          setResults(
+            merged
+          )
+
+
+          return merged
+        }
+
+
+        // ==============================================
+        // UNKNOWN
+        // ==============================================
+
+        setResults([])
+
+        return []
+
+
+      }
+      catch (
+        error
+      ) {
+
+        console.error(
+          'Vehicle search failed:',
+          error
+        )
+
+        setResults([])
+
+        return []
+
+      }
+      finally {
+
+        setLoading(false)
+      }
+    }
+
+
+  // ====================================================
+  // RETURN
+  // ====================================================
+
+  return {
+
+    loading,
+
+    results,
+
+    form,
+
+    setForm,
+
+    vehicleTypes,
+
+    brands,
+
+    models,
+
+    years,
+
+    tireSearchError,
+
+    search,
+
+    // --------------------------------------------------
+    // Explicit AI search function
+    // --------------------------------------------------
+
+    searchVehicleWithAI
+
+  }
+
+}
+
+
+============================================================
+FILE: src\core\controllers\VehicleSearchController.js
+============================================================
+
+// ======================================================
+// EL OLA ERP
+// Vehicle Search Controller
+// ======================================================
+
+import VehicleEngine
+  from '../engines/VehicleEngine'
+
+import ProductsRepository
+  from '../../repositories/ProductsRepository'
+
+import {
+  useWarehouseStore
+} from '../../store/warehouseStore'
+
+
+// ======================================================
+// NORMALIZE TEXT
+// ======================================================
+
+const normalizeText = value => {
+
+  return String(
+    value ?? ''
+  )
+    .trim()
+    .toLowerCase()
+    .replace(/ط£|ط¥|ط¢/g, 'ط§')
+    .replace(/ط©/g, 'ظ‡')
+    .replace(/ظ‰/g, 'ظٹ')
+    .replace(/[\u064B-\u065F\u0670]/g, '')
+
+}
+
+
+// ======================================================
+// NORMALIZE TYPE
+// ======================================================
+
+const normalizeType = value => {
+
+  const type =
+    normalizeText(value)
+
+  if (
+    [
+      'tire',
+      'tires',
+      'tyre',
+      'tyres',
+      'ط§ط·ط§ط±',
+      'ط§ط·ط§ط±ط§طھ'
+    ].includes(type)
+  ) {
+
+    return 'tire'
+
+  }
+
+
+  if (
+    [
+      'battery',
+      'batteries',
+      'ط¨ط·ط§ط±ظٹظ‡',
+      'ط¨ط·ط§ط±ظٹط§طھ',
+      'ط¨ط·ط§ط±ظٹط©'
+    ].includes(type)
+  ) {
+
+    return 'battery'
+
+  }
+
+
+  if (
+    [
+      'oil',
+      'oils',
+      'ط²ظٹطھ',
+      'ط²ظٹظˆطھ'
+    ].includes(type)
+  ) {
+
+    return 'oil'
+
+  }
+
+
+  return type
+
+}
+
+
+// ======================================================
+// NUMBER VALUE
+// ======================================================
+
+const numberValue = value => {
+
+  if (
+    value === null ||
+    value === undefined ||
+    value === ''
+  ) {
+
+    return null
+
+  }
+
+
+  const normalized =
+    Number(
+      String(value)
+        .trim()
+        .replace(',', '.')
+    )
+
+
+  return Number.isFinite(
+    normalized
+  )
+    ? normalized
+    : null
+
+}
+
+
+// ======================================================
+// GET PRODUCT TYPE
+// ======================================================
+
+const getProductType = product => {
+
+  if (!product) {
+
+    return ''
+
+  }
+
+
+  const candidates = [
+
+    product?.type,
+
+    product?.productType,
+
+    product?.category,
+
+    product?.categoryType,
+
+    product?.itemType,
+
+    product?.kind,
+
+    product?.productCategory,
+
+    product?.specifications?.type,
+
+    product?.attributes?.type
+
+  ]
+
+
+  for (
+    const value of candidates
+  ) {
+
+    const normalized =
+      normalizeType(value)
+
+
+    if (
+      normalized === 'tire' ||
+      normalized === 'battery' ||
+      normalized === 'oil'
+    ) {
+
+      return normalized
+
+    }
+
+  }
+
+
+  return ''
+
+}
+
+
+// ======================================================
+// GET TIRE DATA
+// ======================================================
+
+const getProductTire = product => {
+
+  return (
+
+    product?.tire ||
+
+    product?.tireData ||
+
+    product?.tireSpecification ||
+
+    product?.tireSpecifications ||
+
+    product?.specifications?.tire ||
+
+    product?.specification?.tire ||
+
+    product?.attributes?.tire ||
+
+    {}
+
+  )
+
+}
+
+
+// ======================================================
+// GET BATTERY DATA
+// ======================================================
+
+const getProductBattery = product => {
+
+  return (
+
+    product?.battery ||
+
+    product?.batteryData ||
+
+    product?.batterySpecification ||
+
+    product?.batterySpecifications ||
+
+    product?.specifications?.battery ||
+
+    product?.specification?.battery ||
+
+    product?.attributes?.battery ||
+
+    {}
+
+  )
+
+}
+
+
+// ======================================================
+// GET OIL DATA
+// ======================================================
+
+const getProductOil = product => {
+
+  return (
+
+    product?.oil ||
+
+    product?.oilData ||
+
+    product?.oilSpecification ||
+
+    product?.oilSpecifications ||
+
+    product?.specifications?.oil ||
+
+    product?.specification?.oil ||
+
+    product?.attributes?.oil ||
+
+    {}
+
+  )
+
+}
+
+
+// ======================================================
+// GET TIRE VALUE
+// ======================================================
+
+const getTireValue = (
+  tire,
+  keys
+) => {
+
+  if (
+    !tire ||
+    typeof tire !== 'object'
+  ) {
+
+    return null
+
+  }
+
+
+  for (
+    const key of keys
+  ) {
+
+    const value =
+      tire?.[key]
+
+
+    if (
+      value !== undefined &&
+      value !== null &&
+      value !== ''
+    ) {
+
+      return value
+
+    }
+
+  }
+
+
+  return null
+
+}
+
+
+// ======================================================
+// GET ALL WAREHOUSE PRODUCTS
+// ======================================================
+
+const getWarehouseProducts = () => {
+
+  let warehouses = []
+
+
+  try {
+
+    const state =
+      useWarehouseStore.getState()
+
+
+    if (
+      Array.isArray(
+        state?.warehouses
+      )
+    ) {
+
+      warehouses =
+        state.warehouses
+
+    }
+
+  }
+  catch (error) {
+
+    console.error(
+      'Warehouse products read failed:',
+      error
+    )
+
+    return []
+
+  }
+
+
+  const products = []
+
+
+  warehouses.forEach(
+    warehouse => {
+
+      if (!warehouse) {
+
+        return
+
+      }
+
+
+      const warehouseProducts =
+        Array.isArray(
+          warehouse?.products
+        )
+          ? warehouse.products
+          : []
+
+
+      warehouseProducts.forEach(
+        product => {
+
+          if (!product) {
+
+            return
+
+          }
+
+
+          const productId =
+            String(
+              product?.productId ??
+              product?.id ??
+              ''
+            ).trim()
+
+
+          if (!productId) {
+
+            return
+
+          }
+
+
+          const quantity =
+            Number(
+              product?.availableQuantity ??
+              product?.quantity ??
+              product?.stock ??
+              0
+            )
+
+
+          const salePrice =
+            Number(
+              product?.salePrice ??
+              product?.sellingPrice ??
+              product?.consumerPrice ??
+              product?.price ??
+              0
+            )
+
+
+          products.push({
+
+            ...product,
+
+            id:
+              productId,
+
+            productId,
+
+            name:
+              product?.name ||
+              product?.productName ||
+              '',
+
+            productName:
+              product?.productName ||
+              product?.name ||
+              '',
+
+            type:
+              normalizeType(
+                product?.type ||
+                product?.productType ||
+                product?.category ||
+                product?.categoryType ||
+                product?.itemType ||
+                product?.kind
+              ),
+
+            warehouseId:
+              warehouse?.id,
+
+            warehouseName:
+              warehouse?.name ||
+              '',
+
+            quantity,
+
+            stock:
+              quantity,
+
+            availableQuantity:
+              quantity,
+
+            salePrice,
+
+            price:
+              salePrice
+
+          })
+
+        }
+      )
+
+    }
+  )
+
+
+  return products
+
+}
+
+
+// ======================================================
+// GET REPOSITORY PRODUCTS
+// ======================================================
+//
+// IMPORTANT
+// ------------------------------------------------------
+// ProductsRepository.getAll() returns:
+//
+// {
+//   success: true,
+//   data: [...]
+// }
+//
+// It does NOT return the products array directly.
+//
+// ======================================================
+
+const getRepositoryProducts = async () => {
+
+  try {
+
+    const response =
+      await ProductsRepository.getAll()
+
+
+    if (
+      response?.success === false
+    ) {
+
+      console.error(
+        'ProductsRepository.getAll failed:',
+        response?.message,
+        response?.errors
+      )
+
+      return []
+
+    }
+
+
+    const products =
+      Array.isArray(
+        response?.data
+      )
+        ? response.data
+        : []
+
+
+    console.log(
+      '[VehicleSearchController] Repository products:',
+      products.length
+    )
+
+
+    return products
+
+  }
+  catch (error) {
+
+    console.error(
+      'ProductsRepository.getAll failed:',
+      error
+    )
+
+    return []
+
+  }
+
+}
+
+
+// ======================================================
+// GET ALL PRODUCTS
+// ======================================================
+//
+// IMPORTANT ARCHITECTURE RULE
+// ------------------------------------------------------
+//
+// Repository products are the complete product catalog.
+//
+// Warehouse products are ONLY used to enrich products with:
+//
+// - stock
+// - availability
+// - warehouse information
+// - current sale price when available
+//
+// Warehouse availability MUST NOT decide whether a product
+// is technically compatible with a vehicle.
+//
+// ======================================================
+
+const getAllProducts = async () => {
+
+  const [
+    repositoryProducts,
+    warehouseProducts
+  ] = await Promise.all([
+
+    getRepositoryProducts(),
+
+    Promise.resolve(
+      getWarehouseProducts()
+    )
+
+  ])
+
+
+  console.log(
+    '[VehicleSearchController] Repository count:',
+    repositoryProducts.length
+  )
+
+  console.log(
+    '[VehicleSearchController] Warehouse count:',
+    warehouseProducts.length
+  )
+
+
+  const map =
+    new Map()
+
+
+  // ====================================================
+  // FIRST: REPOSITORY CATALOG
+  // ====================================================
+
+  repositoryProducts.forEach(
+    product => {
+
+      if (!product) {
+
+        return
+
+      }
+
+
+      const id =
+        String(
+          product?.productId ??
+          product?.id ??
+          ''
+        ).trim()
+
+
+      if (!id) {
+
+        return
+
+      }
+
+
+      map.set(
+        id,
+        {
+
+          ...product,
+
+          id,
+
+          productId:
+            id,
+
+          type:
+            getProductType(product)
+
+        }
+      )
+
+    }
+  )
+
+
+  // ====================================================
+  // SECOND: WAREHOUSE ENRICHMENT
+  // ====================================================
+
+  warehouseProducts.forEach(
+    product => {
+
+      if (!product) {
+
+        return
+
+      }
+
+
+      const id =
+        String(
+          product?.productId ??
+          product?.id ??
+          ''
+        ).trim()
+
+
+      if (!id) {
+
+        return
+
+      }
+
+
+      const existing =
+        map.get(id) ||
+        {}
+
+
+      map.set(
+        id,
+        {
+
+          ...existing,
+
+          ...product,
+
+          id,
+
+          productId:
+            id,
+
+          name:
+            existing?.name ||
+            existing?.productName ||
+            product?.name ||
+            product?.productName ||
+            '',
+
+          productName:
+            existing?.productName ||
+            existing?.name ||
+            product?.productName ||
+            product?.name ||
+            '',
+
+          type:
+            getProductType(existing) ||
+            getProductType(product),
+
+          salePrice:
+            Number(
+              product?.salePrice ??
+              product?.sellingPrice ??
+              product?.consumerPrice ??
+              product?.price ??
+              existing?.salePrice ??
+              existing?.sellingPrice ??
+              existing?.consumerPrice ??
+              existing?.price ??
+              0
+            ),
+
+          price:
+            Number(
+              product?.salePrice ??
+              product?.sellingPrice ??
+              product?.consumerPrice ??
+              product?.price ??
+              existing?.salePrice ??
+              existing?.sellingPrice ??
+              existing?.consumerPrice ??
+              existing?.price ??
+              0
+            )
+
+        }
+      )
+
+    }
+  )
+
+
+  // ====================================================
+  // BUILD WAREHOUSE AVAILABILITY
+  // ====================================================
+
+  const availabilityMap =
+    new Map()
+
+
+  warehouseProducts.forEach(
+    product => {
+
+      if (!product) {
+
+        return
+
+      }
+
+
+      const id =
+        String(
+          product?.productId ??
+          product?.id ??
+          ''
+        ).trim()
+
+
+      if (!id) {
+
+        return
+
+      }
+
+
+      if (
+        !availabilityMap.has(id)
+      ) {
+
+        availabilityMap.set(
+          id,
+          []
+        )
+
+      }
+
+
+      const quantity =
+        Number(
+          product?.availableQuantity ??
+          product?.quantity ??
+          product?.stock ??
+          0
+        )
+
+
+      availabilityMap
+        .get(id)
+        .push({
+
+          id:
+            product?.warehouseId,
+
+          warehouseId:
+            product?.warehouseId,
+
+          name:
+            product?.warehouseName ||
+            'ط§ظ„ظ…ط®ط²ظ†',
+
+          warehouseName:
+            product?.warehouseName ||
+            'ط§ظ„ظ…ط®ط²ظ†',
+
+          quantity
+
+        })
+
+    }
+  )
+
+
+  // ====================================================
+  // FINAL PRODUCTS
+  // ====================================================
+
+  const finalProducts =
+    Array.from(
+      map.values()
+    )
+      .map(
+        product => {
+
+          const productId =
+            String(
+              product?.productId ??
+              product?.id ??
+              ''
+            ).trim()
+
+
+          const warehouses =
+            availabilityMap.get(
+              productId
+            ) || []
+
+
+          const totalStock =
+            warehouses.reduce(
+              (
+                total,
+                warehouse
+              ) =>
+                total +
+                Number(
+                  warehouse?.quantity ||
+                  0
+                ),
+              0
+            )
+
+
+          return {
+
+            ...product,
+
+            id:
+              productId,
+
+            productId,
+
+            stock:
+              totalStock,
+
+            quantity:
+              totalStock,
+
+            availableQuantity:
+              totalStock,
+
+            availability: {
+
+              available:
+                totalStock > 0,
+
+              quantity:
+                totalStock,
+
+              warehouses
+
+            }
+
+          }
+
+        }
+      )
+
+
+  console.log(
+    '[VehicleSearchController] Final catalog:',
+    finalProducts.length
+  )
+
+
+  return finalProducts
+
+}
+
+
+// ======================================================
+// CONTROLLER
+// ======================================================
+
+class VehicleSearchController {
+
+
+  // ====================================================
+  // VEHICLE SEARCH
+  // ====================================================
+
+  static async searchVehicle({
+
+    vehicleType,
+
+    make,
+
+    model,
+
+    year
+
+  }) {
+
+    const products =
+      await getAllProducts()
+
+
+    console.log(
+      '[VehicleSearchController] Vehicle search:',
+      {
+        vehicleType,
+        make,
+        model,
+        year,
+        productsCount:
+          products.length
+      }
+    )
+
+
+    return VehicleEngine.search({
+
+      vehicleType,
+
+      make,
+
+      model,
+
+      year,
+
+      products
+
+    })
+
+  }
+
+
+  // ====================================================
+  // TIRE SEARCH
+  // ====================================================
+
+  static async searchTire({
+
+    width,
+
+    profile,
+
+    rim,
+
+    format
+
+  }) {
+
+    const products =
+      await getAllProducts()
+
+
+    const requestedWidth =
+      numberValue(width)
+
+
+    const requestedProfile =
+      numberValue(profile)
+
+
+    const requestedRim =
+      numberValue(rim)
+
+
+    if (
+      requestedWidth === null ||
+      requestedRim === null
+    ) {
+
+      return []
+
+    }
+
+
+    return products
+
+      // ----------------------------------------------
+      // TYPE
+      // ----------------------------------------------
+
+      .filter(
+        product =>
+          getProductType(product) ===
+          'tire'
+      )
+
+      // ----------------------------------------------
+      // SIZE
+      // ----------------------------------------------
+
+      .filter(
+        product => {
+
+          const tire =
+            getProductTire(product)
+
+
+          const productWidth =
+            numberValue(
+              getTireValue(
+                tire,
+                [
+                  'width',
+                  'sectionWidth',
+                  'tireWidth'
+                ]
+              )
+            )
+
+
+          const productProfile =
+            numberValue(
+              getTireValue(
+                tire,
+                [
+                  'profile',
+                  'height',
+                  'aspectRatio',
+                  'aspect'
+                ]
+              )
+            )
+
+
+          const productRim =
+            numberValue(
+              getTireValue(
+                tire,
+                [
+                  'rim',
+                  'rimSize',
+                  'wheelDiameter',
+                  'diameter'
+                ]
+              )
+            )
+
+
+          if (
+            productWidth !==
+            requestedWidth
+          ) {
+
+            return false
+
+          }
+
+
+          if (
+            productRim !==
+            requestedRim
+          ) {
+
+            return false
+
+          }
+
+
+          if (
+            format ===
+            'two-part'
+          ) {
+
+            return true
+
+          }
+
+
+          return (
+
+            productProfile !== null &&
+
+            requestedProfile !== null &&
+
+            productProfile ===
+            requestedProfile
+
+          )
+
+        }
+      )
+
+      // ----------------------------------------------
+      // AVAILABLE STOCK
+      // ----------------------------------------------
+
+      .filter(
+        product =>
+          Number(
+            product?.availability?.quantity ??
+            product?.quantity ??
+            product?.stock ??
+            0
+          ) > 0
+      )
+
+}
+
+
+// ====================================================
+// BATTERY SEARCH
+// ====================================================
+
+static async searchBattery({
+
+  capacity
+
+}) {
+
+  const products =
+    await getAllProducts()
+
+
+  const requestedCapacity =
+    numberValue(capacity)
+
+
+  if (
+    requestedCapacity === null
+  ) {
+
+    return []
+
+  }
+
+
+  return products
+
+    // ----------------------------------------------
+    // TYPE
+    // ----------------------------------------------
+
+    .filter(
+      product =>
+        getProductType(product) ===
+        'battery'
+    )
+
+    // ----------------------------------------------
+    // CAPACITY
+    // ----------------------------------------------
+
+    .filter(
+      product => {
+
+        const battery =
+          getProductBattery(product)
+
+
+        const productCapacity =
+          numberValue(
+
+            battery?.capacity ??
+            battery?.ampereHour ??
+            battery?.ah ??
+            battery?.amp ??
+            battery?.ampHours ??
+            product?.capacity ??
+            product?.ampereHour ??
+            product?.ah ??
+            product?.amp ??
+            product?.ampHours
+
+          )
+
+
+        return (
+          productCapacity ===
+          requestedCapacity
+        )
+
+      }
+    )
+
+    // ----------------------------------------------
+    // AVAILABLE STOCK
+    // ----------------------------------------------
+
+    .filter(
+      product =>
+        Number(
+          product?.availability?.quantity ??
+          product?.quantity ??
+          product?.stock ??
+          0
+        ) > 0
+    )
+
+}
+
+
+// ====================================================
+// OIL SEARCH
+// ====================================================
+
+static async searchOil({
+
+  viscosity
+
+}) {
+
+  const products =
+    await getAllProducts()
+
+
+  const requestedViscosity =
+    normalizeText(viscosity)
+      .replace(/\s+/g, '')
+      .replace(/أ—/g, 'x')
+
+
+  if (!requestedViscosity) {
+
+    return []
+
+  }
+
+
+  return products
+
+    // ----------------------------------------------
+    // TYPE
+    // ----------------------------------------------
+
+    .filter(
+      product =>
+        getProductType(product) ===
+        'oil'
+    )
+
+    // ----------------------------------------------
+    // VISCOSITY
+    // ----------------------------------------------
+
+    .filter(
+      product => {
+
+        const oil =
+          getProductOil(product)
+
+
+        const productViscosity =
+          normalizeText(
+
+            oil?.viscosity ??
+            oil?.grade ??
+            oil?.oilGrade ??
+            product?.viscosity ??
+            product?.grade ??
+            product?.oilGrade ??
+            ''
+
+          )
+            .replace(/\s+/g, '')
+            .replace(/أ—/g, 'x')
+
+
+        return (
+          productViscosity ===
+          requestedViscosity
+        )
+
+      }
+    )
+
+    // ----------------------------------------------
+    // AVAILABLE STOCK
+    // ----------------------------------------------
+
+    .filter(
+      product =>
+        Number(
+          product?.availability?.quantity ??
+          product?.quantity ??
+          product?.stock ??
+          0
+        ) > 0
+    )
+
+}
+
+}
+
+
+// ======================================================
+// EXPORT
+// ======================================================
+
+export default VehicleSearchController
+
+
+============================================================
+FILE: src\core\vehicles\VehicleMapper.js
+============================================================
+
+// ======================================================
+// EL OLA ERP
+// Vehicle Mapper
+// ======================================================
+
+export default class VehicleMapper {
+
+
+  // ====================================================
+  // TO NUMBER
+  // ====================================================
+
+  static toNumber(
+
+    value,
+
+    fallback = 0
+
+  ) {
+
+    const number = Number(value)
+
+    return Number.isFinite(number)
+
+      ? number
+
+      : fallback
+
+  }
+
+
+  // ====================================================
+  // NORMALIZE VEHICLE TYPE
+  // ====================================================
+
+  static normalizeVehicleType(
+
+    type = ''
+
+  ) {
+
+    const value =
+
+      String(type ?? '')
+
+        .toLowerCase()
+
+        .trim()
+
+
+    if (
+
+      [
+
+        'car',
+
+        'cars',
+
+        'passenger',
+
+        'passenger car',
+
+        'sedan',
+
+        'طµط§ظ„ظˆظ†',
+
+        'ط³ظٹط§ط±ط©',
+
+        'ط³ظٹط§ط±ط§طھ'
+
+      ].includes(value)
+
+    ) {
+
+      return 'car'
+
+    }
+
+
+    if (
+
+      [
+
+        'truck',
+
+        'trucks',
+
+        'lorry',
+
+        'ط´ط§ط­ظ†ط©',
+
+        'ط´ط§ط­ظ†ط§طھ'
+
+      ].includes(value)
+
+    ) {
+
+      return 'truck'
+
+    }
+
+
+    if (
+
+      [
+
+        'bus',
+
+        'buses',
+
+        'ط­ط§ظپظ„ط©',
+
+        'ط§طھظˆط¨ظٹط³',
+
+        'ط£طھظˆط¨ظٹط³'
+
+      ].includes(value)
+
+    ) {
+
+      return 'bus'
+
+    }
+
+
+    if (
+
+      [
+
+        'motor',
+
+        'motorcycle',
+
+        'motorcycles',
+
+        'bike',
+
+        'ط¯ط±ط§ط¬ط©',
+
+        'ط¯ط±ط§ط¬ط© ظ†ط§ط±ظٹط©'
+
+      ].includes(value)
+
+    ) {
+
+      return 'motorcycle'
+
+    }
+
+
+    if (
+
+      [
+
+        'suv',
+
+        'suvs'
+
+      ].includes(value)
+
+    ) {
+
+      return 'suv'
+
+    }
+
+
+    if (
+
+      [
+
+        'pickup',
+
+        'pick-up',
+
+        'pickups',
+
+        'ط¨ظٹظƒ ط§ط¨',
+
+        'ط¨ظٹظƒ ط£ط¨'
+
+      ].includes(value)
+
+    ) {
+
+      return 'pickup'
+
+    }
+
+
+    return value
+
+  }
+
+
+  // ====================================================
+  // VEHICLE TYPES
+  // ====================================================
+
+  static mapVehicleTypes(
+
+    items = []
+
+  ) {
+
+    if (
+
+      !Array.isArray(items)
+
+    )
+
+      return []
+
+
+    return items
+
+      .filter(Boolean)
+
+      .map(item => {
+
+        if (
+
+          typeof item === 'string'
+
+        ) {
+
+          const type =
+
+            this.normalizeVehicleType(
+
+              item
+
+            )
+
+
+          return {
+
+            id: type,
+
+            value: type,
+
+            name: item,
+
+            label: item,
+
+            image: ''
+
+          }
+
+        }
+
+
+        const rawType =
+
+          item?.type ??
+
+          item?.value ??
+
+          item?.id ??
+
+          item?.name ??
+
+          ''
+
+
+        const type =
+
+          this.normalizeVehicleType(
+
+            rawType
+
+          )
+
+
+        return {
+
+          id:
+
+            item?.id ??
+
+            type,
+
+          value: type,
+
+          name:
+
+            item?.name ??
+
+            item?.label ??
+
+            item?.type ??
+
+            type,
+
+          label:
+
+            item?.label ??
+
+            item?.name ??
+
+            item?.type ??
+
+            type,
+
+          image:
+
+            item?.image ??
+
+            ''
+
+        }
+
+      })
+
+  }
+
+
+  // ====================================================
+  // BRANDS
+  // ====================================================
+
+  static mapBrands(
+
+    items = []
+
+  ) {
+
+    if (
+
+      !Array.isArray(items)
+
+    )
+
+      return []
+
+
+    return items
+
+      .filter(
+
+        item =>
+
+          item &&
+
+          (
+
+            typeof item === 'object' ||
+
+            typeof item === 'string'
+
+          )
+
+      )
+
+      .map(item => {
+
+        if (
+
+          typeof item === 'string'
+
+        ) {
+
+          return {
+
+            id: item,
+
+            value: item,
+
+            name: item,
+
+            label: item
+
+          }
+
+        }
+
+
+        const id =
+
+          item?.id ??
+
+          item?.make_id ??
+
+          item?.make ??
+
+          item?.name ??
+
+          item?.make_display ??
+
+          ''
+
+
+        const name =
+
+          item?.name ??
+
+          item?.make_display ??
+
+          item?.make ??
+
+          item?.label ??
+
+          id
+
+
+        return {
+
+          ...item,
+
+          id,
+
+          value: id,
+
+          name,
+
+          label: name
+
+        }
+
+      })
+
+  }
+
+
+  // ====================================================
+  // MODELS
+  // ====================================================
+
+  static mapModels(
+
+    items = []
+
+  ) {
+
+    if (
+
+      !Array.isArray(items)
+
+    )
+
+      return []
+
+
+    return items
+
+      .filter(
+
+        item =>
+
+          item &&
+
+          (
+
+            typeof item === 'object' ||
+
+            typeof item === 'string'
+
+          )
+
+      )
+
+      .map(item => {
+
+        if (
+
+          typeof item === 'string'
+
+        ) {
+
+          return {
+
+            id: item,
+
+            value: item,
+
+            name: item,
+
+            label: item
+
+          }
+
+        }
+
+
+        const id =
+
+          item?.id ??
+
+          item?.model_id ??
+
+          item?.model ??
+
+          item?.model_name ??
+
+          item?.name ??
+
+          ''
+
+
+        const name =
+
+          item?.name ??
+
+          item?.model_name ??
+
+          item?.model ??
+
+          item?.label ??
+
+          id
+
+
+        return {
+
+          ...item,
+
+          id,
+
+          value: id,
+
+          name,
+
+          label: name
+
+        }
+
+      })
+
+  }
+
+
+  // ====================================================
+  // YEARS
+  // ====================================================
+
+  static mapYears(
+
+    items = []
+
+  ) {
+
+    if (
+
+      !Array.isArray(items)
+
+    )
+
+      return []
+
+
+
+    return items
+
+      .map(item => {
+
+        const value =
+
+          typeof item === 'object'
+
+            ? (
+
+                item?.year ??
+
+                item?.name ??
+
+                item?.value ??
+
+                item?.id
+
+              )
+
+            : item
+
+
+        if (
+
+          value === undefined ||
+
+          value === null ||
+
+          value === ''
+
+        ) {
+
+          return null
+
+        }
+
+
+        return {
+
+          id: String(value),
+
+          value: String(value),
+
+          name: String(value),
+
+          label: String(value)
+
+        }
+
+      })
+
+      .filter(Boolean)
+
+  }
+
+
+  // ====================================================
+  // CARQUERY
+  // ====================================================
+
+  static fromCarQuery(
+
+    vehicle = {}
+
+  ) {
+
+    const make =
+
+      vehicle.make_display ||
+
+      vehicle.make_name ||
+
+      vehicle.model_make_display ||
+
+      vehicle.model_make_id ||
+
+      ''
+
+
+    const model =
+
+      vehicle.model_name ||
+
+      vehicle.model_display ||
+
+      ''
+
+
+    const yearFrom =
+
+      this.toNumber(
+
+        vehicle.model_year ||
+
+        vehicle.year_from ||
+
+        vehicle.yearFrom,
+
+        1980
+
+      )
+
+
+    const yearTo =
+
+      this.toNumber(
+
+        vehicle.year_to ||
+
+        vehicle.yearTo,
+
+        new Date().getFullYear()
+
+      )
+
+
+    const type =
+
+      this.normalizeVehicleType(
+
+        vehicle.vehicle_type ||
+
+        vehicle.type
+
+      )
+
+
+    return {
+
+      id:
+
+        vehicle.model_id ||
+
+        `${make}-${model}-${yearFrom}`,
+
+      vehicleType: type,
+
+      type,
+
+      typeName: type,
+
+      make,
+
+      model,
+
+      yearFrom,
+
+      yearTo,
+
+      source: 'carquery',
+
+      raw: vehicle
+
+    }
+
+  }
+
+
+  // ====================================================
+  // NHTSA
+  // ====================================================
+
+  static fromNHTSA(
+
+    vehicle = {}
+
+  ) {
+
+    const make =
+
+      vehicle.Make_Name || ''
+
+
+    const model =
+
+      vehicle.Model_Name || ''
+
+
+    return {
+
+      id:
+
+        vehicle.Model_ID ||
+
+        `${make}-${model}`,
+
+      vehicleType: 'car',
+
+      type: 'car',
+
+      typeName: 'car',
+
+      make,
+
+      model,
+
+      yearFrom: 1980,
+
+      yearTo:
+
+        new Date().getFullYear(),
+
+      source: 'nhtsa',
+
+      raw: vehicle
+
+    }
+
+  }
+
+
+  // ====================================================
+  // LOCAL
+  // ====================================================
+
+  static fromLocal(
+
+    vehicle = {}
+
+  ) {
+
+    return {
+
+      ...vehicle,
+
+      source: 'local'
+
+    }
+
+  }
+
+
+  // ====================================================
+  // ARRAY
+  // ====================================================
+
+  static mapArray(
+
+    items = [],
+
+    mapper
+
+  ) {
+
+    if (
+
+      !Array.isArray(items)
+
+    )
+
+      return []
+
+
+    return items.map(
+
+      mapper
+
+    )
+
+  }
+
+}
+
+
+============================================================
+FILE: src\core\vehicles\providers\VehDBFitmentProvider.js
+============================================================
+
+// ======================================================
+// EL OLA ERP
+// VehDB Fitment Provider
+//
+// RESPONSIBILITY
+// ------------------------------------------------------
+//
+// Resolve OEM and alternative tire fitment for a vehicle.
+//
+// FLOW
+// ------------------------------------------------------
+//
+// Vehicle
+//   â†“
+// VehDBFitmentProvider
+//   â†“
+// OEM / Alternative Tire Sizes
+//   â†“
+// VehicleSpecificationProvider
+//   â†“
+// OEMCompatibilityEngine
+//   â†“
+// Product Matching
+//
+// IMPORTANT
+// ------------------------------------------------------
+//
+// This provider:
+// - DOES NOT read inventory
+// - DOES NOT read product prices
+// - DOES NOT decide product availability
+// - DOES NOT create products
+//
+// It only resolves vehicle tire fitment.
+//
+// VehDB is optional.
+// If VITE_VEHDB_API_KEY is missing, this provider
+// safely returns null instead of fabricating data.
+// ======================================================
+
+
+// ======================================================
+// CONSTANTS
+// ======================================================
+
+const BASE_URL =
+  'https://api.vehdb.com/v1'
+
+
+// ======================================================
+// NORMALIZE TEXT
+// ======================================================
+
+const normalizeText = value => {
+
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/ط£|ط¥|ط¢/g, 'ط§')
+    .replace(/ط©/g, 'ظ‡')
+    .replace(/ظ‰/g, 'ظٹ')
+    .replace(/\s+/g, ' ')
+
+}
+
+
+// ======================================================
+// API KEY
+// ======================================================
+
+const getApiKey = () => {
+
+  return String(
+    import.meta?.env?.VITE_VEHDB_API_KEY ?? ''
+  ).trim()
+
+}
+
+
+// ======================================================
+// SAFE REQUEST
+// ======================================================
+
+const requestJson = async (
+
+  url
+
+) => {
+
+  const apiKey =
+    getApiKey()
+
+
+  if (!apiKey) {
+
+    return null
+
+  }
+
+
+  try {
+
+    const response =
+      await fetch(
+
+        url,
+
+        {
+
+          method:
+            'GET',
+
+          headers: {
+
+            Accept:
+              'application/json',
+
+            Authorization:
+              `Bearer ${apiKey}`
+
+          }
+
+        }
+
+      )
+
+
+    if (!response.ok) {
+
+      console.warn(
+
+        '[VehDBFitmentProvider] HTTP request failed:',
+
+        response.status,
+        response.statusText
+
+      )
+
+      return null
+
+    }
+
+
+    return await response.json()
+
+  }
+
+  catch (error) {
+
+    console.warn(
+
+      '[VehDBFitmentProvider] Request failed:',
+
+      error
+
+    )
+
+    return null
+
+  }
+
+}
+
+
+// ======================================================
+// COLLECT SIZE VALUES
+// ======================================================
+
+const collectSizes = value => {
+
+  const sizes = []
+
+
+  const add = item => {
+
+    if (
+      item === null ||
+      item === undefined ||
+      item === ''
+    ) {
+
+      return
+
+    }
+
+
+    if (
+      Array.isArray(item)
+    ) {
+
+      item.forEach(add)
+
+      return
+
+    }
+
+
+    if (
+      typeof item === 'string'
+    ) {
+
+      item
+        .split(',')
+        .forEach(
+          part => {
+
+            const size =
+              String(part)
+                .trim()
+
+            if (size) {
+
+              sizes.push(size)
+
+            }
+
+          }
+        )
+
+      return
+
+    }
+
+
+    if (
+      typeof item === 'object'
+    ) {
+
+      Object.values(item)
+        .forEach(add)
+
+      return
+
+    }
+
+
+    sizes.push(
+      String(item).trim()
+    )
+
+  }
+
+
+  add(value)
+
+
+  return sizes
+
+}
+
+
+// ======================================================
+// DEDUPLICATE SIZES
+// ======================================================
+
+const uniqueSizes = sizes => {
+
+  const seen =
+    new Set()
+
+
+  return sizes.filter(
+    size => {
+
+      const normalized =
+        normalizeText(size)
+
+
+      if (!normalized) {
+
+        return false
+
+      }
+
+
+      if (
+        seen.has(normalized)
+      ) {
+
+        return false
+
+      }
+
+
+      seen.add(normalized)
+
+      return true
+
+    }
+  )
+
+}
+
+
+// ======================================================
+// FIND DATA ARRAY
+// ======================================================
+
+const getDataArray = result => {
+
+  if (
+    Array.isArray(
+      result?.data
+    )
+  ) {
+
+    return result.data
+
+  }
+
+
+  if (
+    Array.isArray(
+      result?.results
+    )
+  ) {
+
+    return result.results
+
+  }
+
+
+  if (
+    Array.isArray(result)
+  ) {
+
+    return result
+
+  }
+
+
+  return []
+
+}
+
+
+// ======================================================
+// NORMALIZE FITMENT RECORD
+// ======================================================
+
+const normalizeFitmentRecord = (
+
+  item,
+
+  vehicle
+
+) => {
+
+  if (
+    !item ||
+    typeof item !== 'object'
+  ) {
+
+    return null
+
+  }
+
+
+  const oemSizes =
+    uniqueSizes(
+
+      collectSizes(
+
+        item?.tire_size_oem ??
+
+        item?.oem_tire_size ??
+
+        item?.oemSize ??
+
+        item?.tireSizeOEM ??
+
+        item?.tire_size
+
+      )
+
+    )
+
+
+  const alternateSizes =
+    uniqueSizes(
+
+      collectSizes(
+
+        item?.alternate_tire_sizes ??
+
+        item?.alternateTireSizes ??
+
+        item?.alternate_sizes ??
+
+        item?.alternatives ??
+
+        item?.alternate
+
+      )
+
+    )
+
+
+  const allSizes =
+    uniqueSizes([
+
+      ...oemSizes,
+
+      ...alternateSizes
+
+    ])
+
+
+  return {
+
+    make:
+      item?.make ??
+      vehicle?.make ??
+      null,
+
+    brand:
+      item?.make ??
+      vehicle?.make ??
+      null,
+
+    model:
+      item?.model ??
+      vehicle?.model ??
+      null,
+
+    modelName:
+      item?.model ??
+      vehicle?.model ??
+      null,
+
+    year:
+      item?.year ??
+      vehicle?.year ??
+      null,
+
+    submodel:
+      item?.submodel ??
+      item?.trim ??
+      item?.configuration ??
+      null,
+
+    oemSizes,
+
+    alternateSizes,
+
+    sizes:
+      allSizes,
+
+    raw:
+      item
+
+  }
+
+}
+
+
+// ======================================================
+// PROVIDER
+// ======================================================
+
+export default class VehDBFitmentProvider {
+
+
+  // ====================================================
+  // ENABLED
+  // ====================================================
+
+  static isEnabled() {
+
+    return Boolean(
+      getApiKey()
+    )
+
+  }
+
+
+  // ====================================================
+  // FIND TIRE FITMENT
+  // ====================================================
+
+  static async findTireFitment({
+
+    make,
+
+    model,
+
+    year
+
+  } = {}) {
+
+    if (
+      !make ||
+      !model
+    ) {
+
+      return null
+
+    }
+
+
+    if (
+      !this.isEnabled()
+    ) {
+
+      return null
+
+    }
+
+
+    const params =
+      new URLSearchParams()
+
+
+    params.set(
+      'make',
+      String(make).trim()
+    )
+
+
+    params.set(
+      'model',
+      String(model).trim()
+    )
+
+
+    if (
+      year
+    ) {
+
+      params.set(
+        'year',
+        String(year)
+      )
+
+    }
+
+
+    const result =
+      await requestJson(
+
+        `${BASE_URL}/tire-sizes?${params.toString()}`
+
+      )
+
+
+    if (!result) {
+
+      return null
+
+    }
+
+
+    const records =
+      getDataArray(result)
+
+
+    if (
+      records.length === 0
+    ) {
+
+      return null
+
+    }
+
+
+    const fitments =
+      records
+
+        .map(
+          item =>
+            normalizeFitmentRecord(
+
+              item,
+
+              {
+                make,
+                model,
+                year
+              }
+
+            )
+        )
+
+        .filter(Boolean)
+
+
+    if (
+      fitments.length === 0
+    ) {
+
+      return null
+
+    }
+
+
+    const oemSizes =
+      uniqueSizes(
+
+        fitments.flatMap(
+          item =>
+            item.oemSizes
+        )
+
+      )
+
+
+    const alternateSizes =
+      uniqueSizes(
+
+        fitments.flatMap(
+          item =>
+            item.alternateSizes
+        )
+
+      )
+
+
+    const sizes =
+      uniqueSizes([
+
+      ...oemSizes,
+
+      ...alternateSizes
+
+    ])
+
+
+    if (
+      sizes.length === 0
+    ) {
+
+      return null
+
+    }
+
+
+    return {
+
+      make,
+
+      brand:
+        make,
+
+      model,
+
+      modelName:
+        model,
+
+      year:
+        year ?? null,
+
+      oemSizes,
+
+      alternateSizes,
+
+      sizes,
+
+      fitments,
+
+      source:
+        'vehdb',
+
+      raw:
+        result
+
+    }
+
+  }
+
+
+  // ====================================================
+  // GET OEM SIZES
+  // ====================================================
+
+  static async getOEMSizes({
+
+    make,
+
+    model,
+
+    year
+
+  } = {}) {
+
+    const result =
+      await this.findTireFitment({
+
+        make,
+
+        model,
+
+        year
+
+      })
+
+
+    return (
+
+      result?.oemSizes ??
+
+      []
+
+    )
+
+  }
+
+
+  // ====================================================
+  // GET ALTERNATIVE SIZES
+  // ====================================================
+
+  static async getAlternativeSizes({
+
+    make,
+
+    model,
+
+    year
+
+  } = {}) {
+
+    const result =
+      await this.findTireFitment({
+
+        make,
+
+        model,
+
+        year
+
+      })
+
+
+    return (
+
+      result?.alternateSizes ??
+
+      []
+
+    )
+
+  }
+
+
+  // ====================================================
+  // GET COMPLETE FITMENT
+  // ====================================================
+
+  static async getSpecifications({
+
+    make,
+
+    model,
+
+    year
+
+  } = {}) {
+
+    return this.findTireFitment({
+
+      make,
+
+      model,
+
+      year
+
+    })
+
+  }
+
+}
+
+
+============================================================
+FILE: src\core\services\VehicleLookupService.js
+============================================================
+
+// ======================================================
+// EL OLA ERP
+// Vehicle Lookup Service
+// ======================================================
+
+import VehicleRepository
+  from '../../repositories/VehicleRepository'
+
+class VehicleLookupService {
+
+  // ======================================================
+  // VEHICLE TYPES
+  // ======================================================
+
+  static getCategories() {
+
+    return VehicleRepository.getVehicleTypes()
+
+  }
+
+  // ======================================================
+  // BRANDS
+  // ======================================================
+
+  static getBrands(vehicleType = '') {
+
+    return VehicleRepository.getBrands(
+
+      vehicleType
+
+    )
+
+  }
+
+  // ======================================================
+  // MODELS
+  // ======================================================
+
+  static getModels(brand, vehicleType = '') {
+
+    return VehicleRepository.getModels({
+
+      brand,
+
+      vehicleType
+
+    })
+
+  }
+
+  // ======================================================
+  // YEARS
+  // ======================================================
+
+  static getYears({
+
+    manufacturer,
+
+    model
+
+  }) {
+
+    return VehicleRepository.getYears({
+
+      brand: manufacturer,
+
+      model
+
+    })
+
+  }
+
+  // ======================================================
+  // FIND VEHICLE
+  // ======================================================
+
+  static findVehicle({
+
+    manufacturer,
+
+    model,
+
+    year
+
+  }) {
+
+    return VehicleRepository.find({
+
+      brand: manufacturer,
+
+      model,
+
+      year
+
+    })
+
+  }
+
+}
+
+export default VehicleLookupService
+
+
+============================================================
+FILE: src\core\engines\VehicleEngine.js
+============================================================
+
+// ======================================================
+// EL OLA ERP
+// Vehicle Engine
+// ======================================================
+//
+// RESPONSIBILITY
+// ------------------------------------------------------
+//
+// Central engine for vehicle-based product compatibility.
+//
+// SEARCH FLOW
+// ------------------------------------------------------
+//
+// Vehicle
+//    â†“
+// VehicleProvider
+//    â†“
+// OEMCompatibilityEngine
+//    â†“
+// Technical Product Compatibility
+//    â†“
+// Compatible Products
+//
+// IMPORTANT
+// ------------------------------------------------------
+//
+// Product availability is NOT evaluated here.
+//
+// This engine answers:
+//
+// "Is this product technically compatible with
+//  this vehicle?"
+//
+// It does NOT answer:
+//
+// "Is this product currently available in Elola?"
+//
+// COMPATIBILITY SOURCES
+// ------------------------------------------------------
+//
+// 1. Explicit product vehicle compatibility.
+// 2. OEM tire specification.
+// 3. Alternative tire sizes.
+// 4. OEM battery specification.
+// 5. OEM oil specification.
+//
+// IMPORTANT ARCHITECTURE RULE
+// ------------------------------------------------------
+//
+// Vehicle compatibility MUST be determined independently
+// from Elola inventory availability.
+//
+// A technically compatible product remains compatible
+// even when it is not currently available in Elola.
+//
+// ======================================================
+
+
+import VehicleProvider
+  from '../vehicles/VehicleProvider'
+
+import OEMCompatibilityEngine
+  from './OEMCompatibilityEngine'
+
+import VehicleCompatibilityEngine
+  from './VehicleCompatibilityEngine'
+
+
+// ======================================================
+// NORMALIZE TEXT
+// ======================================================
+
+const normalizeText = value => {
+
+  return String(value ?? '')
+
+    .trim()
+
+    .toLowerCase()
+
+    .replace(/ط£|ط¥|ط¢/g, 'ط§')
+
+    .replace(/ط©/g, 'ظ‡')
+
+    .replace(/ظ‰/g, 'ظٹ')
+
+    .replace(
+      /[\u064B-\u065F\u0670]/g,
+      ''
+    )
+
+    .replace(/\s+/g, ' ')
+
+}
+
+
+// ======================================================
+// COMPACT TEXT
+// ======================================================
+
+const compactText = value => {
+
+  return normalizeText(value)
+
+    .replace(
+      /[\s_\\\-\/أ—*]/g,
+      ''
+    )
+
+}
+
+
+// ======================================================
+// NUMBER
+// ======================================================
+
+const numberValue = value => {
+
+  if (
+    value === null ||
+    value === undefined ||
+    value === ''
+  ) {
+
+    return null
+
+  }
+
+
+  const number =
+
+    Number(
+
+      String(value)
+
+        .trim()
+
+        .replace(',', '.')
+
+    )
+
+
+  return Number.isFinite(number)
+
+    ? number
+
+    : null
+
+}
+
+
+// ======================================================
+// VALUE MATCH
+// ======================================================
+
+const valuesMatch = (
+  actual,
+  wanted
+) => {
+
+  const left =
+    compactText(actual)
+
+
+  const right =
+    compactText(wanted)
+
+
+  if (
+    !left ||
+    !right
+  ) {
+
+    return false
+
+  }
+
+
+  return (
+
+    left === right ||
+
+    left.includes(right) ||
+
+    right.includes(left)
+
+  )
+
+}
+
+
+// ======================================================
+// PRODUCT TYPE
+// ======================================================
+
+const normalizeProductType = product => {
+
+  if (!product) {
+
+    return ''
+
+  }
+
+
+  const candidates = [
+
+    product?.type,
+
+    product?.productType,
+
+    product?.category,
+
+    product?.categoryType,
+
+    product?.itemType,
+
+    product?.kind,
+
+    product?.productCategory,
+
+    product?.specifications?.type,
+
+    product?.specifications?.productType,
+
+    product?.specifications?.category,
+
+    product?.attributes?.type,
+
+    product?.attributes?.productType,
+
+    product?.attributes?.category
+
+  ]
+
+
+  const normalizedCandidates =
+
+    candidates
+
+      .filter(
+
+        value =>
+
+          value !== null &&
+
+          value !== undefined &&
+
+          value !== ''
+
+      )
+
+      .map(
+
+        value =>
+
+          normalizeText(value)
+
+      )
+
+
+  // ----------------------------------------------------
+  // EXPLICIT TYPE
+  // ----------------------------------------------------
+
+  for (
+
+    const type
+
+    of normalizedCandidates
+
+  ) {
+
+    if (
+
+      type === 'tire' ||
+
+      type === 'tires' ||
+
+      type === 'tyre' ||
+
+      type === 'tyres' ||
+
+      type.includes('tire') ||
+
+      type.includes('tyre') ||
+
+      type.includes('ط§ط·ط§ط±') ||
+
+      type.includes('ط§ط·ط§ط±ط§طھ') ||
+
+      type.includes('ظƒط§ظˆطھط´')
+
+    ) {
+
+      return 'tire'
+
+    }
+
+
+    if (
+
+      type === 'battery' ||
+
+      type === 'batteries' ||
+
+      type.includes('battery') ||
+
+      type.includes('ط¨ط·ط§ط±ظٹظ‡') ||
+
+      type.includes('ط¨ط·ط§ط±ظٹط§طھ') ||
+
+      type.includes('ط¨ط·ط§ط±ظٹط©')
+
+    ) {
+
+      return 'battery'
+
+    }
+
+
+    if (
+
+      type === 'oil' ||
+
+      type === 'oils' ||
+
+      type.includes('oil') ||
+
+      type.includes('ط²ظٹطھ') ||
+
+      type.includes('ط²ظٹظˆطھ')
+
+    ) {
+
+      return 'oil'
+
+    }
+
+  }
+
+
+  // ----------------------------------------------------
+  // STRUCTURAL FALLBACK
+  // ----------------------------------------------------
+
+  if (
+
+    product?.tire ||
+
+    product?.tireData ||
+
+    product?.tireSpecification ||
+
+    product?.tireSpecifications ||
+
+    product?.specifications?.tire ||
+
+    product?.specification?.tire ||
+
+    product?.attributes?.tire
+
+  ) {
+
+    return 'tire'
+
+  }
+
+
+  if (
+
+    product?.battery ||
+
+    product?.batteryData ||
+
+    product?.batterySpecification ||
+
+    product?.batterySpecifications ||
+
+    product?.specifications?.battery ||
+
+    product?.specification?.battery ||
+
+    product?.attributes?.battery
+
+  ) {
+
+    return 'battery'
+
+  }
+
+
+  if (
+
+    product?.oil ||
+
+    product?.oilData ||
+
+    product?.oilSpecification ||
+
+    product?.oilSpecifications ||
+
+    product?.specifications?.oil ||
+
+    product?.specification?.oil ||
+
+    product?.attributes?.oil
+
+  ) {
+
+    return 'oil'
+
+  }
+
+
+  // ----------------------------------------------------
+  // TIRE DIMENSION FALLBACK
+  // ----------------------------------------------------
+
+  const possibleSize =
+
+    product?.tireSize ??
+    product?.size ??
+    product?.dimension ??
+    product?.dimensions ??
+    ''
+
+
+  if (
+
+    product?.width !== undefined ||
+
+    product?.profile !== undefined ||
+
+    product?.rim !== undefined ||
+
+    possibleSize
+
+  ) {
+
+    const sizeText =
+
+      String(possibleSize)
+
+
+    if (
+
+      /\d{2,4}\s*[\/xأ—*\-]\s*\d{2,3}(?:\s*[\/xأ—*\-r]\s*\d{1,3})?/i
+
+        .test(sizeText)
+
+    ) {
+
+      return 'tire'
+
+    }
+
+  }
+
+
+  return ''
+
+}
+
+
+// ======================================================
+// GET PRODUCT TIRE
+// ======================================================
+
+const getProductTire = product => {
+
+  return (
+
+    product?.tire ||
+
+    product?.tireData ||
+
+    product?.tireSpecification ||
+
+    product?.tireSpecifications ||
+
+    product?.specifications?.tire ||
+
+    product?.specification?.tire ||
+
+    product?.attributes?.tire ||
+
+    {}
+
+  )
+
+}
+
+
+// ======================================================
+// GET PRODUCT BATTERY
+// ======================================================
+
+const getProductBattery = product => {
+
+  return (
+
+    product?.battery ||
+
+    product?.batteryData ||
+
+    product?.batterySpecification ||
+
+    product?.batterySpecifications ||
+
+    product?.specifications?.battery ||
+
+    product?.specification?.battery ||
+
+    product?.attributes?.battery ||
+
+    {}
+
+  )
+
+}
+
+
+// ======================================================
+// GET PRODUCT OIL
+// ======================================================
+
+const getProductOil = product => {
+
+  return (
+
+    product?.oil ||
+
+    product?.oilData ||
+
+    product?.oilSpecification ||
+
+    product?.oilSpecifications ||
+
+    product?.specifications?.oil ||
+
+    product?.specification?.oil ||
+
+    product?.attributes?.oil ||
+
+    {}
+
+  )
+
+}
+
+
+// ======================================================
+// GET TIRE VALUE
+// ======================================================
+
+const getTireValue = (
+  tire,
+  keys
+) => {
+
+  if (
+    !tire ||
+    typeof tire !== 'object'
+  ) {
+
+    return null
+
+  }
+
+
+  for (
+
+    const key
+    of keys
+
+  ) {
+
+    const value =
+      tire?.[key]
+
+
+    if (
+      value !== null &&
+      value !== undefined &&
+      value !== ''
+    ) {
+
+      return value
+
+    }
+
+  }
+
+
+  return null
+
+}
+
+
+// ======================================================
+// PARSE TIRE SIZE
+// ======================================================
+//
+// Supported:
+//
+// 205/55/16
+// 205/55 R16
+// 205/55R16
+// 205*55*16
+// 205-55-16
+// 205أ—55أ—16
+// 1200/24
+// 1200*24
+//
+// ======================================================
+
+const parseTireSize = value => {
+
+  let text =
+
+    String(value ?? '')
+
+      .trim()
+
+      .toLowerCase()
+
+
+  if (!text) {
+
+    return null
+
+  }
+
+
+  text =
+
+    text
+
+      .replace(/أ—/g, '/')
+
+      .replace(/[x*]/g, '/')
+
+      .replace(/-/g, '/')
+
+      .replace(/\s+/g, '')
+
+      .replace(/r/g, '/')
+
+
+  const numbers =
+
+    text.match(
+      /\d+(?:\.\d+)?/g
+    )
+
+
+  if (
+    !Array.isArray(numbers)
+  ) {
+
+    return null
+
+  }
+
+
+  if (
+    numbers.length >= 3
+  ) {
+
+    return {
+
+      width:
+        numberValue(
+          numbers[0]
+        ),
+
+      profile:
+        numberValue(
+          numbers[1]
+        ),
+
+      rim:
+        numberValue(
+          numbers[2]
+        )
+
+    }
+
+  }
+
+
+  if (
+    numbers.length === 2
+  ) {
+
+    return {
+
+      width:
+        numberValue(
+          numbers[0]
+        ),
+
+      profile:
+        null,
+
+      rim:
+        numberValue(
+          numbers[1]
+        )
+
+    }
+
+  }
+
+
+  return null
+
+}
+
+
+// ======================================================
+// EXTRACT PRODUCT TIRE
+// ======================================================
+
+const extractProductTire = product => {
+
+  const tire =
+    getProductTire(
+      product
+    )
+
+
+  return {
+
+    width:
+
+      numberValue(
+
+        getTireValue(
+
+          tire,
+
+          [
+
+            'width',
+
+            'sectionWidth',
+
+            'tireWidth'
+
+          ]
+
+        )
+
+        ??
+
+        product?.width
+
+      ),
+
+
+    profile:
+
+      numberValue(
+
+        getTireValue(
+
+          tire,
+
+          [
+
+            'height',
+
+            'profile',
+
+            'aspectRatio',
+
+            'aspect'
+
+          ]
+
+        )
+
+        ??
+
+        product?.profile
+
+      ),
+
+
+    rim:
+
+      numberValue(
+
+        getTireValue(
+
+          tire,
+
+          [
+
+            'rim',
+
+            'rimSize',
+
+            'wheelDiameter',
+
+            'diameter'
+
+          ]
+
+        )
+
+        ??
+
+        product?.rim
+
+      ),
+
+
+    size:
+
+      getTireValue(
+
+        tire,
+
+        [
+
+          'size',
+
+          'tireSize',
+
+          'dimension',
+
+          'dimensions',
+
+          'sizeCode'
+
+        ]
+
+      )
+
+      ??
+
+      product?.tireSize
+
+      ??
+
+      product?.size
+
+      ??
+
+      product?.dimension
+
+      ??
+
+      product?.dimensions
+
+  }
+
+}
+
+
+// ======================================================
+// COLLECT VALUES RECURSIVELY
+// ======================================================
+
+const collectValues = value => {
+
+  const values = []
+
+
+  const add = item => {
+
+    if (
+      item === null ||
+      item === undefined ||
+      item === ''
+    ) {
+
+      return
+
+    }
+
+
+    if (
+      Array.isArray(item)
+    ) {
+
+      item.forEach(add)
+
+      return
+
+    }
+
+
+    if (
+      typeof item === 'object'
+    ) {
+
+      Object.values(item)
+        .forEach(add)
+
+      return
+
+    }
+
+
+    values.push(
+      String(item)
+    )
+
+  }
+
+
+  add(value)
+
+
+  return values
+
+}
+
+
+// ======================================================
+// COLLECT OEM TIRE VALUES
+// ======================================================
+
+const collectOEMTireValues = oem => {
+
+  const values = []
+
+
+  const add = value => {
+
+    if (
+      value === null ||
+      value === undefined ||
+      value === ''
+    ) {
+
+      return
+
+    }
+
+
+    if (
+      Array.isArray(value)
+    ) {
+
+      value.forEach(add)
+
+      return
+
+    }
+
+
+    if (
+      typeof value === 'object'
+    ) {
+
+      Object.values(value)
+        .forEach(add)
+
+      return
+
+    }
+
+
+    values.push(
+      String(value)
+    )
+
+  }
+
+
+  // ----------------------------------------------------
+  // Direct OEM structures
+  // ----------------------------------------------------
+
+  add(
+    oem?.tire
+  )
+
+  add(
+    oem?.tires
+  )
+
+  add(
+    oem?.tireSpecification
+  )
+
+  add(
+    oem?.tireSpecifications
+  )
+
+
+  // ----------------------------------------------------
+  // Explicit size arrays
+  // ----------------------------------------------------
+
+  add(
+    oem?.oemSizes
+  )
+
+  add(
+    oem?.alternativeSizes
+  )
+
+  add(
+    oem?.sizes
+  )
+
+
+  // ----------------------------------------------------
+  // Vehicle specification
+  // ----------------------------------------------------
+
+  add(
+    oem?.vehicle?.tire
+  )
+
+  add(
+    oem?.vehicle?.tires
+  )
+
+  add(
+    oem?.vehicle?.tireSize
+  )
+
+  add(
+    oem?.vehicle?.tireSizes
+  )
+
+  add(
+    oem?.vehicle?.oemTire
+  )
+
+  add(
+    oem?.vehicle?.oemTires
+  )
+
+
+  // ----------------------------------------------------
+  // Root specification
+  // ----------------------------------------------------
+
+  add(
+    oem?.tireSize
+  )
+
+  add(
+    oem?.tireSizes
+  )
+
+  add(
+    oem?.oemTire
+  )
+
+  add(
+    oem?.oemTires
+  )
+
+
+  return values
+
+}
+
+
+// ======================================================
+// GET OEM TIRE SIZE ARRAYS DIRECTLY
+// ======================================================
+
+const getOEMTireSizeArrays = oem => {
+
+  const arrays = []
+
+
+  const add = value => {
+
+    if (!value) {
+
+      return
+
+    }
+
+
+    if (
+      Array.isArray(value)
+    ) {
+
+      arrays.push(
+        value
+      )
+
+      return
+
+    }
+
+
+    if (
+      typeof value === 'object'
+    ) {
+
+      if (
+        Array.isArray(
+          value?.oemSizes
+        )
+      ) {
+
+        arrays.push(
+          value.oemSizes
+        )
+
+      }
+
+
+      if (
+        Array.isArray(
+          value?.alternativeSizes
+        )
+      ) {
+
+        arrays.push(
+          value.alternativeSizes
+        )
+
+      }
+
+
+      if (
+        Array.isArray(
+          value?.sizes
+        )
+      ) {
+
+        arrays.push(
+          value.sizes
+        )
+
+      }
+
+
+      if (
+        Array.isArray(
+          value?.tireSizes
+        )
+      ) {
+
+        arrays.push(
+          value.tireSizes
+        )
+
+      }
+
+
+      if (
+        Array.isArray(
+          value?.oemTires
+        )
+      ) {
+
+        arrays.push(
+          value.oemTires
+        )
+
+      }
+
+    }
+
+  }
+
+
+  add(
+    oem?.tire
+  )
+
+  add(
+    oem?.tires
+  )
+
+  add(
+    oem?.vehicle?.tire
+  )
+
+  add(
+    oem?.vehicle?.tires
+  )
+
+  add(
+    oem?.vehicle
+  )
+
+
+  return arrays
+
+}
+
+
+// ======================================================
+// TIRE OEM MATCH
+// ======================================================
+
+const tireMatchesOEM = (
+  product,
+  oem
+) => {
+
+  if (!oem) {
+
+    return false
+
+  }
+
+
+  const productTire =
+    extractProductTire(
+      product
+    )
+
+
+  const oemValues =
+    collectOEMTireValues(
+      oem
+    )
+
+
+  const directArrays =
+    getOEMTireSizeArrays(
+      oem
+    )
+
+
+  const directSizes =
+    collectValues(
+      directArrays
+    )
+
+
+  const allOEMValues = [
+
+    ...oemValues,
+
+    ...directSizes
+
+  ]
+
+
+  if (
+    allOEMValues.length === 0
+  ) {
+
+    return false
+
+  }
+
+
+  // ----------------------------------------------------
+  // NUMERIC SIZE MATCH
+  // ----------------------------------------------------
+
+  for (
+
+    const value
+    of allOEMValues
+
+  ) {
+
+    const parsed =
+      parseTireSize(
+        value
+      )
+
+
+    if (!parsed) {
+
+      continue
+
+    }
+
+
+    // --------------------------------------------------
+    // THREE-PART SIZE
+    //
+    // 205/55R16
+    // --------------------------------------------------
+
+    if (
+
+      productTire.width !== null &&
+
+      productTire.profile !== null &&
+
+      productTire.rim !== null &&
+
+      parsed.width !== null &&
+
+      parsed.profile !== null &&
+
+      parsed.rim !== null &&
+
+      productTire.width ===
+        parsed.width &&
+
+      productTire.profile ===
+        parsed.profile &&
+
+      productTire.rim ===
+        parsed.rim
+
+    ) {
+
+      return true
+
+    }
+
+
+    // --------------------------------------------------
+    // TWO-PART SIZE
+    //
+    // 1200/24
+    // --------------------------------------------------
+
+    if (
+
+      productTire.width !== null &&
+
+      productTire.rim !== null &&
+
+      parsed.width !== null &&
+
+      parsed.rim !== null &&
+
+      parsed.profile === null &&
+
+      productTire.width ===
+        parsed.width &&
+
+      productTire.rim ===
+        parsed.rim
+
+    ) {
+
+      return true
+
+    }
+
+
+    // --------------------------------------------------
+    // TEXT SIZE
+    // --------------------------------------------------
+
+    if (
+
+      productTire.size &&
+
+      valuesMatch(
+
+        productTire.size,
+
+        value
+
+      )
+
+    ) {
+
+      return true
+
+    }
+
+  }
+
+
+  // ----------------------------------------------------
+  // FALLBACK PRODUCT TEXT
+  // ----------------------------------------------------
+
+  const productValues =
+
+    collectValues([
+
+      productTire.size,
+
+      product?.tireSize,
+
+      product?.size,
+
+      product?.dimension,
+
+      product?.dimensions,
+
+      product?.width,
+
+      product?.profile,
+
+      product?.rim,
+
+      product?.name,
+
+      product?.productName,
+
+      product?.title,
+
+      product?.description,
+
+      product?.sku
+
+    ])
+
+
+  return allOEMValues.some(
+
+    wanted =>
+
+      productValues.some(
+
+        actual =>
+
+          valuesMatch(
+
+            actual,
+
+            wanted
+
+          )
+
+      )
+
+  )
+
+}
+
+
+// ======================================================
+// COLLECT PRODUCT VALUES
+// ======================================================
+
+const collectProductValues = (
+  product,
+  fields
+) => {
+
+  const values = []
+
+
+  const add = value => {
+
+    if (
+      value === null ||
+      value === undefined ||
+      value === ''
+    ) {
+
+      return
+
+    }
+
+
+    if (
+      Array.isArray(value)
+    ) {
+
+      value.forEach(add)
+
+      return
+
+    }
+
+
+    if (
+      typeof value === 'object'
+    ) {
+
+      Object.values(value)
+        .forEach(add)
+
+      return
+
+    }
+
+
+    values.push(
+      String(value)
+    )
+
+  }
+
+
+  const battery =
+    getProductBattery(
+      product
+    )
+
+
+  const oil =
+    getProductOil(
+      product
+    )
+
+
+  const specifications =
+    product?.specifications || {}
+
+
+  const attributes =
+    product?.attributes || {}
+
+
+  fields.forEach(
+
+    field => {
+
+      add(
+        product?.[field]
+      )
+
+      add(
+        battery?.[field]
+      )
+
+      add(
+        oil?.[field]
+      )
+
+      add(
+        specifications?.[field]
+      )
+
+      add(
+        attributes?.[field]
+      )
+
+      add(
+        specifications?.battery?.[field]
+      )
+
+      add(
+        specifications?.oil?.[field]
+      )
+
+      add(
+        attributes?.battery?.[field]
+      )
+
+      add(
+        attributes?.oil?.[field]
+      )
+
+    }
+
+  )
+
+
+  return values
+
+}
+
+
+// ======================================================
+// COLLECT OEM BATTERY VALUES
+// ======================================================
+
+const collectOEMBatteryValues = oem => {
+
+  const values = []
+
+
+  const add = value => {
+
+    if (
+      value === null ||
+      value === undefined ||
+      value === ''
+    ) {
+
+      return
+
+    }
+
+
+    if (
+      Array.isArray(value)
+    ) {
+
+      value.forEach(add)
+
+      return
+
+    }
+
+
+    if (
+      typeof value === 'object'
+    ) {
+
+      Object.values(value)
+        .forEach(add)
+
+      return
+
+    }
+
+
+    values.push(
+      String(value)
+    )
+
+  }
+
+
+  add(
+    oem?.battery
+  )
+
+  add(
+    oem?.batteries
+  )
+
+  add(
+    oem?.vehicle?.battery
+  )
+
+  add(
+    oem?.vehicle?.batteries
+  )
+
+  add(
+    oem?.vehicle?.batterySpec
+  )
+
+  add(
+    oem?.vehicle?.oemBattery
+  )
+
+  add(
+    oem?.batterySpec
+  )
+
+  add(
+    oem?.batterySpecification
+  )
+
+  add(
+    oem?.oemBattery
+  )
+
+  add(
+    oem?.oemBatteries
+  )
+
+
+  return values
+
+}
+
+
+// ======================================================
+// BATTERY OEM MATCH
+// ======================================================
+
+const batteryMatchesOEM = (
+  product,
+  oem
+) => {
+
+  if (!oem) {
+
+    return false
+
+  }
+
+
+  const wantedValues =
+    collectOEMBatteryValues(
+      oem
+    )
+
+
+  if (
+    wantedValues.length === 0
+  ) {
+
+    return false
+
+  }
+
+
+  const productValues =
+
+    collectProductValues(
+
+      product,
+
+      [
+
+        'capacity',
+
+        'capacityAh',
+
+        'batteryCapacity',
+
+        'ampereHour',
+
+        'ah',
+
+        'amp',
+
+        'ampHours',
+
+        'batteryType',
+
+        'technology',
+
+        'typeCode',
+
+        'batteryCode',
+
+        'code',
+
+        'model',
+
+        'batteryModel',
+
+        'group',
+
+        'groupSize',
+
+        'size',
+
+        'sizeCode',
+
+        'name',
+
+        'productName',
+
+        'title',
+
+        'description',
+
+        'sku'
+
+      ]
+
+    )
+
+
+  return wantedValues.some(
+
+    wanted =>
+
+      productValues.some(
+
+        actual =>
+
+          valuesMatch(
+
+            actual,
+
+            wanted
+
+          )
+
+      )
+
+  )
+
+}
+
+
+// ======================================================
+// COLLECT OEM OIL VALUES
+// ======================================================
+
+const collectOILValues = oem => {
+
+  const values = []
+
+
+  const add = value => {
+
+    if (
+      value === null ||
+      value === undefined ||
+      value === ''
+    ) {
+
+      return
+
+    }
+
+
+    if (
+      Array.isArray(value)
+    ) {
+
+      value.forEach(add)
+
+      return
+
+    }
+
+
+    if (
+      typeof value === 'object'
+    ) {
+
+      Object.values(value)
+        .forEach(add)
+
+      return
+
+    }
+
+
+    values.push(
+      String(value)
+    )
+
+  }
+
+
+  add(
+    oem?.oil
+  )
+
+  add(
+    oem?.oils
+  )
+
+  add(
+    oem?.vehicle?.oil
+  )
+
+  add(
+    oem?.vehicle?.oils
+  )
+
+  add(
+    oem?.vehicle?.oilViscosity
+  )
+
+  add(
+    oem?.vehicle?.oemOil
+  )
+
+  add(
+    oem?.oilViscosity
+  )
+
+  add(
+    oem?.oilSpecification
+  )
+
+  add(
+    oem?.oemOil
+  )
+
+  add(
+    oem?.oemOils
+  )
+
+
+  return values
+
+}
+
+
+// ======================================================
+// OIL OEM MATCH
+// ======================================================
+
+const oilMatchesOEM = (
+  product,
+  oem
+) => {
+
+  if (!oem) {
+
+    return false
+
+  }
+
+
+  const wantedValues =
+    collectOILValues(
+      oem
+    )
+
+
+  if (
+    wantedValues.length === 0
+  ) {
+
+    return false
+
+  }
+
+
+  const productValues =
+
+    collectProductValues(
+
+      product,
+
+      [
+
+        'viscosity',
+
+        'viscosityGrade',
+
+        'grade',
+
+        'oilGrade',
+
+        'oilViscosity',
+
+        'sae',
+
+        'SAE',
+
+        'weight',
+
+        'oilWeight',
+
+        'specification',
+
+        'description',
+
+        'name',
+
+        'productName',
+
+        'title',
+
+        'code',
+
+        'sku'
+
+      ]
+
+    )
+
+
+  return wantedValues.some(
+
+    wanted => {
+
+      const wantedText =
+        compactText(
+          wanted
+        )
+
+
+      if (!wantedText) {
+
+        return false
+
+      }
+
+
+      return productValues.some(
+
+        actual => {
+
+          const actualText =
+            compactText(
+              actual
+            )
+
+
+          if (!actualText) {
+
+            return false
+
+          }
+
+
+          return (
+
+            actualText ===
+              wantedText ||
+
+            actualText.includes(
+              wantedText
+            ) ||
+
+            wantedText.includes(
+              actualText
+            )
+
+          )
+
+        }
+
+      )
+
+    }
+
+  )
+
+}
+
+
+// ======================================================
+// EXPLICIT VEHICLE COMPATIBILITY
+// ======================================================
+
+const explicitVehicleMatch = ({
+
+  product,
+
+  make,
+
+  model,
+
+  year,
+
+  vehicleType
+
+}) => {
+
+  try {
+
+    return Boolean(
+
+      VehicleCompatibilityEngine
+        .matchVehicle({
+
+          product,
+
+          make,
+
+          model,
+
+          year,
+
+          vehicleType
+
+        })
+
+    )
+
+  }
+
+  catch (error) {
+
+    console.warn(
+
+      '[VehicleEngine] Explicit vehicle compatibility failed:',
+
+      error
+
+    )
+
+
+    return false
+
+  }
+
+}
+
+
+// ======================================================
+// PRODUCT COMPATIBILITY
+// ======================================================
+//
+// IMPORTANT:
+//
+// Explicit vehicle compatibility is one source.
+//
+// OEM technical specifications are another source.
+//
+// They are alternatives:
+//
+// explicit match
+// OR
+// tire OEM match
+// OR
+// battery OEM match
+// OR
+// oil OEM match
+//
+// Product availability is deliberately ignored.
+//
+// ======================================================
+
+const productMatchesVehicle = ({
+
+  product,
+
+  make,
+
+  model,
+
+  year,
+
+  vehicleType,
+
+  oem
+
+}) => {
+
+  if (!product) {
+
+    return false
+
+  }
+
+
+  // ----------------------------------------------------
+  // FIRST: EXPLICIT VEHICLE COMPATIBILITY
+  // ----------------------------------------------------
+
+  if (
+
+    explicitVehicleMatch({
+
+      product,
+
+      make,
+
+      model,
+
+      year,
+
+      vehicleType
+
+    })
+
+  ) {
+
+    return true
+
+  }
+
+
+  // ----------------------------------------------------
+  // SECOND: OEM TECHNICAL COMPATIBILITY
+  // ----------------------------------------------------
+
+  const type =
+
+    normalizeProductType(
+      product
+    )
+
+
+  if (
+    type === 'tire'
+  ) {
+
+    return tireMatchesOEM(
+
+      product,
+
+      oem
+
+    )
+
+  }
+
+
+  if (
+    type === 'battery'
+  ) {
+
+    return batteryMatchesOEM(
+
+      product,
+
+      oem
+
+    )
+
+  }
+
+
+  if (
+    type === 'oil'
+  ) {
+
+    return oilMatchesOEM(
+
+      product,
+
+      oem
+
+    )
+
+  }
+
+
+  return false
+
+}
+
+
+// ======================================================
+// VEHICLE ENGINE
+// ======================================================
+
+export class VehicleEngine {
+
+
+  // ====================================================
+  // FIND VEHICLE
+  // ====================================================
+
+  static async findVehicle({
+
+    make,
+
+    model,
+
+    year,
+
+    vehicleType
+
+  }) {
+
+    try {
+
+      return await VehicleProvider
+
+        .findVehicle({
+
+          make,
+
+          model,
+
+          year,
+
+          vehicleType
+
+        })
+
+    }
+
+    catch (error) {
+
+      console.warn(
+
+        '[VehicleEngine] Vehicle provider failed:',
+
+        error
+
+      )
+
+
+      return null
+
+    }
+
+  }
+
+
+  // ====================================================
+  // SEARCH
+  // ====================================================
+
+  static async search({
+
+    vehicleType,
+
+    make,
+
+    model,
+
+    year,
+
+    products = []
+
+  }) {
+
+    const safeProducts =
+
+      Array.isArray(products)
+
+        ? products
+
+        : []
+
+
+    // --------------------------------------------------
+    // VEHICLE
+    // --------------------------------------------------
+
+    let vehicle = null
+
+
+    try {
+
+      vehicle =
+
+        await this.findVehicle({
+
+          make,
+
+          model,
+
+          year,
+
+          vehicleType
+
+        })
+
+    }
+
+    catch (error) {
+
+      console.warn(
+
+        '[VehicleEngine] Vehicle lookup failed:',
+
+        error
+
+      )
+
+    }
+
+
+    // --------------------------------------------------
+    // OEM SPECIFICATIONS
+    // --------------------------------------------------
+
+    let oem = null
+
+
+    try {
+
+      oem =
+
+        await OEMCompatibilityEngine
+
+          .search({
+
+            make,
+
+            model,
+
+            year,
+
+            vehicleType
+
+          })
+
+    }
+
+    catch (error) {
+
+      console.warn(
+
+        '[VehicleEngine] OEM lookup failed. Continuing with explicit compatibility.',
+
+        error
+
+      )
+
+    }
+
+
+    // --------------------------------------------------
+    // TECHNICAL COMPATIBILITY
+    // --------------------------------------------------
+
+    const matched =
+
+      safeProducts.filter(
+
+        product =>
+
+          productMatchesVehicle({
+
+            product,
+
+            make,
+
+            model,
+
+            year,
+
+            vehicleType,
+
+            oem
+
+          })
+
+      )
+
+
+    // --------------------------------------------------
+    // TYPE RESULTS
+    // --------------------------------------------------
+
+    const tires =
+
+      matched.filter(
+
+        product =>
+
+          normalizeProductType(
+            product
+          ) === 'tire'
+
+      )
+
+
+    const batteries =
+
+      matched.filter(
+
+        product =>
+
+          normalizeProductType(
+            product
+          ) === 'battery'
+
+      )
+
+
+    const oils =
+
+      matched.filter(
+
+        product =>
+
+          normalizeProductType(
+            product
+          ) === 'oil'
+
+      )
+
+
+    // --------------------------------------------------
+    // RETURN
+    // --------------------------------------------------
+
+    return {
+
+      vehicle,
+
+      oem,
+
+      tires,
+
+      batteries,
+
+      oils,
+
+      products:
+        matched
+
+    }
+
+  }
+
+
+  // ====================================================
+  // FILTER TIRES
+  // ====================================================
+
+  static filterTires({
+
+    products = [],
+
+    vehicleType,
+
+    make,
+
+    model,
+
+    year,
+
+    oem
+
+  }) {
+
+    const safeProducts =
+
+      Array.isArray(products)
+
+        ? products
+
+        : []
+
+
+    return safeProducts.filter(
+
+      product => {
+
+        if (
+
+          normalizeProductType(
+            product
+          ) !== 'tire'
+
+        ) {
+
+          return false
+
+        }
+
+
+        return productMatchesVehicle({
+
+          product,
+
+          make,
+
+          model,
+
+          year,
+
+          vehicleType,
+
+          oem
+
+        })
+
+      }
+
+    )
+
+  }
+
+
+  // ====================================================
+  // FILTER BATTERIES
+  // ====================================================
+
+  static filterBatteries({
+
+    products = [],
+
+    vehicleType,
+
+    make,
+
+    model,
+
+    year,
+
+    oem
+
+  }) {
+
+    const safeProducts =
+
+      Array.isArray(products)
+
+        ? products
+
+        : []
+
+
+    return safeProducts.filter(
+
+      product => {
+
+        if (
+
+          normalizeProductType(
+            product
+          ) !== 'battery'
+
+        ) {
+
+          return false
+
+        }
+
+
+        return productMatchesVehicle({
+
+          product,
+
+          make,
+
+          model,
+
+          year,
+
+          vehicleType,
+
+          oem
+
+        })
+
+      }
+
+    )
+
+  }
+
+
+  // ====================================================
+  // FILTER OILS
+  // ====================================================
+
+  static filterOils({
+
+    products = [],
+
+    vehicleType,
+
+    make,
+
+    model,
+
+    year,
+
+    oem
+
+  }) {
+
+    const safeProducts =
+
+      Array.isArray(products)
+
+        ? products
+
+        : []
+
+
+    return safeProducts.filter(
+
+      product => {
+
+        if (
+
+          normalizeProductType(
+            product
+          ) !== 'oil'
+
+        ) {
+
+          return false
+
+        }
+
+
+        return productMatchesVehicle({
+
+          product,
+
+          make,
+
+          model,
+
+          year,
+
+          vehicleType,
+
+          oem
+
+        })
+
+      }
+
+    )
+
+  }
+
+
+  // ====================================================
+  // ALL PRODUCTS
+  // ====================================================
+
+  static filterAll(
+
+    params = {}
+
+  ) {
+
+    return [
+
+      ...this.filterTires(
+        params
+      ),
+
+      ...this.filterBatteries(
+        params
+      ),
+
+      ...this.filterOils(
+        params
+      )
+
+    ]
+
+  }
+
+}
+
+
+// ======================================================
+// DEFAULT EXPORT
+// ======================================================
+
+export default VehicleEngine
+
+
+============================================================
+FILE: src\core\engines\OEMCompatibilityEngine.js
+============================================================
+
+// ======================================================
+// EL OLA ERP
+// OEM Compatibility Engine
+// ======================================================
+//
+// RESPONSIBILITY
+// ------------------------------------------------------
+//
+// Resolve the technical OEM requirements of a vehicle.
+//
+// FLOW
+// ------------------------------------------------------
+//
+// VehicleEngine
+//      â†“
+// OEMCompatibilityEngine
+//      â†“
+// VehicleSpecificationProvider
+//      â†“
+// VehicleProvider / Fitment Providers
+//      â†“
+// Normalized OEM requirements
+//
+// IMPORTANT
+// ------------------------------------------------------
+//
+// This engine does NOT:
+// - read inventory
+// - read warehouse stock
+// - read product prices
+// - decide product availability
+// - depend on product.compatibleVehicles
+//
+// It only resolves vehicle technical requirements.
+//
+// IMPORTANT CONTRACT
+// ------------------------------------------------------
+//
+// Vehicle compatibility is resolved FIRST.
+//
+// Product availability is a completely separate step.
+//
+// Therefore:
+//
+// compatible product
+//      â‰ 
+// available product
+//
+// A product must NOT be rejected here because it is:
+// - not in Elola inventory
+// - out of stock
+// - not currently offered
+// - missing warehouse data
+//
+// ======================================================
+
+
+// ======================================================
+// IMPORT
+// ======================================================
+
+import VehicleSpecificationProvider
+  from '../vehicles/providers/VehicleSpecificationProvider'
+
+
+// ======================================================
+// COLLECT VALUES
+// ======================================================
+
+const collectValues = value => {
+
+  const values = []
+
+
+  const add = item => {
+
+    if (
+      item === null ||
+      item === undefined ||
+      item === ''
+    ) {
+
+      return
+
+    }
+
+
+    if (
+      Array.isArray(item)
+    ) {
+
+      item.forEach(add)
+
+      return
+
+    }
+
+
+    if (
+      typeof item === 'object'
+    ) {
+
+      Object.values(item)
+        .forEach(add)
+
+      return
+
+    }
+
+
+    values.push(item)
+
+  }
+
+
+  add(value)
+
+
+  return values
+
+}
+
+
+// ======================================================
+// NORMALIZE TEXT
+// ======================================================
+
+const normalizeText = value => {
+
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/ط£|ط¥|ط¢/g, 'ط§')
+    .replace(/ط©/g, 'ظ‡')
+    .replace(/ظ‰/g, 'ظٹ')
+    .replace(/\s+/g, ' ')
+
+}
+
+
+// ======================================================
+// UNIQUE VALUES
+// ======================================================
+
+const uniqueValues = values => {
+
+  const seen =
+    new Set()
+
+
+  const result = []
+
+
+  collectValues(values)
+    .forEach(value => {
+
+      const text =
+        String(value ?? '')
+          .trim()
+
+
+      if (!text) {
+
+        return
+
+      }
+
+
+      const key =
+        normalizeText(text)
+
+
+      if (
+        !key ||
+        seen.has(key)
+      ) {
+
+        return
+
+      }
+
+
+      seen.add(key)
+
+      result.push(text)
+
+    })
+
+
+  return result
+
+}
+
+
+// ======================================================
+// FIRST VALUE
+// ======================================================
+
+const firstValue = (
+  object,
+  keys
+) => {
+
+  if (
+    !object ||
+    typeof object !== 'object'
+  ) {
+
+    return null
+
+  }
+
+
+  for (
+    const key of keys
+  ) {
+
+    const value =
+      object?.[key]
+
+
+    if (
+      value !== null &&
+      value !== undefined &&
+      value !== ''
+    ) {
+
+      return value
+
+    }
+
+  }
+
+
+  return null
+
+}
+
+
+// ======================================================
+// FIND NESTED SPECIFICATION
+// ======================================================
+
+const findNestedSpecification = (
+  source,
+  keys
+) => {
+
+  if (
+    !source ||
+    typeof source !== 'object'
+  ) {
+
+    return null
+
+  }
+
+
+  // ----------------------------------------------------
+  // DIRECT
+  // ----------------------------------------------------
+
+  for (
+    const key of keys
+  ) {
+
+    const direct =
+      source?.[key]
+
+
+    if (
+      direct !== null &&
+      direct !== undefined &&
+      direct !== ''
+    ) {
+
+      return direct
+
+    }
+
+  }
+
+
+  // ----------------------------------------------------
+  // NESTED CONTAINERS
+  // ----------------------------------------------------
+
+  const containers = [
+
+    source?.specifications,
+
+    source?.technicalSpecifications,
+
+    source?.technicalSpecification,
+
+    source?.technical,
+
+    source?.oem,
+
+    source?.oemSpecifications,
+
+    source?.fitment,
+
+    source?.compatibility,
+
+    source?.vehicle,
+
+    source?.vehicle?.specifications,
+
+    source?.vehicle?.technicalSpecifications,
+
+    source?.vehicle?.technicalSpecification,
+
+    source?.vehicle?.technical,
+
+    source?.vehicle?.oem,
+
+    source?.vehicle?.oemSpecifications,
+
+    source?.vehicle?.fitment,
+
+    source?.vehicle?.compatibility
+
+  ]
+
+
+  for (
+    const container
+    of containers
+  ) {
+
+    if (
+      !container ||
+      typeof container !== 'object'
+    ) {
+
+      continue
+
+    }
+
+
+    for (
+      const key of keys
+    ) {
+
+      const value =
+        container?.[key]
+
+
+      if (
+        value !== null &&
+        value !== undefined &&
+        value !== ''
+      ) {
+
+        return value
+
+      }
+
+    }
+
+  }
+
+
+  return null
+
+}
+
+
+// ======================================================
+// NORMALIZE TIRE
+// ======================================================
+
+const normalizeTire = value => {
+
+  if (
+    value === null ||
+    value === undefined ||
+    value === ''
+  ) {
+
+    return null
+
+  }
+
+
+  // ----------------------------------------------------
+  // ARRAY
+  // ----------------------------------------------------
+
+  if (
+    Array.isArray(value)
+  ) {
+
+    const sizes =
+      uniqueValues(value)
+
+
+    return {
+
+      width:
+        null,
+
+      profile:
+        null,
+
+      rim:
+        null,
+
+      size:
+        sizes[0] ?? null,
+
+      sizes,
+
+      oemSizes:
+        sizes,
+
+      alternativeSizes:
+        [],
+
+      alternateSizes:
+        [],
+
+      compatibleSizes:
+        sizes,
+
+      raw:
+        value
+
+    }
+
+  }
+
+
+  // ----------------------------------------------------
+  // SIMPLE VALUE
+  // ----------------------------------------------------
+
+  if (
+    typeof value !== 'object'
+  ) {
+
+    const size =
+      String(value)
+        .trim()
+
+
+    return {
+
+      width:
+        null,
+
+      profile:
+        null,
+
+      rim:
+        null,
+
+      size:
+        size || null,
+
+      sizes:
+        size
+          ? [size]
+          : [],
+
+      oemSizes:
+        size
+          ? [size]
+          : [],
+
+      alternativeSizes:
+        [],
+
+      alternateSizes:
+        [],
+
+      compatibleSizes:
+        size
+          ? [size]
+          : [],
+
+      raw:
+        value
+
+    }
+
+  }
+
+
+  // ----------------------------------------------------
+  // DIMENSIONS
+  // ----------------------------------------------------
+
+  const width =
+    firstValue(
+      value,
+      [
+        'width',
+        'sectionWidth',
+        'tireWidth'
+      ]
+    )
+
+
+  const profile =
+    firstValue(
+      value,
+      [
+        'profile',
+        'height',
+        'aspectRatio',
+        'aspect'
+      ]
+    )
+
+
+  const rim =
+    firstValue(
+      value,
+      [
+        'rim',
+        'rimSize',
+        'wheelDiameter',
+        'diameter'
+      ]
+    )
+
+
+  // ----------------------------------------------------
+  // PRIMARY SIZE
+  // ----------------------------------------------------
+
+  const size =
+    firstValue(
+      value,
+      [
+        'size',
+        'tireSize',
+        'dimension',
+        'dimensions',
+        'sizeCode'
+      ]
+    )
+
+
+  // ----------------------------------------------------
+  // ALL SIZE SOURCES
+  // ----------------------------------------------------
+
+  const oemSizes =
+    uniqueValues([
+
+      value?.oemSizes,
+
+      value?.oemSize,
+
+      value?.oem_tire_size,
+
+      value?.tire_size_oem,
+
+      value?.oemTireSizes,
+
+      value?.oemTireSize,
+
+      size
+
+    ])
+
+
+  const alternativeSizes =
+    uniqueValues([
+
+      value?.alternativeSizes,
+
+      value?.alternateSizes,
+
+      value?.alternateTireSizes,
+
+      value?.alternate_tire_sizes,
+
+      value?.alternate_sizes,
+
+      value?.alternatives,
+
+      value?.alternate
+
+    ])
+
+
+  const sizes =
+    uniqueValues([
+
+      value?.sizes,
+
+      value?.tireSizes,
+
+      value?.compatibleSizes,
+
+      value?.compatibleTireSizes,
+
+      oemSizes,
+
+      alternativeSizes,
+
+      size
+
+    ])
+
+
+  const compatibleSizes =
+    uniqueValues([
+
+      sizes,
+
+      oemSizes,
+
+      alternativeSizes
+
+    ])
+
+
+  return {
+
+    width,
+
+    profile,
+
+    rim,
+
+    size:
+      size !== null &&
+      size !== undefined &&
+      size !== ''
+        ? String(size).trim()
+        : (
+          oemSizes[0] ??
+          alternativeSizes[0] ??
+          sizes[0] ??
+          null
+        ),
+
+    sizes,
+
+    oemSizes,
+
+    alternativeSizes,
+
+    alternateSizes:
+      alternativeSizes,
+
+    compatibleSizes,
+
+    raw:
+      value
+
+  }
+
+}
+
+
+// ======================================================
+// NORMALIZE BATTERY
+// ======================================================
+
+const normalizeBattery = value => {
+
+  if (
+    value === null ||
+    value === undefined ||
+    value === ''
+  ) {
+
+    return null
+
+  }
+
+
+  if (
+    typeof value !== 'object'
+  ) {
+
+    return {
+
+      capacity:
+        value,
+
+      capacityAh:
+        value,
+
+      batteryType:
+        null,
+
+      code:
+        null,
+
+      model:
+        null,
+
+      group:
+        null,
+
+      size:
+        null,
+
+      raw:
+        value
+
+    }
+
+  }
+
+
+  return {
+
+    capacity:
+      firstValue(
+        value,
+        [
+          'capacity',
+          'capacityAh',
+          'ampereHour',
+          'ampHours',
+          'ah'
+        ]
+      ),
+
+    capacityAh:
+      firstValue(
+        value,
+        [
+          'capacityAh',
+          'capacity',
+          'ampereHour',
+          'ampHours',
+          'ah'
+        ]
+      ),
+
+    batteryType:
+      firstValue(
+        value,
+        [
+          'batteryType',
+          'type',
+          'technology'
+        ]
+      ),
+
+    code:
+      firstValue(
+        value,
+        [
+          'code',
+          'batteryCode',
+          'typeCode'
+        ]
+      ),
+
+    model:
+      firstValue(
+        value,
+        [
+          'model',
+          'batteryModel'
+        ]
+      ),
+
+    group:
+      firstValue(
+        value,
+        [
+          'group',
+          'groupSize'
+        ]
+      ),
+
+    size:
+      firstValue(
+        value,
+        [
+          'size',
+          'sizeCode',
+          'batterySize'
+        ]
+      ),
+
+    raw:
+      value
+
+  }
+
+}
+
+
+// ======================================================
+// NORMALIZE OIL
+// ======================================================
+
+const normalizeOil = value => {
+
+  if (
+    value === null ||
+    value === undefined ||
+    value === ''
+  ) {
+
+    return null
+
+  }
+
+
+  if (
+    typeof value !== 'object'
+  ) {
+
+    return {
+
+      viscosity:
+        value,
+
+      grade:
+        null,
+
+      specification:
+        null,
+
+      raw:
+        value
+
+    }
+
+  }
+
+
+  return {
+
+    viscosity:
+      firstValue(
+        value,
+        [
+          'viscosity',
+          'oilViscosity',
+          'viscosityGrade',
+          'sae',
+          'SAE'
+        ]
+      ),
+
+    grade:
+      firstValue(
+        value,
+        [
+          'grade',
+          'oilGrade',
+          'specification'
+        ]
+      ),
+
+    specification:
+      firstValue(
+        value,
+        [
+          'specification',
+          'oilSpecification'
+        ]
+      ),
+
+    raw:
+      value
+
+  }
+
+}
+
+
+// ======================================================
+// RESOLVE TIRE
+// ======================================================
+
+const resolveTire = specs => {
+
+  const value =
+    findNestedSpecification(
+      specs,
+      [
+        'tire',
+        'tires',
+        'tireSpecification',
+        'tireSpecifications',
+        'oemTire',
+        'oemTires',
+        'tireSize',
+        'tireSizes',
+        'fitment'
+      ]
+    )
+
+
+  if (
+    value !== null &&
+    value !== undefined &&
+    value !== ''
+  ) {
+
+    return normalizeTire(
+      value
+    )
+
+  }
+
+
+  // ----------------------------------------------------
+  // Direct dimensions
+  // ----------------------------------------------------
+
+  const width =
+    findNestedSpecification(
+      specs,
+      [
+        'width',
+        'sectionWidth',
+        'tireWidth'
+      ]
+    )
+
+
+  const profile =
+    findNestedSpecification(
+      specs,
+      [
+        'profile',
+        'height',
+        'aspectRatio',
+        'aspect'
+      ]
+    )
+
+
+  const rim =
+    findNestedSpecification(
+      specs,
+      [
+        'rim',
+        'rimSize',
+        'wheelDiameter',
+        'diameter'
+      ]
+    )
+
+
+  if (
+    width ||
+    profile ||
+    rim
+  ) {
+
+    return normalizeTire({
+
+      width,
+
+      profile,
+
+      rim
+
+    })
+
+  }
+
+
+  return null
+
+}
+
+
+// ======================================================
+// RESOLVE BATTERY
+// ======================================================
+
+const resolveBattery = specs => {
+
+  const value =
+    findNestedSpecification(
+      specs,
+      [
+        'battery',
+        'batteries',
+        'batterySpec',
+        'batterySpecification',
+        'batterySpecifications',
+        'oemBattery',
+        'oemBatteries',
+        'batterySize',
+        'batteryCapacity',
+        'batteryCapacityAh'
+      ]
+    )
+
+
+  if (
+    value !== null &&
+    value !== undefined &&
+    value !== ''
+  ) {
+
+    return normalizeBattery(
+      value
+    )
+
+  }
+
+
+  const capacity =
+    findNestedSpecification(
+      specs,
+      [
+        'capacity',
+        'capacityAh',
+        'ampereHour',
+        'ampHours',
+        'ah'
+      ]
+    )
+
+
+  if (
+    capacity !== null &&
+    capacity !== undefined &&
+    capacity !== ''
+  ) {
+
+    return normalizeBattery({
+
+      capacity
+
+    })
+
+  }
+
+
+  return null
+
+}
+
+
+// ======================================================
+// RESOLVE OIL
+// ======================================================
+
+const resolveOil = specs => {
+
+  const value =
+    findNestedSpecification(
+      specs,
+      [
+        'oil',
+        'oils',
+        'oilSpec',
+        'oilSpecification',
+        'oilSpecifications',
+        'oemOil',
+        'oemOils',
+        'oilViscosity',
+        'viscosity',
+        'oilGrade',
+        'grade'
+      ]
+    )
+
+
+  if (
+    value !== null &&
+    value !== undefined &&
+    value !== ''
+  ) {
+
+    return normalizeOil(
+      value
+    )
+
+  }
+
+
+  return null
+
+}
+
+
+// ======================================================
+// BUILD OEM RESULT
+// ======================================================
+
+const buildResult = (
+  specs,
+  {
+    make,
+    model,
+    year,
+    vehicleType
+  }
+) => {
+
+  const safeSpecs =
+
+    specs &&
+    typeof specs === 'object'
+
+      ? specs
+
+      : {}
+
+
+  const tire =
+    resolveTire(
+      safeSpecs
+    )
+
+
+  const battery =
+    resolveBattery(
+      safeSpecs
+    )
+
+
+  const oil =
+    resolveOil(
+      safeSpecs
+    )
+
+
+  // ----------------------------------------------------
+  // EXPLICIT COMPATIBLE TIRE SIZES
+  // ----------------------------------------------------
+
+  const compatibleTireSizes =
+
+    uniqueValues([
+
+      tire?.compatibleSizes,
+
+      tire?.sizes,
+
+      tire?.oemSizes,
+
+      tire?.alternativeSizes,
+
+      tire?.alternateSizes,
+
+      tire?.size
+
+    ])
+
+
+  // ----------------------------------------------------
+  // EXPLICIT OEM TIRE SIZES
+  // ----------------------------------------------------
+
+  const oemTireSizes =
+
+    uniqueValues([
+
+      tire?.oemSizes,
+
+      tire?.size
+
+    ])
+
+
+  // ----------------------------------------------------
+  // EXPLICIT ALTERNATIVE TIRE SIZES
+  // ----------------------------------------------------
+
+  const alternativeTireSizes =
+
+    uniqueValues([
+
+      tire?.alternativeSizes,
+
+      tire?.alternateSizes
+
+    ])
+
+
+  return {
+
+    // ==================================================
+    // VEHICLE IDENTITY
+    // ==================================================
+
+    make:
+      safeSpecs?.make ??
+      safeSpecs?.brand ??
+      make ??
+      null,
+
+    brand:
+      safeSpecs?.brand ??
+      safeSpecs?.make ??
+      make ??
+      null,
+
+    model:
+      safeSpecs?.model ??
+      safeSpecs?.modelName ??
+      model ??
+      null,
+
+    modelName:
+      safeSpecs?.modelName ??
+      safeSpecs?.model ??
+      model ??
+      null,
+
+    year:
+      safeSpecs?.year ??
+      year ??
+      null,
+
+    vehicleType:
+      safeSpecs?.vehicleType ??
+      vehicleType ??
+      null,
+
+
+    // ==================================================
+    // VEHICLE
+    // ==================================================
+
+    vehicle:
+      safeSpecs?.vehicle ??
+      safeSpecs,
+
+
+    // ==================================================
+    // TIRE
+    // ==================================================
+
+    tire,
+
+
+    // ==================================================
+    // EXPLICIT TIRE CONTRACT
+    //
+    // These aliases make the result consumable by
+    // downstream product matching engines without
+    // requiring them to understand every provider shape.
+    // ==================================================
+
+    oemSizes:
+      oemTireSizes,
+
+    alternativeSizes:
+      alternativeTireSizes,
+
+    alternateSizes:
+      alternativeTireSizes,
+
+    compatibleSizes:
+      compatibleTireSizes,
+
+    compatibleTireSizes:
+      compatibleTireSizes,
+
+
+    // ==================================================
+    // BATTERY
+    // ==================================================
+
+    battery,
+
+
+    // ==================================================
+    // OIL
+    // ==================================================
+
+    oil,
+
+
+    // ==================================================
+    // AVAILABILITY SEPARATION
+    // ==================================================
+    //
+    // This engine never determines whether Elola has
+    // the product.
+    //
+    // The downstream product/availability layer must
+    // handle that independently.
+    // ==================================================
+
+    compatibilityResolved:
+      Boolean(
+
+        compatibleTireSizes.length > 0 ||
+
+        battery ||
+
+        oil
+
+      ),
+
+
+    availabilityChecked:
+      false,
+
+
+    // ==================================================
+    // SOURCE
+    // ==================================================
+
+    source:
+      tire?.raw?.source ??
+      safeSpecs?.fitmentSource ??
+      safeSpecs?.source ??
+      'vehicle',
+
+
+    // ==================================================
+    // RAW
+    // ==================================================
+
+    raw:
+      safeSpecs
+
+  }
+
+}
+
+
+// ======================================================
+// ENGINE
+// ======================================================
+
+export default class OEMCompatibilityEngine {
+
+
+  // ====================================================
+  // SEARCH
+  // ====================================================
+
+  static async search({
+
+    make,
+
+    model,
+
+    year,
+
+    vehicleType
+
+  } = {}) {
+
+    if (
+      !make ||
+      !model
+    ) {
+
+      return null
+
+    }
+
+
+    let specs = null
+
+
+    try {
+
+      specs =
+        await VehicleSpecificationProvider
+          .getSpecifications({
+
+            make,
+
+            model,
+
+            year,
+
+            vehicleType
+
+          })
+
+    }
+
+    catch (error) {
+
+      console.warn(
+
+        '[OEMCompatibilityEngine] Specification lookup failed:',
+
+        error
+
+      )
+
+      return null
+
+    }
+
+
+    if (
+      !specs
+    ) {
+
+      return null
+
+    }
+
+
+    return buildResult(
+
+      specs,
+
+      {
+        make,
+        model,
+        year,
+        vehicleType
+      }
+
+    )
+
+  }
+
+
+  // ====================================================
+  // TIRE
+  // ====================================================
+
+  static getTireSpecification(
+    specs
+  ) {
+
+    if (
+      !specs
+    ) {
+
+      return null
+
+    }
+
+
+    return resolveTire(
+      specs
+    )
+
+  }
+
+
+  // ====================================================
+  // BATTERY
+  // ====================================================
+
+  static getBatterySpecification(
+    specs
+  ) {
+
+    if (
+      !specs
+    ) {
+
+      return null
+
+    }
+
+
+    return resolveBattery(
+      specs
+    )
+
+  }
+
+
+  // ====================================================
+  // OIL
+  // ====================================================
+
+  static getOilSpecification(
+    specs
+  ) {
+
+    if (
+      !specs
+    ) {
+
+      return null
+
+    }
+
+
+    return resolveOil(
+      specs
+    )
+
+  }
+
+
+  // ====================================================
+  // GET OEM SIZES
+  // ====================================================
+
+  static getOEMSizes(
+    specs
+  ) {
+
+    if (
+      !specs
+    ) {
+
+      return []
+
+    }
+
+
+    const tire =
+      this.getTireSpecification(
+        specs
+      )
+
+
+    if (
+      !tire
+    ) {
+
+      return []
+
+    }
+
+
+    return uniqueValues([
+
+      tire.oemSizes,
+
+      tire.size
+
+    ])
+
+  }
+
+
+  // ====================================================
+  // GET ALTERNATIVE SIZES
+  // ====================================================
+
+  static getAlternativeSizes(
+    specs
+  ) {
+
+    if (
+      !specs
+    ) {
+
+      return []
+
+    }
+
+
+    const tire =
+      this.getTireSpecification(
+        specs
+      )
+
+
+    if (
+      !tire
+    ) {
+
+      return []
+
+    }
+
+
+    return uniqueValues([
+
+      tire.alternativeSizes,
+
+      tire.alternateSizes
+
+    ])
+
+  }
+
+
+  // ====================================================
+  // GET ALL COMPATIBLE SIZES
+  // ====================================================
+
+  static getCompatibleTireSizes(
+    specs
+  ) {
+
+    if (
+      !specs
+    ) {
+
+      return []
+
+    }
+
+
+    const tire =
+      this.getTireSpecification(
+        specs
+      )
+
+
+    if (
+      !tire
+    ) {
+
+      return []
+
+    }
+
+
+    return uniqueValues([
+
+      tire.compatibleSizes,
+
+      tire.sizes,
+
+      tire.oemSizes,
+
+      tire.alternativeSizes,
+
+      tire.alternateSizes,
+
+      tire.size
+
+    ])
+
+  }
+
+
+  // ====================================================
+  // BATTERY
+  // ====================================================
+
+  static getBattery({
+    make,
+    model,
+    year,
+    vehicleType
+  } = {}) {
+
+    return VehicleSpecificationProvider
+      .getBatterySpecification({
+
+        make,
+        model,
+        year,
+        vehicleType
+
+      })
+
+  }
+
+
+  // ====================================================
+  // OIL
+  // ====================================================
+
+  static getOil({
+    make,
+    model,
+    year,
+    vehicleType
+  } = {}) {
+
+    return VehicleSpecificationProvider
+      .getOilSpecification({
+
+        make,
+        model,
+        year,
+        vehicleType
+
+      })
+
+  }
+
+
+  // ====================================================
+  // RESOLVE
+  // ====================================================
+
+  static async resolve({
+
+    make,
+
+    model,
+
+    year,
+
+    vehicleType
+
+  } = {}) {
+
+    return this.search({
+
+      make,
+
+      model,
+
+      year,
+
+      vehicleType
+
+    })
+
+  }
+
+}
+
+
+============================================================
+FILE: src\components\vehicle\VehicleResults.jsx
+============================================================
+
+// ======================================================
+// EL OLA ERP
+// Vehicle Results
+// ======================================================
+
+import VehicleResultSection
+  from './VehicleResultSection'
+
+
+// ======================================================
+// NORMALIZE TYPE
+// ======================================================
+
+const normalizeType = (value) =>
+
+  String(value ?? '')
+    .trim()
+    .toLowerCase()
+
+
+// ======================================================
+// GET PRODUCT TYPE
+// ======================================================
+
+const getProductType = (product) => {
+
+  const type =
+    normalizeType(
+      product?.type
+    )
+
+
+  if (
+    type === 'tire' ||
+    type === 'tyre' ||
+    type === 'tires' ||
+    type === 'ط¥ط·ط§ط±' ||
+    type === 'ط§ط·ط§ط±' ||
+    type === 'ط¥ط·ط§ط±ط§طھ' ||
+    type === 'ط§ط·ط§ط±ط§طھ'
+  ) {
+
+    return 'tire'
+
+  }
+
+
+  if (
+    type === 'battery' ||
+    type === 'ط¨ط·ط§ط±ظٹط©' ||
+    type === 'ط¨ط·ط§ط±ظٹط§طھ'
+  ) {
+
+    return 'battery'
+
+  }
+
+
+  if (
+    type === 'oil' ||
+    type === 'ط²ظٹطھ' ||
+    type === 'ط²ظٹظˆطھ'
+  ) {
+
+    return 'oil'
+
+  }
+
+
+  return type
+
+}
+
+
+// ======================================================
+// COMPONENT
+// ======================================================
+
+export default function VehicleResults({
+
+  result,
+
+  onAddToCart
+
+}) {
+
+
+  // ====================================================
+  // NORMALIZE RESULT
+  // ====================================================
+
+  const products =
+
+    Array.isArray(result)
+
+      ? result
+
+      : Array.isArray(result?.products)
+
+        ? result.products
+
+        : []
+
+
+  // ====================================================
+  // NO RESULTS
+  // ====================================================
+
+  if (!products.length)
+
+    return null
+
+
+  // ====================================================
+  // CLASSIFY
+  // ====================================================
+
+  const tires =
+
+    products.filter(
+
+      product =>
+
+        getProductType(product) ===
+        'tire'
+
+    )
+
+
+  const batteries =
+
+    products.filter(
+
+      product =>
+
+        getProductType(product) ===
+        'battery'
+
+    )
+
+
+  const oils =
+
+    products.filter(
+
+      product =>
+
+        getProductType(product) ===
+        'oil'
+
+    )
+
+
+  // ====================================================
+  // OTHER PRODUCTS
+  // ====================================================
+
+  const parts =
+
+    products.filter(product => {
+
+      const type =
+        getProductType(product)
+
+      return (
+
+        type !== 'tire' &&
+
+        type !== 'battery' &&
+
+        type !== 'oil'
+
+      )
+
+    })
+
+
+  // ====================================================
+  // RENDER
+  // ====================================================
+
+  return (
+
+    <div
+
+      className="
+        mt-10
+        space-y-10
+      "
+
+    >
+
+
+      <VehicleResultSection
+
+        icon="ًں›‍"
+
+        title="ط§ظ„ط¥ط·ط§ط±ط§طھ ط§ظ„ظ…ظ†ط§ط³ط¨ط©"
+
+        products={tires}
+
+        onAddToCart={
+          onAddToCart
+        }
+
+      />
+
+
+      <VehicleResultSection
+
+        icon="ًں”‹"
+
+        title="ط§ظ„ط¨ط·ط§ط±ظٹط§طھ ط§ظ„ظ…ظ†ط§ط³ط¨ط©"
+
+        products={batteries}
+
+        onAddToCart={
+          onAddToCart
+        }
+
+      />
+
+
+      <VehicleResultSection
+
+        icon="ًں›¢ï¸ڈ"
+
+        title="ط§ظ„ط²ظٹظˆطھ ط§ظ„ظ…ظ†ط§ط³ط¨ط©"
+
+        products={oils}
+
+        onAddToCart={
+          onAddToCart
+        }
+
+      />
+
+
+      <VehicleResultSection
+
+        icon="ًں”§"
+
+        title="ظ‚ط·ط¹ ط§ظ„ط؛ظٹط§ط±"
+
+        products={parts}
+
+        onAddToCart={
+          onAddToCart
+        }
+
+      />
+
+    </div>
+
+  )
+
+}
+
+
+============================================================
+FILE: src\components\vehicle\VehicleResultSection.jsx
+============================================================
+
+// ======================================================
+// EL OLA ERP
+// Vehicle Result Section
+// ======================================================
+
+import VehicleProductCard
+from './VehicleProductCard'
+
+export default function VehicleResultSection({
+
+  title,
+
+  icon = 'ًںڑ—',
+
+  products = [],
+
+  emptyMessage = 'ظ„ط§ طھظˆط¬ط¯ ظ…ظ†طھط¬ط§طھ ظ…ط·ط§ط¨ظ‚ط©.'
+
+}) {
+
+  return (
+
+    <section>
+
+      <div
+
+        className="
+
+          flex
+
+          items-center
+
+          gap-3
+
+          mb-6
+
+        "
+
+      >
+
+        <span className="text-3xl">
+
+          {icon}
+
+        </span>
+
+        <h2
+
+          className="
+
+            text-2xl
+
+            font-black
+
+            text-yellow-400
+
+          "
+
+        >
+
+          {title}
+
+        </h2>
+
+        <div
+
+          className="
+
+            ml-auto
+
+            bg-slate-800
+
+            px-4
+
+            py-1
+
+            rounded-full
+
+            text-sm
+
+            font-bold
+
+          "
+
+        >
+
+          {products.length}
+
+        </div>
+
+      </div>
+
+      {
+
+        products.length === 0
+
+        ?
+
+        (
+
+          <div
+
+            className="
+
+              bg-slate-800
+
+              border
+
+              border-slate-700
+
+              rounded-3xl
+
+              p-10
+
+              text-center
+
+              text-slate-400
+
+            "
+
+          >
+
+            {emptyMessage}
+
+          </div>
+
+        )
+
+        :
+
+        (
+
+          <div
+
+            className="
+
+              grid
+
+              md:grid-cols-2
+
+              xl:grid-cols-3
+
+              gap-6
+
+            "
+
+          >
+
+            {
+
+              products.map(product => (
+
+                <VehicleProductCard
+
+                  key={product.id}
+
+                  product={product}
+
+                />
+
+              ))
+
+            }
+
+          </div>
+
+        )
+
+      }
+
+    </section>
+
+  )
+
+}

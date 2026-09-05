@@ -1,12 +1,30 @@
 // ======================================================
 // EL OLA ERP
 // useVehicleSearch Hook
+//
+// AI-FIRST VEHICLE SEARCH
+//
+// Supports:
+// 1. Structured vehicle search
+// 2. Free-text AI vehicle search
+// 3. Tire size search
+// 4. Battery search
+// 5. Oil search
 // ======================================================
 
-import { useMemo, useState } from 'react'
+import {
+  useMemo,
+  useState
+} from 'react'
 
 import VehicleProvider
   from '../core/vehicles/VehicleProvider'
+
+import VehicleEngine
+  from '../core/engines/VehicleEngine'
+
+import VehicleAIEngine
+  from '../core/engines/VehicleAIEngine'
 
 import VehicleSearchController
   from '../core/controllers/VehicleSearchController'
@@ -137,21 +155,15 @@ const parseTireSize = value => {
     )
 
   if (threePart) {
-
     return {
-
       width:
         threePart[1],
-
       profile:
         threePart[2],
-
       rim:
         threePart[3],
-
       format:
         'three-part'
-
     }
   }
 
@@ -161,21 +173,15 @@ const parseTireSize = value => {
     )
 
   if (twoPart) {
-
     return {
-
       width:
         twoPart[1],
-
       profile:
         '',
-
       rim:
         twoPart[2],
-
       format:
         'two-part'
-
     }
   }
 
@@ -208,9 +214,7 @@ const flattenSearchResults = (
   if (
     tab === 'vehicle'
   ) {
-
     return [
-
       ...(Array.isArray(data.tires)
         ? data.tires
         : []),
@@ -230,14 +234,12 @@ const flattenSearchResults = (
       ...(Array.isArray(data.products)
         ? data.products
         : [])
-
     ]
   }
 
   if (
     tab === 'tire'
   ) {
-
     return Array.isArray(data.tires)
       ? data.tires
       : []
@@ -246,7 +248,6 @@ const flattenSearchResults = (
   if (
     tab === 'battery'
   ) {
-
     return Array.isArray(data.batteries)
       ? data.batteries
       : []
@@ -255,7 +256,6 @@ const flattenSearchResults = (
   if (
     tab === 'oil'
   ) {
-
     return Array.isArray(data.oils)
       ? data.oils
       : []
@@ -275,23 +275,19 @@ const idsEqual = (
 ) => {
 
   const left = [
-
     a?.productId,
     a?.id,
     a?.sku,
     a?.barcode
-
   ]
     .filter(Boolean)
     .map(norm)
 
   const right = [
-
     b?.productId,
     b?.id,
     b?.sku,
     b?.barcode
-
   ]
     .filter(Boolean)
     .map(norm)
@@ -331,15 +327,11 @@ const activeOfferFor = product => {
   if (
     !websiteProduct
   ) {
-
     return {
-
       websiteProduct:
         null,
-
       offer:
         null
-
     }
   }
 
@@ -380,7 +372,6 @@ const activeOfferFor = product => {
         if (
           item.startDate
         ) {
-
           const date =
             new Date(
               item.startDate
@@ -399,7 +390,6 @@ const activeOfferFor = product => {
         if (
           item.endDate
         ) {
-
           const date =
             new Date(
               item.endDate
@@ -420,10 +410,8 @@ const activeOfferFor = product => {
     ) || null
 
   return {
-
     websiteProduct,
     offer
-
   }
 }
 
@@ -494,11 +482,10 @@ const publicWarehouseProduct =
         ) &&
         explicit >= 0
       ) {
-
         offerPrice =
           explicit
-
-      } else {
+      }
+      else {
 
         const discount =
           Number(
@@ -511,7 +498,6 @@ const publicWarehouseProduct =
           discount < 100 &&
           salePrice > 0
         ) {
-
           offerPrice =
             salePrice -
             (
@@ -682,7 +668,6 @@ const publicWarehouseProduct =
         Boolean(
           product?.hidden
         )
-
     }
   }
 
@@ -736,7 +721,6 @@ const warehouseProducts = () => {
               product?.warehouseName ||
               warehouse?.name ||
               ''
-
           })
         }
       )
@@ -761,6 +745,19 @@ const websiteProducts = () => {
   )
     ? state.products
     : []
+}
+
+
+// ======================================================
+// ALL SEARCHABLE PRODUCTS
+// ======================================================
+
+const allSearchableProducts = () => {
+
+  return [
+    ...warehouseProducts(),
+    ...websiteProducts()
+  ]
 }
 
 
@@ -851,20 +848,18 @@ const tireMatches = (
     product?.skuSize,
     product?.name,
     product?.productName,
+
     tire?.size,
     tire?.tireSize,
     tire?.dimension,
     tire?.dimensions,
     tire?.sizeCode
-
   ]
 
   const wanted = [
-
     wantedWidth,
     wantedProfile,
     wantedRim
-
   ].join('/')
 
   return sizeValues.some(
@@ -1009,8 +1004,7 @@ const normalizeOilValue = value => {
   return norm(value)
     .replace(/–|—/g, '-')
     .replace(/[\/\\]/g, '-')
-    .replace(/_/g, '-')
-    .replace(/-/g, '-')
+    .replace(/\_/g, '-')
 }
 
 
@@ -1033,7 +1027,6 @@ const extractOilGrades = value => {
 
   const grades = []
 
-  // 20W-50
   const rangeMatches =
     text.match(
       /\b\d{1,3}w-?\d{1,3}\b/gi
@@ -1050,16 +1043,11 @@ const extractOilGrades = value => {
 
         grades.push(
           norm(item)
-            .replace(
-              /-/g,
-              '-'
-            )
         )
       }
     )
   }
 
-  // 20W
   const wMatches =
     text.match(
       /\b\d{1,3}w\b/gi
@@ -1079,7 +1067,6 @@ const extractOilGrades = value => {
     )
   }
 
-  // Plain number such as 20
   const numberMatches =
     text.match(
       /\b\d{1,3}\b/g
@@ -1131,7 +1118,6 @@ const oilMatches = (
     collectValues(
       product,
       [
-
         'viscosity',
         'viscosityGrade',
         'grade',
@@ -1148,7 +1134,6 @@ const oilMatches = (
         'title',
         'code',
         'sku'
-
       ]
     )
 
@@ -1171,14 +1156,12 @@ const oilMatches = (
         return false
       }
 
-      // Exact complete match
       if (
         actual === wanted
       ) {
         return true
       }
 
-      // Search for requested grade inside a larger value.
       if (
         actual.includes(
           wanted
@@ -1187,16 +1170,14 @@ const oilMatches = (
         return true
       }
 
-      // Compare extracted grades.
       const actualGrades =
         extractOilGrades(
           actual
         )
 
       return wantedGrades.some(
-        wantedGrade => {
-
-          return actualGrades.some(
+        wantedGrade =>
+          actualGrades.some(
             actualGrade => {
 
               if (
@@ -1206,7 +1187,6 @@ const oilMatches = (
                 return true
               }
 
-              // 20 should match 20W
               if (
                 /^\d+$/.test(
                   wantedGrade
@@ -1215,7 +1195,6 @@ const oilMatches = (
                   actualGrade
                 )
               ) {
-
                 return (
                   actualGrade.slice(
                     0,
@@ -1225,7 +1204,6 @@ const oilMatches = (
                 )
               }
 
-              // 20W should match 20W-50
               if (
                 /^\d+w$/.test(
                   wantedGrade
@@ -1240,7 +1218,6 @@ const oilMatches = (
               return false
             }
           )
-        }
       )
     }
   )
@@ -1277,21 +1254,6 @@ const extractBatteryCodes = value => {
   }
 
   const codes = []
-
-  /*
-   * Battery codes:
-   *
-   * N
-   * N40
-   * N50
-   * N55
-   * N70
-   * N70L
-   * N70R
-   *
-   * Also allow common numeric capacity
-   * values such as 70 / 70Ah.
-   */
 
   const matches =
     text.match(
@@ -1355,7 +1317,6 @@ const batteryMatches = (
     collectValues(
       product,
       [
-
         'capacity',
         'batteryCapacity',
         'ampereHour',
@@ -1377,7 +1338,6 @@ const batteryMatches = (
         'title',
         'description',
         'sku'
-
       ]
     )
 
@@ -1400,14 +1360,12 @@ const batteryMatches = (
         return false
       }
 
-      // Exact value
       if (
         actual === wanted
       ) {
         return true
       }
 
-      // Direct containment
       if (
         actual.includes(
           wanted
@@ -1430,9 +1388,8 @@ const batteryMatches = (
         )
 
       return wantedCodes.some(
-        wantedCode => {
-
-          return actualCodes.some(
+        wantedCode =>
+          actualCodes.some(
             actualCode => {
 
               if (
@@ -1442,9 +1399,6 @@ const batteryMatches = (
                 return true
               }
 
-              /*
-               * N70 should match N70L / N70R.
-               */
               if (
                 wantedCode.startsWith('n') &&
                 actualCode.startsWith(
@@ -1454,9 +1408,6 @@ const batteryMatches = (
                 return true
               }
 
-              /*
-               * 70 should match 70Ah.
-               */
               if (
                 /^\d+$/.test(
                   wantedCode
@@ -1470,7 +1421,6 @@ const batteryMatches = (
               return false
             }
           )
-        }
       )
     }
   )
@@ -1646,7 +1596,6 @@ const vehicleObjectMatches = (
         singleYear
       )
     ) {
-
       return (
         requestedYear ===
         singleYear
@@ -1677,7 +1626,6 @@ const vehicleObjectMatches = (
       Number.isFinite(from) &&
       Number.isFinite(to)
     ) {
-
       return (
         requestedYear >= from &&
         requestedYear <= to
@@ -1687,7 +1635,6 @@ const vehicleObjectMatches = (
     if (
       Number.isFinite(from)
     ) {
-
       return (
         requestedYear >= from
       )
@@ -1696,7 +1643,6 @@ const vehicleObjectMatches = (
     if (
       Number.isFinite(to)
     ) {
-
       return (
         requestedYear <= to
       )
@@ -1726,11 +1672,9 @@ const vehicleStringMatches = (
   }
 
   const requested = [
-
     form?.vehicleType,
     form?.brand,
     form?.model
-
   ]
     .filter(Boolean)
     .map(norm)
@@ -1780,122 +1724,122 @@ const vehicleStringMatches = (
 // VEHICLE COMPATIBILITY VALUES
 // ======================================================
 
-const collectVehicleCompatibility = product => {
+const collectVehicleCompatibility =
+  product => {
 
-  const output = []
+    const output = []
 
-  const add = value => {
-
-    if (
-      value == null
-    ) {
-      return
-    }
-
-    if (
-      Array.isArray(value)
-    ) {
-
-      value.forEach(
-        item =>
-          add(item)
-      )
-
-      return
-    }
-
-    if (
-      typeof value === 'object'
-    ) {
-
-      output.push(
-        value
-      )
-
-      return
-    }
-
-    if (
-      typeof value === 'string'
-    ) {
+    const add = value => {
 
       if (
-        value.trim()
+        value == null
+      ) {
+        return
+      }
+
+      if (
+        Array.isArray(value)
+      ) {
+
+        value.forEach(
+          item =>
+            add(item)
+        )
+
+        return
+      }
+
+      if (
+        typeof value === 'object'
       ) {
 
         output.push(
           value
         )
+
+        return
+      }
+
+      if (
+        typeof value === 'string'
+      ) {
+
+        if (
+          value.trim()
+        ) {
+          output.push(
+            value
+          )
+        }
       }
     }
+
+    add(
+      product?.compatibleVehicles
+    )
+
+    add(
+      product?.vehicleCompatibility
+    )
+
+    add(
+      product?.vehicleCompatibilities
+    )
+
+    add(
+      product?.vehicles
+    )
+
+    add(
+      product?.compatibility?.vehicles
+    )
+
+    add(
+      product?.compatibility?.compatibleVehicles
+    )
+
+    add(
+      product?.compatibility?.vehicleCompatibility
+    )
+
+    add(
+      product?.compatibility?.vehicleCompatibilities
+    )
+
+    add(
+      product?.specifications?.compatibleVehicles
+    )
+
+    add(
+      product?.specifications?.vehicleCompatibility
+    )
+
+    add(
+      product?.specifications?.vehicleCompatibilities
+    )
+
+    add(
+      product?.specifications?.vehicles
+    )
+
+    add(
+      product?.attributes?.compatibleVehicles
+    )
+
+    add(
+      product?.attributes?.vehicleCompatibility
+    )
+
+    add(
+      product?.attributes?.vehicleCompatibilities
+    )
+
+    add(
+      product?.attributes?.vehicles
+    )
+
+    return output
   }
-
-  add(
-    product?.compatibleVehicles
-  )
-
-  add(
-    product?.vehicleCompatibility
-  )
-
-  add(
-    product?.vehicleCompatibilities
-  )
-
-  add(
-    product?.vehicles
-  )
-
-  add(
-    product?.compatibility?.vehicles
-  )
-
-  add(
-    product?.compatibility?.compatibleVehicles
-  )
-
-  add(
-    product?.compatibility?.vehicleCompatibility
-  )
-
-  add(
-    product?.compatibility?.vehicleCompatibilities
-  )
-
-  add(
-    product?.specifications?.compatibleVehicles
-  )
-
-  add(
-    product?.specifications?.vehicleCompatibility
-  )
-
-  add(
-    product?.specifications?.vehicleCompatibilities
-  )
-
-  add(
-    product?.specifications?.vehicles
-  )
-
-  add(
-    product?.attributes?.compatibleVehicles
-  )
-
-  add(
-    product?.attributes?.vehicleCompatibility
-  )
-
-  add(
-    product?.attributes?.vehicleCompatibilities
-  )
-
-  add(
-    product?.attributes?.vehicles
-  )
-
-  return output
-}
 
 
 // ======================================================
@@ -1931,7 +1875,6 @@ const vehicleMatches = (
       if (
         typeof vehicle === 'string'
       ) {
-
         return vehicleStringMatches(
           vehicle,
           form
@@ -2137,10 +2080,6 @@ const mergeWarehouseSearchResults = (
   let catalogMatches =
     []
 
-  // ====================================================
-  // TIRE
-  // ====================================================
-
   if (
     tab === 'tire'
   ) {
@@ -2169,11 +2108,6 @@ const mergeWarehouseSearchResults = (
           )
       )
   }
-
-
-  // ====================================================
-  // BATTERY
-  // ====================================================
 
   if (
     tab === 'battery'
@@ -2218,11 +2152,6 @@ const mergeWarehouseSearchResults = (
       )
   }
 
-
-  // ====================================================
-  // OIL
-  // ====================================================
-
   if (
     tab === 'oil'
   ) {
@@ -2266,11 +2195,6 @@ const mergeWarehouseSearchResults = (
       )
   }
 
-
-  // ====================================================
-  // VEHICLE
-  // ====================================================
-
   if (
     tab === 'vehicle'
   ) {
@@ -2294,11 +2218,6 @@ const mergeWarehouseSearchResults = (
       )
   }
 
-
-  // ====================================================
-  // NORMALIZE RESULTS
-  // ====================================================
-
   const normalizedWarehouse =
     warehouseMatches.map(
       publicWarehouseProduct
@@ -2318,22 +2237,179 @@ const mergeWarehouseSearchResults = (
         )
       : []
 
-
-  // ====================================================
-  // FINAL MERGE
-  // ====================================================
-
   return mergeProducts(
     [
-
       ...normalizedWarehouse,
-
       ...normalizedCatalog,
-
       ...normalizedController
-
     ]
   )
+}
+
+
+// ======================================================
+// AI VEHICLE SEARCH
+//
+// IMPORTANT
+// ------------------------------------------------------
+//
+// Free text must go through VehicleAIEngine first.
+//
+// Example:
+//
+// "تويوتا كرولا 2020"
+//
+// VehicleAIEngine:
+//   1. Parses the text.
+//   2. Resolves make/model/year.
+//   3. Calls VehicleEngine with structured data.
+//
+// VehicleEngine then performs:
+//
+//   VehicleProvider
+//   OEMCompatibilityEngine
+//   VehicleCompatibilityEngine
+//   Product matching
+//
+// This keeps AI parsing separate from compatibility logic.
+// ======================================================
+
+const searchVehicleWithAI = async query => {
+
+  const text =
+    String(
+      query ?? ''
+    ).trim()
+
+  if (
+    !text
+  ) {
+    return {
+      response:
+        null,
+      results:
+        []
+    }
+  }
+
+  const products =
+    allSearchableProducts()
+
+  try {
+
+    console.log(
+      '[Vehicle AI] Searching:',
+      text
+    )
+
+    console.log(
+      '[Vehicle AI] Products available:',
+      products.length
+    )
+
+    // --------------------------------------------------
+    // CORRECT AI PATH
+    // --------------------------------------------------
+    //
+    // DO NOT send free text directly to VehicleEngine.
+    //
+    // VehicleAIEngine is responsible for parsing:
+    //
+    // "Toyota corolla 2021"
+    //
+    // into:
+    //
+    // make  = Toyota
+    // model = Corolla
+    // year  = 2021
+    //
+    // and then calling VehicleEngine.
+    // --------------------------------------------------
+
+    const response =
+      await VehicleAIEngine.search({
+        query:
+          text,
+        products
+      })
+
+    console.log(
+      '[Vehicle AI] AI Engine response:',
+      response
+    )
+
+    // --------------------------------------------------
+    // VehicleAIEngine.search() returns an object
+    // containing the final matched products.
+    //
+    // flattenSearchResults() already understands
+    // response.products.
+    // --------------------------------------------------
+
+    const engineProducts =
+      flattenSearchResults(
+        'vehicle',
+        response
+      )
+
+    console.log(
+      '[Vehicle AI] Matched products:',
+      engineProducts.length
+    )
+
+    if (
+      engineProducts.length > 0
+    ) {
+
+      return {
+        response,
+
+        results:
+          mergeProducts(
+            engineProducts.map(
+              publicWarehouseProduct
+            )
+          )
+      }
+    }
+
+    // --------------------------------------------------
+    // If VehicleAIEngine resolved the vehicle but
+    // returned no Elola products, do NOT treat this
+    // as an AI parsing failure.
+    //
+    // Compatibility and availability remain separate.
+    // --------------------------------------------------
+
+    console.warn(
+      '[Vehicle AI] Vehicle resolved but no matching products were returned.',
+      response
+    )
+
+    return {
+      response,
+
+      results:
+        []
+    }
+  }
+  catch (
+    error
+  ) {
+
+    console.error(
+      '[Vehicle AI] Search failed:',
+      error
+    )
+
+    return {
+      response:
+        null,
+
+      results:
+        []
+    }
+  }
 }
 
 
@@ -2386,8 +2462,10 @@ export default function useVehicleSearch() {
         '',
 
       viscosity:
-        ''
+        '',
 
+      vehicleQuery:
+        ''
     })
 
 
@@ -2427,20 +2505,15 @@ export default function useVehicleSearch() {
     useMemo(
       () =>
         VehicleProvider.getModels({
-
           vehicleType:
             form.vehicleType,
 
           brand:
             form.brand
-
         }),
       [
-
         form.vehicleType,
-
         form.brand
-
       ]
     )
 
@@ -2453,20 +2526,15 @@ export default function useVehicleSearch() {
     useMemo(
       () =>
         VehicleProvider.getYears({
-
           brand:
             form.brand,
 
           model:
             form.model
-
         }),
       [
-
         form.brand,
-
         form.model
-
       ]
     )
 
@@ -2483,7 +2551,6 @@ export default function useVehicleSearch() {
       if (
         tab === 'tire'
       ) {
-
         setTireSearchError('')
       }
 
@@ -2496,6 +2563,50 @@ export default function useVehicleSearch() {
         if (
           tab === 'vehicle'
         ) {
+
+          // --------------------------------------------
+          // AI FREE TEXT SEARCH
+          // --------------------------------------------
+
+          const aiQuery =
+            String(
+              form.vehicleQuery ??
+              form.query ??
+              ''
+            ).trim()
+
+          if (
+            aiQuery
+          ) {
+
+            console.log(
+              '[Vehicle Search] AI query:',
+              aiQuery
+            )
+
+            const aiResult =
+              await searchVehicleWithAI(
+                aiQuery
+              )
+
+            const finalResults =
+              Array.isArray(
+                aiResult?.results
+              )
+                ? aiResult.results
+                : []
+
+            setResults(
+              finalResults
+            )
+
+            return finalResults
+          }
+
+
+          // --------------------------------------------
+          // STRUCTURED SEARCH
+          // --------------------------------------------
 
           if (
             !form.brand ||
@@ -2526,7 +2637,6 @@ export default function useVehicleSearch() {
 
                 year:
                   form.year
-
               })
 
             controllerResults =
@@ -2534,18 +2644,14 @@ export default function useVehicleSearch() {
                 'vehicle',
                 response
               )
-
           }
           catch (
             controllerError
           ) {
 
             console.warn(
-
               'Vehicle controller search failed. Using local product compatibility search.',
-
               controllerError
-
             )
 
             controllerResults =
@@ -2554,15 +2660,10 @@ export default function useVehicleSearch() {
 
           const merged =
             mergeWarehouseSearchResults(
-
               'vehicle',
-
               controllerResults,
-
               form,
-
               null
-
             )
 
           setResults(
@@ -2593,9 +2694,7 @@ export default function useVehicleSearch() {
             setResults([])
 
             setTireSearchError(
-
               'اكتب مقاس الإطار بهذا الشكل: 205/55/16 أو 205*55*16 أو 24.9/24'
-
             )
 
             return []
@@ -2620,7 +2719,6 @@ export default function useVehicleSearch() {
 
                 format:
                   parsed.format
-
               })
 
             controllerResults =
@@ -2628,18 +2726,14 @@ export default function useVehicleSearch() {
                 'tire',
                 response
               )
-
           }
           catch (
             error
           ) {
 
             console.warn(
-
               'Tire controller search failed. Using local product search.',
-
               error
-
             )
 
             controllerResults =
@@ -2648,15 +2742,10 @@ export default function useVehicleSearch() {
 
           const merged =
             mergeWarehouseSearchResults(
-
               'tire',
-
               controllerResults,
-
               form,
-
               parsed
-
             )
 
           setResults(
@@ -2685,7 +2774,6 @@ export default function useVehicleSearch() {
 
                 capacity:
                   form.capacity
-
               })
 
             controllerResults =
@@ -2693,18 +2781,14 @@ export default function useVehicleSearch() {
                 'battery',
                 response
               )
-
           }
           catch (
             error
           ) {
 
             console.warn(
-
               'Battery controller search failed. Using local product search.',
-
               error
-
             )
 
             controllerResults =
@@ -2713,15 +2797,10 @@ export default function useVehicleSearch() {
 
           const merged =
             mergeWarehouseSearchResults(
-
               'battery',
-
               controllerResults,
-
               form,
-
               null
-
             )
 
           setResults(
@@ -2750,7 +2829,6 @@ export default function useVehicleSearch() {
 
                 viscosity:
                   form.viscosity
-
               })
 
             controllerResults =
@@ -2758,18 +2836,14 @@ export default function useVehicleSearch() {
                 'oil',
                 response
               )
-
           }
           catch (
             error
           ) {
 
             console.warn(
-
               'Oil controller search failed. Using local product search.',
-
               error
-
             )
 
             controllerResults =
@@ -2778,15 +2852,10 @@ export default function useVehicleSearch() {
 
           const merged =
             mergeWarehouseSearchResults(
-
               'oil',
-
               controllerResults,
-
               form,
-
               null
-
             )
 
           setResults(
@@ -2811,17 +2880,13 @@ export default function useVehicleSearch() {
       ) {
 
         console.error(
-
           'Vehicle search failed:',
-
           error
-
         )
 
         setResults([])
 
         return []
-
       }
       finally {
 
@@ -2854,7 +2919,8 @@ export default function useVehicleSearch() {
 
     tireSearchError,
 
-    search
+    search,
 
+    searchVehicleWithAI
   }
 }

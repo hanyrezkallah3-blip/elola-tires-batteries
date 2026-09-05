@@ -2,476 +2,850 @@
 // EL OLA ERP
 // Vehicle Compatibility Engine
 // ======================================================
-
-export class VehicleCompatibilityEngine {
-
-  // ====================================================
-  // NORMALIZE TEXT
-  // ====================================================
-
-  static normalizeText(value) {
-
-    return String(value ?? '')
-      .trim()
-      .toLowerCase()
-      .replace(/أ|إ|آ/g, 'ا')
-      .replace(/ة/g, 'ه')
-      .replace(/ى/g, 'ي')
-      .replace(/\s+/g, ' ')
-
-  }
-
-
-  // ====================================================
-  // NORMALIZE TYPE
-  // ====================================================
-
-  static normalizeType(value) {
-
-    const normalized =
-      this.normalizeText(
-        value
-      )
+//
+// RESPONSIBILITY
+// ------------------------------------------------------
+//
+// Central engine for explicit product ↔ vehicle
+// compatibility.
+//
+// IMPORTANT
+// ------------------------------------------------------
+//
+// This engine checks technical vehicle compatibility only.
+//
+// It does NOT check:
+// - inventory
+// - stock
+// - warehouse availability
+// - price
+//
+// A compatible product remains compatible even when it
+// is not currently available in Elola.
+//
+// ======================================================
 
 
-    const aliases = {
+// ======================================================
+// NORMALIZE TEXT
+// ======================================================
 
-      tire:
-        [
-          'tire',
-          'tires',
-          'tyre',
-          'tyres',
-          'إطار',
-          'اطار',
-          'إطارات',
-          'اطارات'
-        ],
+const normalizeText = value => {
 
-      battery:
-        [
-          'battery',
-          'batteries',
-          'بطارية',
-          'بطاريات'
-        ],
-
-      oil:
-        [
-          'oil',
-          'oils',
-          'زيت',
-          'زيوت'
-        ]
-
-    }
-
-
-    for (
-      const [
-        type,
-        values
-      ] of Object.entries(
-        aliases
-      )
-    ) {
-
-      if (
-        values.some(
-          value =>
-            this.normalizeText(
-              value
-            ) === normalized
-        )
-      ) {
-
-        return type
-
-      }
-
-    }
-
-
-    return normalized
-
-  }
-
-
-  // ====================================================
-  // NORMALIZE YEAR
-  // ====================================================
-
-  static normalizeYear(value) {
-
-    if (
-      value === undefined ||
-      value === null ||
-      value === ''
-    ) {
-
-      return null
-
-    }
-
-
-    const number =
-      Number(
-        value
-      )
-
-
-    return Number.isFinite(
-      number
+  return String(
+    value ?? ''
+  )
+    .trim()
+    .toLowerCase()
+    .replace(/أ|إ|آ/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي')
+    .replace(
+      /[\u064B-\u065F\u0670]/g,
+      ''
     )
-      ? number
-      : null
+    .replace(/\s+/g, ' ')
 
-  }
+}
 
 
-  // ====================================================
-  // GET COMPATIBLE VEHICLES
-  // ====================================================
+// ======================================================
+// COMPACT TEXT
+// ======================================================
 
-  static getCompatibleVehicles(
-    product
+const compactText = value => {
+
+  return normalizeText(
+    value
+  )
+    .replace(
+      /[\s_\-\/\\*×x]/gi,
+      ''
+    )
+
+}
+
+
+// ======================================================
+// NUMBER
+// ======================================================
+
+const numberValue = value => {
+
+  if (
+    value === null ||
+    value === undefined ||
+    value === ''
   ) {
-
-    const candidates = [
-
-      product?.compatibleVehicles,
-
-      product?.vehicleCompatibility,
-
-      product?.vehicleCompatibilities,
-
-      product?.vehicles,
-
-      product?.compatibility?.vehicles,
-
-      product?.compatibility?.compatibleVehicles,
-
-      product?.specifications?.compatibleVehicles,
-
-      product?.specifications?.vehicleCompatibility,
-
-      product?.specifications?.vehicles,
-
-      product?.attributes?.compatibleVehicles,
-
-      product?.attributes?.vehicleCompatibility,
-
-      product?.attributes?.vehicles,
-
-      product?.tire?.compatibleVehicles,
-
-      product?.tire?.vehicleCompatibility,
-
-      product?.battery?.compatibleVehicles,
-
-      product?.battery?.vehicleCompatibility,
-
-      product?.oil?.compatibleVehicles,
-
-      product?.oil?.vehicleCompatibility
-
-    ]
-
-
-    for (
-      const value of candidates
-    ) {
-
-      if (
-        Array.isArray(value)
-      ) {
-
-        return value
-
-      }
-
-    }
-
-
-    return []
-
-  }
-
-
-  // ====================================================
-  // CONVERT COMPATIBILITY ENTRY
-  // ====================================================
-
-  static normalizeCompatibilityVehicle(
-    vehicle
-  ) {
-
-    // --------------------------------------------------
-    // STRING
-    // --------------------------------------------------
-
-    if (
-      typeof vehicle === 'string'
-    ) {
-
-      const value =
-        vehicle.trim()
-
-
-      if (!value) {
-
-        return null
-
-      }
-
-
-      /*
-       * دعم الصيغ النصية مثل:
-       *
-       * Toyota Corolla
-       * Toyota Corolla 2020
-       * Toyota | Corolla | 2020
-       * Toyota, Corolla, 2020
-       */
-
-      const parts =
-        value
-          .split(
-            /\||,|\/|;/ 
-          )
-          .map(
-            part =>
-              part.trim()
-          )
-          .filter(
-            Boolean
-          )
-
-
-      if (
-        parts.length >= 2
-      ) {
-
-        const year =
-          parts
-            .map(
-              part =>
-                this.normalizeYear(
-                  part
-                )
-            )
-            .find(
-              value =>
-                value !== null
-            )
-
-
-        const nonYearParts =
-          parts.filter(
-            part =>
-              this.normalizeYear(
-                part
-              ) === null
-          )
-
-
-        return {
-
-          make:
-            nonYearParts[0] ||
-            '',
-
-          model:
-            nonYearParts[1] ||
-            '',
-
-          year
-
-        }
-
-      }
-
-
-      return {
-
-        make:
-          value,
-
-        model:
-          '',
-
-        year:
-          null
-
-      }
-
-    }
-
-
-    // --------------------------------------------------
-    // OBJECT
-    // --------------------------------------------------
-
-    if (
-      vehicle &&
-      typeof vehicle === 'object'
-    ) {
-
-      return {
-
-        ...vehicle,
-
-        vehicleType:
-          vehicle.vehicleType ??
-          vehicle.type ??
-          vehicle.category ??
-          vehicle.vehicleCategory ??
-          '',
-
-        make:
-          vehicle.make ??
-          vehicle.brand ??
-          vehicle.manufacturer ??
-          vehicle.makeName ??
-          '',
-
-        model:
-          vehicle.model ??
-          vehicle.modelName ??
-          '',
-
-        year:
-          vehicle.year ??
-          vehicle.modelYear ??
-          vehicle.productionYear ??
-          null,
-
-        yearFrom:
-          vehicle.yearFrom ??
-          vehicle.from ??
-          vehicle.startYear ??
-          null,
-
-        yearTo:
-          vehicle.yearTo ??
-          vehicle.to ??
-          vehicle.endYear ??
-          null
-
-      }
-
-    }
-
 
     return null
 
   }
 
 
-  // ====================================================
-  // GET VEHICLE FIELD
-  // ====================================================
+  const normalized =
 
-  static getVehicleField(
-    vehicle,
-    keys = []
+    Number(
+
+      String(value)
+        .trim()
+        .replace(',', '.')
+
+    )
+
+
+  return Number.isFinite(
+    normalized
+  )
+
+    ? normalized
+
+    : null
+
+}
+
+
+// ======================================================
+// GENERIC VALUE MATCH
+// ======================================================
+
+const valuesMatch = (
+  actual,
+  wanted
+) => {
+
+  const left =
+    compactText(
+      actual
+    )
+
+
+  const right =
+    compactText(
+      wanted
+    )
+
+
+  if (
+    !left ||
+    !right
   ) {
 
-    for (
-      const key of keys
-    ) {
-
-      const value =
-        vehicle?.[key]
-
-
-      if (
-        value !== undefined &&
-        value !== null &&
-        value !== ''
-      ) {
-
-        return value
-
-      }
-
-    }
-
-
-    return ''
+    return false
 
   }
 
 
-  // ====================================================
-  // MATCH TEXT
-  // ====================================================
+  return (
 
-  static matchText(
-    requested,
-    actual
-  ) {
+    left === right ||
 
-    const wanted =
-      this.normalizeText(
-        requested
-      )
+    left.includes(
+      right
+    ) ||
 
+    right.includes(
+      left
+    )
 
-    const value =
-      this.normalizeText(
-        actual
-      )
+  )
+
+}
 
 
-    /*
-     * إذا لم يتم تحديد القيمة
-     * لا تمنع التوافق.
-     */
+// ======================================================
+// COLLECT COMPATIBILITY VALUES
+// ======================================================
+//
+// Supports all compatibility structures used by Elola.
+//
+// ======================================================
 
-    if (!wanted) {
+const collectCompatibilityValues = product => {
 
-      return true
-
-    }
+  const values = []
 
 
-    /*
-     * إذا لم توجد القيمة في بيانات
-     * التوافق فلا نعتبرها تطابقًا.
-     */
+  const add = value => {
 
-    if (!value) {
+    if (
+      value === null ||
+      value === undefined ||
+      value === ''
+    ) {
 
-      return false
+      return
 
     }
 
 
     if (
-      wanted === value
+      Array.isArray(value)
+    ) {
+
+      value.forEach(
+        add
+      )
+
+      return
+
+    }
+
+
+    if (
+      typeof value === 'object'
+    ) {
+
+      values.push(
+        value
+      )
+
+      return
+
+    }
+
+
+    values.push(
+      String(value)
+    )
+
+  }
+
+
+  // ----------------------------------------------------
+  // ROOT
+  // ----------------------------------------------------
+
+  add(
+    product?.compatibleVehicles
+  )
+
+  add(
+    product?.vehicleCompatibility
+  )
+
+  add(
+    product?.vehicleCompatibilities
+  )
+
+  add(
+    product?.vehicles
+  )
+
+
+  // ----------------------------------------------------
+  // COMPATIBILITY
+  // ----------------------------------------------------
+
+  add(
+    product?.compatibility?.vehicles
+  )
+
+  add(
+    product?.compatibility?.compatibleVehicles
+  )
+
+  add(
+    product?.compatibility?.vehicleCompatibility
+  )
+
+  add(
+    product?.compatibility?.vehicleCompatibilities
+  )
+
+
+  // ----------------------------------------------------
+  // SPECIFICATIONS
+  // ----------------------------------------------------
+
+  add(
+    product?.specifications?.compatibleVehicles
+  )
+
+  add(
+    product?.specifications?.vehicleCompatibility
+  )
+
+  add(
+    product?.specifications?.vehicleCompatibilities
+  )
+
+  add(
+    product?.specifications?.vehicles
+  )
+
+
+  // ----------------------------------------------------
+  // ATTRIBUTES
+  // ----------------------------------------------------
+
+  add(
+    product?.attributes?.compatibleVehicles
+  )
+
+  add(
+    product?.attributes?.vehicleCompatibility
+  )
+
+  add(
+    product?.attributes?.vehicleCompatibilities
+  )
+
+  add(
+    product?.attributes?.vehicles
+  )
+
+
+  return values
+
+}
+
+
+// ======================================================
+// VEHICLE STRING MATCH
+// ======================================================
+
+const vehicleStringMatches = (
+  value,
+  {
+    make,
+    model,
+    year,
+    vehicleType
+  }
+) => {
+
+  const text =
+    compactText(
+      value
+    )
+
+
+  if (
+    !text
+  ) {
+
+    return false
+
+  }
+
+
+  const requested = [
+
+    vehicleType,
+
+    make,
+
+    model
+
+  ]
+    .filter(
+      value =>
+        value !== null &&
+        value !== undefined &&
+        value !== ''
+    )
+    .map(
+      compactText
+    )
+    .filter(Boolean)
+
+
+  if (
+    requested.length === 0
+  ) {
+
+    return false
+
+  }
+
+
+  // ----------------------------------------------------
+  // MAKE / MODEL / TYPE
+  // ----------------------------------------------------
+
+  const basicMatch =
+    requested.every(
+      item =>
+        text.includes(
+          item
+        )
+    )
+
+
+  if (
+    !basicMatch
+  ) {
+
+    return false
+
+  }
+
+
+  // ----------------------------------------------------
+  // YEAR
+  // ----------------------------------------------------
+
+  if (
+    year !== null &&
+    year !== undefined &&
+    year !== ''
+  ) {
+
+    const requestedYear =
+      compactText(
+        year
+      )
+
+
+    if (
+      requestedYear &&
+      !text.includes(
+        requestedYear
+      )
+    ) {
+
+      // A string compatibility value may describe a
+      // range, therefore do not reject it solely because
+      // the exact year is absent.
+      //
+      // Examples:
+      // 2018-2022
+      // 2018/2022
+      // 2018 to 2022
+
+      const yearNumber =
+        numberValue(
+          year
+        )
+
+
+      const range =
+        String(
+          value ?? ''
+        ).match(
+          /(\d{4})\s*[-\/]\s*(\d{4})/
+        )
+
+
+      if (
+        yearNumber !== null &&
+        range
+      ) {
+
+        const from =
+          Number(
+            range[1]
+          )
+
+
+        const to =
+          Number(
+            range[2]
+          )
+
+
+        if (
+          yearNumber >= from &&
+          yearNumber <= to
+        ) {
+
+          return true
+
+        }
+
+      }
+
+
+      return false
+
+    }
+
+  }
+
+
+  return true
+
+}
+
+
+// ======================================================
+// VEHICLE OBJECT MATCH
+// ======================================================
+
+const vehicleObjectMatches = (
+  vehicle,
+  {
+    make,
+    model,
+    year,
+    vehicleType
+  }
+) => {
+
+  if (
+    !vehicle ||
+    typeof vehicle !== 'object'
+  ) {
+
+    return false
+
+  }
+
+
+  // ----------------------------------------------------
+  // TYPE
+  // ----------------------------------------------------
+
+  const vehicleTypeValue =
+
+    vehicle?.vehicleType ??
+    vehicle?.type ??
+    vehicle?.category ??
+    vehicle?.vehicleCategory ??
+    ''
+
+
+  if (
+    vehicleType &&
+    vehicleTypeValue
+  ) {
+
+    if (
+      !valuesMatch(
+        vehicleTypeValue,
+        vehicleType
+      )
+    ) {
+
+      return false
+
+    }
+
+  }
+
+
+  // ----------------------------------------------------
+  // MAKE / BRAND
+  // ----------------------------------------------------
+
+  const vehicleBrand =
+
+    vehicle?.brand ??
+    vehicle?.make ??
+    vehicle?.manufacturer ??
+    vehicle?.manufacturerName ??
+    ''
+
+
+  if (
+    make &&
+    vehicleBrand
+  ) {
+
+    if (
+      !valuesMatch(
+        vehicleBrand,
+        make
+      )
+    ) {
+
+      return false
+
+    }
+
+  }
+
+
+  // ----------------------------------------------------
+  // MODEL
+  // ----------------------------------------------------
+
+  const vehicleModel =
+
+    vehicle?.model ??
+    vehicle?.modelName ??
+    vehicle?.vehicleModel ??
+    ''
+
+
+  if (
+    model &&
+    vehicleModel
+  ) {
+
+    if (
+      !valuesMatch(
+        vehicleModel,
+        model
+      )
+    ) {
+
+      return false
+
+    }
+
+  }
+
+
+  // ----------------------------------------------------
+  // YEAR
+  // ----------------------------------------------------
+
+  return matchYear({
+
+    vehicle,
+
+    year
+
+  })
+
+}
+
+
+// ======================================================
+// YEAR MATCH
+// ======================================================
+
+const matchYear = ({
+  vehicle,
+  year
+}) => {
+
+  if (
+    year === null ||
+    year === undefined ||
+    year === ''
+  ) {
+
+    return true
+
+  }
+
+
+  const requestedYear =
+    numberValue(
+      year
+    )
+
+
+  if (
+    requestedYear === null
+  ) {
+
+    return true
+
+  }
+
+
+  // ----------------------------------------------------
+  // EXACT YEAR FIELDS
+  // ----------------------------------------------------
+
+  const exactYear =
+
+    vehicle?.year ??
+    vehicle?.modelYear ??
+    vehicle?.vehicleYear
+
+
+  if (
+    exactYear !== null &&
+    exactYear !== undefined &&
+    exactYear !== ''
+  ) {
+
+    const exact =
+      numberValue(
+        exactYear
+      )
+
+
+    if (
+      exact !== null
+    ) {
+
+      return (
+        requestedYear ===
+        exact
+      )
+
+    }
+
+  }
+
+
+  // ----------------------------------------------------
+  // YEAR FROM / TO
+  // ----------------------------------------------------
+
+  const fromValue =
+
+    vehicle?.yearFrom ??
+    vehicle?.from ??
+    vehicle?.startYear ??
+    vehicle?.minYear
+
+
+  const toValue =
+
+    vehicle?.yearTo ??
+    vehicle?.to ??
+    vehicle?.endYear ??
+    vehicle?.maxYear
+
+
+  const from =
+    numberValue(
+      fromValue
+    )
+
+
+  const to =
+    numberValue(
+      toValue
+    )
+
+
+  if (
+    from !== null ||
+    to !== null
+  ) {
+
+    const minimum =
+      from !== null
+        ? from
+        : requestedYear
+
+
+    const maximum =
+      to !== null
+        ? to
+        : requestedYear
+
+
+    return (
+
+      requestedYear >=
+      minimum &&
+
+      requestedYear <=
+      maximum
+
+    )
+
+  }
+
+
+  // ----------------------------------------------------
+  // YEAR ARRAY
+  // ----------------------------------------------------
+
+  const years = [
+
+    vehicle?.years,
+
+    vehicle?.modelYears,
+
+    vehicle?.supportedYears
+
+  ]
+
+
+  for (
+    const value of years
+  ) {
+
+    if (
+      !Array.isArray(value)
+    ) {
+
+      continue
+
+    }
+
+
+    const found =
+      value.some(
+        item =>
+          numberValue(
+            item
+          ) ===
+          requestedYear
+      )
+
+
+    if (
+      found
     ) {
 
       return true
 
     }
 
+  }
 
-    /*
-     * دعم اختلافات بسيطة في الكتابة.
-     */
 
-    return (
-      value.includes(wanted) ||
-      wanted.includes(value)
+  // ----------------------------------------------------
+  // NO YEAR INFORMATION
+  // ----------------------------------------------------
+  //
+  // If the compatibility record contains make/model but
+  // no year restriction, it remains compatible.
+  //
+  // ----------------------------------------------------
+
+  return true
+
+}
+
+
+// ======================================================
+// VEHICLE OBJECT / STRING MATCH
+// ======================================================
+
+const compatibilityValueMatches = (
+  value,
+  params
+) => {
+
+  if (
+    typeof value === 'string' ||
+    typeof value === 'number'
+  ) {
+
+    return vehicleStringMatches(
+      value,
+      params
     )
 
   }
 
 
-  // ====================================================
-  // MATCH VEHICLE
-  // ====================================================
+  if (
+    typeof value === 'object' &&
+    value !== null
+  ) {
+
+    return vehicleObjectMatches(
+      value,
+      params
+    )
+
+  }
+
+
+  return false
+
+}
+
+
+// ======================================================
+// MATCH VEHICLE
+// ======================================================
+
+export class VehicleCompatibilityEngine {
+
 
   static matchVehicle({
 
@@ -487,15 +861,24 @@ export class VehicleCompatibilityEngine {
 
   }) {
 
+    if (
+      !product
+    ) {
+
+      return false
+
+    }
+
+
+    // --------------------------------------------------
+    // COLLECT ALL COMPATIBILITY DATA
+    // --------------------------------------------------
+
     const vehicles =
-      this.getCompatibleVehicles(
+      collectCompatibilityValues(
         product
       )
 
-
-    // --------------------------------------------------
-    // NO COMPATIBILITY DATA
-    // --------------------------------------------------
 
     if (
       vehicles.length === 0
@@ -506,364 +889,28 @@ export class VehicleCompatibilityEngine {
     }
 
 
+    // --------------------------------------------------
+    // TEST EVERY COMPATIBILITY RECORD
+    // --------------------------------------------------
+
     return vehicles.some(
-      vehicle => {
-
-        const normalizedVehicle =
-          this.normalizeCompatibilityVehicle(
-            vehicle
-          )
-
-
-        if (
-          !normalizedVehicle
-        ) {
-
-          return false
-
-        }
-
-
-        return this.isCompatible({
-
-          vehicle:
-            normalizedVehicle,
-
-          make,
-
-          model,
-
-          year,
-
-          vehicleType
-
-        })
-
-      }
+      vehicle =>
+        compatibilityValueMatches(
+          vehicle,
+          {
+            make,
+            model,
+            year,
+            vehicleType
+          }
+        )
     )
 
   }
 
 
   // ====================================================
-  // CHECK COMPATIBILITY
-  // ====================================================
-
-  static isCompatible({
-
-    vehicle,
-
-    make,
-
-    model,
-
-    year,
-
-    vehicleType
-
-  }) {
-
-    if (
-      !vehicle ||
-      typeof vehicle !== 'object'
-    ) {
-
-      return false
-
-    }
-
-
-    // ==================================================
-    // VEHICLE TYPE
-    // ==================================================
-
-    const vehicleTypeValue =
-      this.getVehicleField(
-
-        vehicle,
-
-        [
-
-          'vehicleType',
-
-          'type',
-
-          'category',
-
-          'vehicleCategory'
-
-        ]
-
-      )
-
-
-    if (
-      vehicleType &&
-      vehicleTypeValue
-    ) {
-
-      const requestedType =
-        this.normalizeType(
-          vehicleType
-        )
-
-
-      const actualType =
-        this.normalizeType(
-          vehicleTypeValue
-        )
-
-
-      if (
-        requestedType &&
-        actualType &&
-        requestedType !== actualType
-      ) {
-
-        return false
-
-      }
-
-    }
-
-
-    // ==================================================
-    // BRAND / MAKE
-    // ==================================================
-
-    const vehicleBrand =
-      this.getVehicleField(
-
-        vehicle,
-
-        [
-
-          'make',
-
-          'brand',
-
-          'manufacturer',
-
-          'makeName'
-
-        ]
-
-      )
-
-
-    if (
-      make &&
-      !this.matchText(
-        make,
-        vehicleBrand
-      )
-    ) {
-
-      return false
-
-    }
-
-
-    // ==================================================
-    // MODEL
-    // ==================================================
-
-    const vehicleModel =
-      this.getVehicleField(
-
-        vehicle,
-
-        [
-
-          'model',
-
-          'modelName'
-
-        ]
-
-      )
-
-
-    if (
-      model &&
-      !this.matchText(
-        model,
-        vehicleModel
-      )
-    ) {
-
-      return false
-
-    }
-
-
-    // ==================================================
-    // YEAR
-    // ==================================================
-
-    return this.matchYear({
-
-      vehicle,
-
-      year
-
-    })
-
-  }
-
-
-  // ====================================================
-  // YEAR
-  // ====================================================
-
-  static matchYear({
-
-    vehicle,
-
-    year
-
-  }) {
-
-    if (
-      year === undefined ||
-      year === null ||
-      year === ''
-    ) {
-
-      return true
-
-    }
-
-
-    const requestedYear =
-      this.normalizeYear(
-        year
-      )
-
-
-    if (
-      requestedYear === null
-    ) {
-
-      return false
-
-    }
-
-
-    // --------------------------------------------------
-    // SINGLE YEAR
-    // --------------------------------------------------
-
-    const singleYear =
-      this.normalizeYear(
-
-        vehicle.year ??
-        vehicle.modelYear ??
-        vehicle.productionYear
-
-      )
-
-
-    if (
-      singleYear !== null
-    ) {
-
-      return (
-        requestedYear ===
-        singleYear
-      )
-
-    }
-
-
-    // --------------------------------------------------
-    // YEAR RANGE
-    // --------------------------------------------------
-
-    const from =
-      this.normalizeYear(
-
-        vehicle.yearFrom ??
-        vehicle.from ??
-        vehicle.startYear
-
-      )
-
-
-    const to =
-      this.normalizeYear(
-
-        vehicle.yearTo ??
-        vehicle.to ??
-        vehicle.endYear
-
-      )
-
-
-    // --------------------------------------------------
-    // ONLY FROM YEAR
-    // --------------------------------------------------
-
-    if (
-      from !== null &&
-      to === null
-    ) {
-
-      return (
-        requestedYear >= from
-      )
-
-    }
-
-
-    // --------------------------------------------------
-    // ONLY TO YEAR
-    // --------------------------------------------------
-
-    if (
-      from === null &&
-      to !== null
-    ) {
-
-      return (
-        requestedYear <= to
-      )
-
-    }
-
-
-    // --------------------------------------------------
-    // RANGE
-    // --------------------------------------------------
-
-    if (
-      from !== null &&
-      to !== null
-    ) {
-
-      return (
-
-        requestedYear >= from &&
-
-        requestedYear <= to
-
-      )
-
-    }
-
-
-    /*
-     * لا توجد سنة مخزنة في compatibility
-     * لذلك لا نرفض المنتج بسبب السنة.
-     */
-
-    return true
-
-  }
-
-
-  // ====================================================
-  // FILTER
+  // FILTER PRODUCTS
   // ====================================================
 
   static filterProducts({
@@ -882,63 +929,54 @@ export class VehicleCompatibilityEngine {
 
   }) {
 
-    if (
-      !Array.isArray(products)
-    ) {
+    const safeProducts =
 
-      return []
-
-    }
-
-
-    const requestedType =
-      this.normalizeType(
-        type
+      Array.isArray(
+        products
       )
 
+        ? products
 
-    return products.filter(
+        : []
+
+
+    return safeProducts.filter(
       product => {
 
         if (
-          !product ||
-          typeof product !== 'object'
+          type
         ) {
 
-          return false
+          const productType =
+            normalizeText(
+              product?.type ??
+              product?.productType ??
+              product?.category ??
+              product?.categoryType ??
+              product?.itemType ??
+              product?.kind ??
+              product?.productCategory ??
+              ''
+            )
+
+
+          const wantedType =
+            normalizeText(
+              type
+            )
+
+
+          if (
+            productType !==
+            wantedType
+          ) {
+
+            return false
+
+          }
 
         }
 
-
-        // ==============================================
-        // TYPE
-        // ==============================================
-
-        const productType =
-          this.normalizeType(
-
-            product?.type ??
-            product?.productType ??
-            product?.category ??
-            product?.productCategory
-
-          )
-
-
-        if (
-          requestedType &&
-          productType !==
-          requestedType
-        ) {
-
-          return false
-
-        }
-
-
-        // ==============================================
-        // VEHICLE
-        // ==============================================
 
         return this.matchVehicle({
 
@@ -959,80 +997,11 @@ export class VehicleCompatibilityEngine {
 
   }
 
-
-  // ====================================================
-  // FILTER ALL
-  // ====================================================
-
-  static filterAll({
-
-    products = [],
-
-    make,
-
-    model,
-
-    year,
-
-    vehicleType
-
-  }) {
-
-    return this.filterProducts({
-
-      products,
-
-      type: 'tire',
-
-      make,
-
-      model,
-
-      year,
-
-      vehicleType
-
-    }).concat(
-
-      this.filterProducts({
-
-        products,
-
-        type: 'battery',
-
-        make,
-
-        model,
-
-        year,
-
-        vehicleType
-
-      })
-
-    ).concat(
-
-      this.filterProducts({
-
-        products,
-
-        type: 'oil',
-
-        make,
-
-        model,
-
-        year,
-
-        vehicleType
-
-      })
-
-    )
-
-  }
-
 }
 
+
+// ======================================================
+// DEFAULT EXPORT
+// ======================================================
 
 export default VehicleCompatibilityEngine

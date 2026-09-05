@@ -1,104 +1,170 @@
 // ======================================================
 // EL OLA ERP
 // Vehicle Provider
+// Unified Vehicle Access Layer
+//
+// ARCHITECTURE:
+//
+// UI
+//  ↓
+// VehicleProvider
+//  ↓
+// CachedVehicleSource
+//  ↓
+// VehicleCache
+//  ↓
+// OnlineVehicleSource
+//  ↓
+// NHTSA / CarQuery
+//
+// IMPORTANT:
+// - All online source methods are asynchronous.
+// - VehicleProvider MUST await CachedVehicleSource.
+// - No manually maintained manufacturer files.
+// - Elola-specific compatibility data is separate.
 // ======================================================
 
 import CachedVehicleSource
-from './CachedVehicleSource'
-
-import LocalVehicleSource
-from './LocalVehicleSource'
+  from './CachedVehicleSource'
 
 import VehicleMapper
-from './VehicleMapper'
+  from './VehicleMapper'
+
 
 export default class VehicleProvider {
+
 
   // ====================================================
   // VEHICLE TYPES
   // ====================================================
 
-  static getVehicleTypes() {
+  static async getVehicleTypes() {
+
+    const data =
+      await CachedVehicleSource.getVehicleTypes()
+
 
     return VehicleMapper.mapVehicleTypes(
 
-      CachedVehicleSource.getVehicleTypes()
+      Array.isArray(data)
+        ? data
+        : []
 
     )
 
   }
+
 
   // ====================================================
   // BRANDS
   // ====================================================
 
-  static getBrands(vehicleType) {
+  static async getBrands(
 
-    return VehicleMapper.mapBrands(
+    vehicleType = ''
 
-      CachedVehicleSource.getBrands(
+  ) {
+
+    const data =
+      await CachedVehicleSource.getBrands(
 
         vehicleType
 
       )
 
+
+    return VehicleMapper.mapBrands(
+
+      Array.isArray(data)
+        ? data
+        : []
+
     )
 
   }
+
 
   // ====================================================
   // MODELS
   // ====================================================
 
-  static getModels(params) {
+  static async getModels(
 
-    return VehicleMapper.mapModels(
+    params = {}
 
-      CachedVehicleSource.getModels(
+  ) {
+
+    const data =
+      await CachedVehicleSource.getModels(
 
         params
 
       )
 
+
+    return VehicleMapper.mapModels(
+
+      Array.isArray(data)
+        ? data
+        : []
+
     )
 
   }
+
 
   // ====================================================
   // YEARS
   // ====================================================
 
-  static getYears(params) {
+  static async getYears(
 
-    return VehicleMapper.mapYears(
+    params = {}
 
-      CachedVehicleSource.getYears(
+  ) {
+
+    const data =
+      await CachedVehicleSource.getYears(
 
         params
 
       )
+
+
+    return VehicleMapper.mapYears(
+
+      Array.isArray(data)
+        ? data
+        : []
 
     )
 
   }
 
+
   // ====================================================
-  // VEHICLE
+  // FIND VEHICLE
   // ====================================================
 
-  static findVehicle(params) {
+  static async findVehicle(
+
+    params = {}
+
+  ) {
 
     const vehicle =
 
-      CachedVehicleSource.findVehicle(
+      await CachedVehicleSource.findVehicle(
 
         params
 
       )
 
+
     if (!vehicle)
 
       return null
+
 
     return VehicleMapper.fromLocal(
 
@@ -108,31 +174,47 @@ export default class VehicleProvider {
 
   }
 
+
   // ====================================================
   // DATABASE
   // ====================================================
 
-  static getAll() {
+  static async getAll() {
+
+    const data =
+
+      await CachedVehicleSource.getAll()
+
 
     return VehicleMapper.mapArray(
 
-      CachedVehicleSource.getAll(),
+      Array.isArray(data)
+        ? data
+        : [],
 
       VehicleMapper.fromLocal
 
     )
 
   }
+
 
   // ====================================================
   // LOCAL DATABASE
   // ====================================================
 
-  static getLocalDatabase() {
+  static async getLocalDatabase() {
+
+    const data =
+
+      await CachedVehicleSource.getAll()
+
 
     return VehicleMapper.mapArray(
 
-      LocalVehicleSource.getAll(),
+      Array.isArray(data)
+        ? data
+        : [],
 
       VehicleMapper.fromLocal
 
@@ -140,21 +222,113 @@ export default class VehicleProvider {
 
   }
 
+
   // ====================================================
-  // CACHE
+  // OEM TIRE SIZES
+  // ====================================================
+
+  static getOEMSizes(
+
+    brand,
+
+    model
+
+  ) {
+
+    return []
+
+  }
+
+
+  // ====================================================
+  // ALTERNATIVE TIRE SIZES
+  // ====================================================
+
+  static getAlternativeSizes(
+
+    brand,
+
+    model
+
+  ) {
+
+    return []
+
+  }
+
+
+  // ====================================================
+  // BATTERY
+  // ====================================================
+
+  static getBattery(
+
+    brand,
+
+    model
+
+  ) {
+
+    return null
+
+  }
+
+
+  // ====================================================
+  // OIL
+  // ====================================================
+
+  static getOil(
+
+    brand,
+
+    model
+
+  ) {
+
+    return null
+
+  }
+
+
+  // ====================================================
+  // SEARCH BY TIRE SIZE
+  // ====================================================
+
+  static findByTireSize(
+
+    tireSize
+
+  ) {
+
+    if (!tireSize)
+
+      return []
+
+
+    return []
+
+  }
+
+
+  // ====================================================
+  // CLEAR CACHE
   // ====================================================
 
   static clearCache() {
 
     if (
 
-      CachedVehicleSource.clear
+      typeof CachedVehicleSource.clear ===
+      'function'
 
     ) {
 
-      CachedVehicleSource.clear()
+      return CachedVehicleSource.clear()
 
     }
+
+    return undefined
 
   }
 

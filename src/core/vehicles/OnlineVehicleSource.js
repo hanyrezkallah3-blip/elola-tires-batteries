@@ -1,11 +1,54 @@
 // ======================================================
 // EL OLA ERP
 // Online Vehicle Source
+// Unified Online Vehicle Provider Gateway
 // ======================================================
+//
+// ARCHITECTURE:
+//
+// VehicleProvider
+//      ↓
+// CachedVehicleSource
+//      ↓
+// OnlineVehicleSource
+//      ↓
+// ┌───────────────────────┐
+// │ CarQueryProvider      │
+// │ NHTSAProvider         │
+// └───────────────────────┘
+//
+// IMPORTANT:
+// Providers are registered automatically when this
+// source is loaded.
+//
+// This prevents the vehicle system from depending on
+// VehicleSyncService.start() before it can access data.
+//
+// No manually maintained manufacturer files are used.
+// ======================================================
+
+import CarQueryProvider
+  from './providers/CarQueryProvider'
+
+import NHTSAProvider
+  from './providers/NHTSAProvider'
+
 
 export default class OnlineVehicleSource {
 
-  static providers = []
+
+  // ====================================================
+  // PROVIDERS
+  // ====================================================
+
+  static providers = [
+
+    CarQueryProvider,
+
+    NHTSAProvider
+
+  ]
+
 
   // ====================================================
   // REGISTER
@@ -21,23 +64,76 @@ export default class OnlineVehicleSource {
 
     ) {
 
-      this.providers.push(provider)
+      this.providers.push(
+        provider
+      )
 
     }
 
   }
 
+
+  // ====================================================
+  // UNREGISTER
+  // ====================================================
+
+  static unregister(provider) {
+
+    if (!provider)
+
+      return
+
+    this.providers =
+      this.providers.filter(
+        item =>
+          item !== provider
+      )
+
+  }
+
+
+  // ====================================================
+  // CLEAR PROVIDERS
+  // ====================================================
+
+  static clearProviders() {
+
+    this.providers = []
+
+  }
+
+
+  // ====================================================
+  // GET PROVIDERS
+  // ====================================================
+
+  static getProviders() {
+
+    return [
+      ...this.providers
+    ]
+
+  }
+
+
   // ====================================================
   // EXECUTE
   // ====================================================
 
-  static async execute(method, ...args) {
+  static async execute(
+    method,
+    ...args
+  ) {
 
-    for (const provider of this.providers) {
+    for (
+      const provider
+      of this.providers
+    ) {
 
       if (
 
-        typeof provider?.[method] !== 'function'
+        typeof provider?.[method] !==
+        'function'
 
       ) {
 
@@ -45,22 +141,44 @@ export default class OnlineVehicleSource {
 
       }
 
+
       try {
 
-        const result = await provider[method](
+        const result =
+          await provider[method](
+            ...args
+          )
 
-          ...args
 
-        )
+        // ----------------------------------------------
+        // ARRAY RESULT
+        // ----------------------------------------------
 
         if (
-
           Array.isArray(result)
+        ) {
 
-            ? result.length > 0
+          if (
+            result.length > 0
+          ) {
 
-            : result
+            return result
 
+          }
+
+          continue
+
+        }
+
+
+        // ----------------------------------------------
+        // OBJECT / VALUE RESULT
+        // ----------------------------------------------
+
+        if (
+          result !== null &&
+          result !== undefined &&
+          result !== ''
         ) {
 
           return result
@@ -73,7 +191,11 @@ export default class OnlineVehicleSource {
 
         console.error(
 
-          `[OnlineVehicleSource] ${provider.constructor?.name || 'Provider'} ${method}`,
+          `[OnlineVehicleSource] ${
+            provider.name ||
+            provider.constructor?.name ||
+            'Provider'
+          } ${method}`,
 
           error
 
@@ -83,20 +205,18 @@ export default class OnlineVehicleSource {
 
     }
 
-    return Array.isArray(
 
-      await Promise.resolve([])
+    // --------------------------------------------------
+    // NO PROVIDER RETURNED DATA
+    // --------------------------------------------------
 
-    )
-
-      ? []
-
-      : null
+    return []
 
   }
 
+
   // ====================================================
-  // TYPES
+  // VEHICLE TYPES
   // ====================================================
 
   static getVehicleTypes() {
@@ -109,11 +229,14 @@ export default class OnlineVehicleSource {
 
   }
 
+
   // ====================================================
   // BRANDS
   // ====================================================
 
-  static getBrands(vehicleType) {
+  static getBrands(
+    vehicleType
+  ) {
 
     return this.execute(
 
@@ -125,11 +248,14 @@ export default class OnlineVehicleSource {
 
   }
 
+
   // ====================================================
   // MODELS
   // ====================================================
 
-  static getModels(params) {
+  static getModels(
+    params
+  ) {
 
     return this.execute(
 
@@ -141,11 +267,14 @@ export default class OnlineVehicleSource {
 
   }
 
+
   // ====================================================
   // YEARS
   // ====================================================
 
-  static getYears(params) {
+  static getYears(
+    params
+  ) {
 
     return this.execute(
 
@@ -157,17 +286,35 @@ export default class OnlineVehicleSource {
 
   }
 
+
   // ====================================================
   // VEHICLE
   // ====================================================
 
-  static findVehicle(params) {
+  static findVehicle(
+    params
+  ) {
 
     return this.execute(
 
       'findVehicle',
 
       params
+
+    )
+
+  }
+
+
+  // ====================================================
+  // ALL VEHICLES
+  // ====================================================
+
+  static getAll() {
+
+    return this.execute(
+
+      'getAll'
 
     )
 

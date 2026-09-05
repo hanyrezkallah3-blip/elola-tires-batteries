@@ -1,10 +1,12 @@
 // ======================================================
 // EL OLA ERP
 // Vehicle Cache
+// Unified Vehicle Cache Adapter
 // ======================================================
 
 import CacheManager
-from '../cache/CacheManager'
+  from '../cache/CacheManager'
+
 
 export default class VehicleCache {
 
@@ -15,12 +17,11 @@ export default class VehicleCache {
   static has(key) {
 
     return CacheManager.has(
-
       key
-
     )
 
   }
+
 
   // ====================================================
   // GET
@@ -29,34 +30,28 @@ export default class VehicleCache {
   static get(key) {
 
     return CacheManager.get(
-
       key
-
     )
 
   }
+
 
   // ====================================================
   // SET
   // ====================================================
 
   static set(
-
     key,
-
     value
-
   ) {
 
     return CacheManager.set(
-
       key,
-
       value
-
     )
 
   }
+
 
   // ====================================================
   // REMOVE
@@ -64,13 +59,12 @@ export default class VehicleCache {
 
   static remove(key) {
 
-    CacheManager.remove(
-
+    return CacheManager.remove(
       key
-
     )
 
   }
+
 
   // ====================================================
   // CLEAR
@@ -78,28 +72,23 @@ export default class VehicleCache {
 
   static clear() {
 
-    CacheManager.clear()
+    return CacheManager.clear()
 
   }
+
 
   // ====================================================
   // GET OR SET
   // ====================================================
 
   static getOrSet(
-
     key,
-
     loader
-
   ) {
 
     return CacheManager.getOrSet(
-
       key,
-
       loader
-
     )
 
   }

@@ -2,21 +2,21 @@
 // EL OLA ERP
 // Vehicle Repository
 // Unified Vehicle Data Access
+//
+// IMPORTANT:
+// This repository MUST NOT depend on manually created
+// brand/model files such as Toyota.js or Hyundai.js.
+//
+// Vehicle catalog data comes from the online vehicle
+// providers through the Provider layer.
+//
+// Elola-specific vehicle intelligence (OEM tire sizes,
+// alternative sizes, battery, oil, etc.) must be handled
+// by its own data source and is NOT fabricated here.
 // ======================================================
 
-import vehicleTypes from './vehicleTypes'
-
-import Toyota from './brands/Toyota'
-import Hyundai from './brands/Hyundai'
-
-
-const brands = [
-
-  Toyota,
-
-  Hyundai
-
-]
+import VehicleMapper
+  from '../../core/vehicles/VehicleMapper'
 
 
 // ======================================================
@@ -70,145 +70,6 @@ const matchesValue = (
 
 
 // ======================================================
-// FIND BRAND
-// ======================================================
-
-const findBrand = value => {
-
-  const wanted =
-
-    normalize(value)
-
-
-  if (!wanted)
-
-    return null
-
-
-  return (
-
-    brands.find(
-
-      brand =>
-
-        matchesValue(
-
-          brand,
-
-          wanted,
-
-          [
-
-            'id',
-
-            'name',
-
-            'make',
-
-            'make_id',
-
-            'make_display',
-
-            'value'
-
-          ]
-
-        )
-
-    )
-
-    ||
-
-    null
-
-  )
-
-}
-
-
-// ======================================================
-// FIND VEHICLE
-// ======================================================
-
-const findVehicleInBrand = (
-
-  brand,
-
-  value
-
-) => {
-
-  if (
-
-    !brand ||
-
-    !Array.isArray(
-
-      brand.vehicles
-
-    )
-
-  ) {
-
-    return null
-
-  }
-
-
-  const wanted =
-
-    normalize(value)
-
-
-  if (!wanted)
-
-    return null
-
-
-  return (
-
-    brand.vehicles.find(
-
-      vehicle =>
-
-        matchesValue(
-
-          vehicle,
-
-          wanted,
-
-          [
-
-            'id',
-
-            'name',
-
-            'model',
-
-            'modelName',
-
-            'model_name',
-
-            'model_id',
-
-            'value'
-
-          ]
-
-        )
-
-    )
-
-    ||
-
-    null
-
-  )
-
-}
-
-
-// ======================================================
 // VEHICLE TYPE MATCH
 // ======================================================
 
@@ -234,9 +95,9 @@ const vehicleTypeMatches = (
 
     normalize(
 
-      vehicle?.type ??
-
       vehicle?.vehicleType ??
+
+      vehicle?.type ??
 
       vehicle?.category ??
 
@@ -252,7 +113,17 @@ const vehicleTypeMatches = (
 
   return (
 
-    actual === wanted
+    VehicleMapper.normalizeVehicleType(
+
+      actual
+
+    ) ===
+
+    VehicleMapper.normalizeVehicleType(
+
+      wanted
+
+    )
 
   )
 
@@ -260,7 +131,7 @@ const vehicleTypeMatches = (
 
 
 // ======================================================
-// REPOSITORY
+// VEHICLE REPOSITORY
 // ======================================================
 
 export default class VehicleRepository {
@@ -272,15 +143,66 @@ export default class VehicleRepository {
 
   static getVehicleTypes() {
 
-    return Array.isArray(
+    /*
+     * Vehicle types are intentionally kept minimal here.
+     *
+     * The actual vehicle catalog is supplied by the
+     * online providers.
+     *
+     * This is NOT a manufacturer database.
+     */
 
-      vehicleTypes
+    return [
 
-    )
+      {
 
-      ? vehicleTypes
+        id: 'car',
 
-      : []
+        value: 'car',
+
+        name: 'Car',
+
+        label: 'Car'
+
+      },
+
+      {
+
+        id: 'truck',
+
+        value: 'truck',
+
+        name: 'Truck',
+
+        label: 'Truck'
+
+      },
+
+      {
+
+        id: 'bus',
+
+        value: 'bus',
+
+        name: 'Bus',
+
+        label: 'Bus'
+
+      },
+
+      {
+
+        id: 'motorcycle',
+
+        value: 'motorcycle',
+
+        name: 'Motorcycle',
+
+        label: 'Motorcycle'
+
+      }
+
+    ]
 
   }
 
@@ -295,36 +217,18 @@ export default class VehicleRepository {
 
   ) {
 
-    if (!vehicleType)
+    /*
+     * This method is intentionally NOT backed by
+     * local manufacturer files.
+     *
+     * CachedVehicleSource is responsible for supplying
+     * cached online data when available.
+     *
+     * If no online data has been synchronized yet,
+     * return an empty array instead of inventing brands.
+     */
 
-      return brands
-
-
-    return brands.filter(
-
-      brand =>
-
-        Array.isArray(
-
-          brand?.vehicles
-
-        ) &&
-
-        brand.vehicles.some(
-
-          vehicle =>
-
-            vehicleTypeMatches(
-
-              vehicle,
-
-              vehicleType
-
-            )
-
-        )
-
-    )
+    return []
 
   }
 
@@ -341,45 +245,18 @@ export default class VehicleRepository {
 
   ) {
 
-    const brand =
-
-      findBrand(
-
-        brandId
-
-      )
-
-
-    if (
-
-      !brand ||
-
-      !Array.isArray(
-
-        brand.vehicles
-
-      )
-
-    ) {
+    if (!brandId)
 
       return []
 
-    }
 
+    /*
+     * No manually maintained model database exists here.
+     *
+     * Models are supplied by the active online provider.
+     */
 
-    return brand.vehicles.filter(
-
-      vehicle =>
-
-        vehicleTypeMatches(
-
-          vehicle,
-
-          vehicleType
-
-        )
-
-    )
+    return []
 
   }
 
@@ -396,141 +273,25 @@ export default class VehicleRepository {
 
   ) {
 
-    const vehicle =
+    if (
 
-      this.findVehicle(
+      !brandId ||
 
-        brandId,
+      !vehicleId
 
-        vehicleId
-
-      )
-
-
-    if (!vehicle)
+    ) {
 
       return []
 
-
-    if (
-
-      Array.isArray(
-
-        vehicle.years
-
-      )
-
-    ) {
-
-      return vehicle.years
-
     }
 
 
-    const yearFrom =
-
-      Number(
-
-        vehicle.yearFrom ??
-
-        vehicle.year_from ??
-
-        vehicle.startYear ??
-
-        NaN
-
-      )
-
-
-    const yearTo =
-
-      Number(
-
-        vehicle.yearTo ??
-
-        vehicle.year_to ??
-
-        vehicle.endYear ??
-
-        NaN
-
-      )
-
-
-    if (
-
-      Number.isFinite(
-
-        yearFrom
-
-      ) &&
-
-      Number.isFinite(
-
-        yearTo
-
-      ) &&
-
-      yearTo >= yearFrom
-
-    ) {
-
-      const years = []
-
-
-      for (
-
-        let year = yearFrom;
-
-        year <= yearTo;
-
-        year++
-
-      ) {
-
-        years.push(year)
-
-      }
-
-
-      return years
-
-    }
-
-
-    const singleYear =
-
-      Number(
-
-        vehicle.year ??
-
-        vehicle.modelYear ??
-
-        vehicle.model_year ??
-
-        NaN
-
-      )
-
-
-    if (
-
-      Number.isFinite(
-
-        singleYear
-
-      )
-
-    ) {
-
-      return [
-
-        singleYear
-
-      ]
-
-    }
-
+    /*
+     * Years are provider data.
+     *
+     * We do not fabricate vehicle-specific years
+     * from local manufacturer files.
+     */
 
     return []
 
@@ -549,27 +310,24 @@ export default class VehicleRepository {
 
   ) {
 
-    const brand =
+    if (
 
-      findBrand(
+      !brandId ||
 
-        brandId
+      !vehicleId
 
-      )
-
-
-    if (!brand)
+    ) {
 
       return null
 
+    }
 
-    return findVehicleInBrand(
 
-      brand,
+    /*
+     * Vehicle lookup is performed by the provider layer.
+     */
 
-      vehicleId
-
-    )
+    return null
 
   }
 
@@ -586,31 +344,27 @@ export default class VehicleRepository {
 
   ) {
 
-    const vehicle =
+    if (
 
-      this.findVehicle(
+      !brandId ||
 
-        brandId,
+      !vehicleId
 
-        vehicleId
-
-      )
-
-
-    if (!vehicle)
+    ) {
 
       return []
 
+    }
 
-    return Array.isArray(
 
-      vehicle?.tire?.oemSizes
+    /*
+     * OEM sizes must come from Elola's vehicle
+     * intelligence/data layer.
+     *
+     * They must NOT be fabricated inside brand files.
+     */
 
-    )
-
-      ? vehicle.tire.oemSizes
-
-      : []
+    return []
 
   }
 
@@ -627,31 +381,25 @@ export default class VehicleRepository {
 
   ) {
 
-    const vehicle =
+    if (
 
-      this.findVehicle(
+      !brandId ||
 
-        brandId,
+      !vehicleId
 
-        vehicleId
-
-      )
-
-
-    if (!vehicle)
+    ) {
 
       return []
 
+    }
 
-    return Array.isArray(
 
-      vehicle?.tire?.optionalSizes
+    /*
+     * Alternative sizes belong to Elola's own
+     * compatibility intelligence layer.
+     */
 
-    )
-
-      ? vehicle.tire.optionalSizes
-
-      : []
+    return []
 
   }
 
@@ -668,28 +416,25 @@ export default class VehicleRepository {
 
   ) {
 
-    const vehicle =
+    if (
 
-      this.findVehicle(
+      !brandId ||
 
-        brandId,
+      !vehicleId
 
-        vehicleId
+    ) {
 
-      )
+      return null
+
+    }
 
 
-    return vehicle
+    /*
+     * Battery compatibility belongs to Elola's
+     * vehicle intelligence layer.
+     */
 
-      ? (
-
-          vehicle.battery ??
-
-          null
-
-        )
-
-      : null
+    return null
 
   }
 
@@ -706,28 +451,25 @@ export default class VehicleRepository {
 
   ) {
 
-    const vehicle =
+    if (
 
-      this.findVehicle(
+      !brandId ||
 
-        brandId,
+      !vehicleId
 
-        vehicleId
+    ) {
 
-      )
+      return null
+
+    }
 
 
-    return vehicle
+    /*
+     * Oil compatibility belongs to Elola's
+     * vehicle intelligence layer.
+     */
 
-      ? (
-
-          vehicle.oil ??
-
-          null
-
-        )
-
-      : null
+    return null
 
   }
 
@@ -752,88 +494,15 @@ export default class VehicleRepository {
       return []
 
 
-    return brands.flatMap(
+    /*
+     * There is deliberately no manually maintained
+     * manufacturer database here.
+     *
+     * Tire-size search will be connected later to the
+     * unified Elola vehicle compatibility repository.
+     */
 
-      brand =>
-
-        (
-
-          Array.isArray(
-
-            brand?.vehicles
-
-          )
-
-            ? brand.vehicles
-
-            : []
-
-        )
-
-          .filter(
-
-            vehicle => {
-
-              const sizes =
-
-                [
-
-                  ...(Array.isArray(
-
-                    vehicle?.tire?.oemSizes
-
-                  )
-
-                    ? vehicle.tire.oemSizes
-
-                    : []),
-
-                  ...(Array.isArray(
-
-                    vehicle?.tire?.optionalSizes
-
-                  )
-
-                    ? vehicle.tire.optionalSizes
-
-                    : [])
-
-                ]
-
-
-              return sizes.some(
-
-                size =>
-
-                  normalize(size) ===
-
-                  wanted
-
-              )
-
-            }
-
-          )
-
-          .map(
-
-            vehicle => ({
-
-              brand:
-
-                brand.name ??
-
-                brand.id ??
-
-                '',
-
-              ...vehicle
-
-            })
-
-          )
-
-    )
+    return []
 
   }
 
@@ -844,45 +513,491 @@ export default class VehicleRepository {
 
   static getAllVehicles() {
 
-    return brands.flatMap(
+    /*
+     * The repository no longer constructs a fake local
+     * vehicle database from manufacturer files.
+     *
+     * OnlineVehicleSource / VehicleProvider owns the
+     * external catalog.
+     */
 
-      brand =>
+    return []
 
-        (
+  }
 
-          Array.isArray(
 
-            brand?.vehicles
+  // ====================================================
+  // NORMALIZED VEHICLE
+  // ====================================================
+
+  static normalizeVehicle(
+
+    vehicle = {}
+
+  ) {
+
+    if (
+
+      !vehicle ||
+
+      typeof vehicle !== 'object'
+
+    ) {
+
+      return null
+
+    }
+
+
+    const make =
+
+      vehicle.make ??
+
+      vehicle.brand ??
+
+      vehicle.manufacturer ??
+
+      vehicle.make_display ??
+
+      ''
+
+
+    const model =
+
+      vehicle.model ??
+
+      vehicle.modelName ??
+
+      vehicle.model_name ??
+
+      vehicle.model_display ??
+
+      ''
+
+
+    const vehicleType =
+
+      VehicleMapper.normalizeVehicleType(
+
+        vehicle.vehicleType ??
+
+        vehicle.type ??
+
+        vehicle.category ??
+
+        ''
+
+      )
+
+
+    const yearFrom =
+
+      Number(
+
+        vehicle.yearFrom ??
+
+        vehicle.year_from ??
+
+        vehicle.startYear ??
+
+        vehicle.model_year ??
+
+        NaN
+
+      )
+
+
+    const yearTo =
+
+      Number(
+
+        vehicle.yearTo ??
+
+        vehicle.year_to ??
+
+        vehicle.endYear ??
+
+        vehicle.model_year ??
+
+        NaN
+
+      )
+
+
+    return {
+
+      ...vehicle,
+
+      id:
+
+        vehicle.id ??
+
+        vehicle.model_id ??
+
+        `${make}-${model}`,
+
+      vehicleType,
+
+      type:
+
+        vehicle.type ??
+
+        vehicleType,
+
+      make,
+
+      model,
+
+      ...(
+
+        Number.isFinite(yearFrom)
+
+          ? { yearFrom }
+
+          : {}
+
+      ),
+
+      ...(
+
+        Number.isFinite(yearTo)
+
+          ? { yearTo }
+
+          : {}
+
+      )
+
+    }
+
+  }
+
+
+  // ====================================================
+  // FILTER VEHICLES
+  // ====================================================
+
+  static filterVehicles(
+
+    vehicles = [],
+
+    {
+
+      vehicleType = '',
+
+      brand = '',
+
+      make = '',
+
+      model = '',
+
+      year = ''
+
+    } = {}
+
+  ) {
+
+    if (
+
+      !Array.isArray(vehicles)
+
+    ) {
+
+      return []
+
+    }
+
+
+    const requestedBrand =
+
+      brand ||
+
+      make
+
+
+    return vehicles.filter(
+
+      vehicle => {
+
+        const normalized =
+
+          this.normalizeVehicle(
+
+            vehicle
 
           )
 
-            ? brand.vehicles
 
-            : []
+        if (!normalized)
 
-        ).map(
+          return false
 
-          vehicle => ({
 
-            brand:
+        // ----------------------------------------------
+        // TYPE
+        // ----------------------------------------------
 
-              brand.name ??
+        if (
 
-              brand.id ??
+          vehicleType &&
 
-              '',
+          !vehicleTypeMatches(
 
-            brandId:
+            normalized,
 
-              brand.id ??
+            vehicleType
 
-              '',
+          )
 
-            ...vehicle
+        ) {
 
-          })
+          return false
 
-        )
+        }
+
+
+        // ----------------------------------------------
+        // BRAND
+        // ----------------------------------------------
+
+        if (
+
+          requestedBrand &&
+
+          !matchesValue(
+
+            normalized,
+
+            requestedBrand,
+
+            [
+
+              'id',
+
+              'make',
+
+              'brand',
+
+              'manufacturer',
+
+              'make_display'
+
+            ]
+
+          )
+
+        ) {
+
+          const actualBrand =
+
+            normalize(
+
+              normalized.make
+
+            )
+
+
+          const wantedBrand =
+
+            normalize(
+
+              requestedBrand
+
+            )
+
+
+          if (
+
+            !actualBrand ||
+
+            (
+
+              !actualBrand.includes(
+
+                wantedBrand
+
+              ) &&
+
+              !wantedBrand.includes(
+
+                actualBrand
+
+              )
+
+            )
+
+          ) {
+
+            return false
+
+          }
+
+        }
+
+
+        // ----------------------------------------------
+        // MODEL
+        // ----------------------------------------------
+
+        if (model) {
+
+          const actualModel =
+
+            normalize(
+
+              normalized.model
+
+            )
+
+
+          const wantedModel =
+
+            normalize(
+
+              model
+
+            )
+
+
+          if (
+
+            !actualModel ||
+
+            (
+
+              !actualModel.includes(
+
+                wantedModel
+
+              ) &&
+
+              !wantedModel.includes(
+
+                actualModel
+
+              )
+
+            )
+
+          ) {
+
+            return false
+
+          }
+
+        }
+
+
+        // ----------------------------------------------
+        // YEAR
+        // ----------------------------------------------
+
+        if (year) {
+
+          const requestedYear =
+
+            Number(year)
+
+
+          if (
+
+            Number.isFinite(
+
+              requestedYear
+
+            )
+
+          ) {
+
+            const from =
+
+              Number(
+
+                normalized.yearFrom
+
+              )
+
+
+            const to =
+
+              Number(
+
+                normalized.yearTo
+
+              )
+
+
+            if (
+
+              Number.isFinite(from) &&
+
+              Number.isFinite(to)
+
+            ) {
+
+              if (
+
+                requestedYear < from ||
+
+                requestedYear > to
+
+              ) {
+
+                return false
+
+              }
+
+            }
+
+            else if (
+
+              Number.isFinite(from)
+
+            ) {
+
+              if (
+
+                requestedYear !== from
+
+              ) {
+
+                return false
+
+              }
+
+            }
+
+          }
+
+        }
+
+
+        return true
+
+      }
+
+    )
+
+  }
+
+
+  // ====================================================
+  // SEARCH
+  // ====================================================
+
+  static search(
+
+    vehicles = [],
+
+    params = {}
+
+  ) {
+
+    return this.filterVehicles(
+
+      vehicles,
+
+      params
 
     )
 

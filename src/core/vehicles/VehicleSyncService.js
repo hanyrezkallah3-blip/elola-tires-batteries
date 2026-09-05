@@ -1,25 +1,34 @@
 // ======================================================
 // EL OLA ERP
 // Vehicle Sync Service
+// Unified Online Vehicle Synchronization
+//
+// IMPORTANT:
+// - No manually maintained manufacturer files.
+// - OnlineVehicleSource is the only provider gateway.
+// - VehicleCache is the only vehicle cache adapter.
+// - Provider registration happens once.
 // ======================================================
 
 import VehicleCache
-from './VehicleCache'
+  from './VehicleCache'
 
 import OnlineVehicleSource
-from './OnlineVehicleSource'
+  from './OnlineVehicleSource'
 
 import CarQueryProvider
-from './providers/CarQueryProvider'
+  from './providers/CarQueryProvider'
 
 import NHTSAProvider
-from './providers/NHTSAProvider'
+  from './providers/NHTSAProvider'
+
 
 // ======================================================
-// REGISTER PROVIDERS (مرة واحدة)
+// PROVIDER REGISTRATION
 // ======================================================
 
 let registered = false
+
 
 function registerProviders() {
 
@@ -27,11 +36,13 @@ function registerProviders() {
 
     return
 
+
   OnlineVehicleSource.register(
 
     CarQueryProvider
 
   )
+
 
   OnlineVehicleSource.register(
 
@@ -39,11 +50,85 @@ function registerProviders() {
 
   )
 
+
   registered = true
 
 }
 
+
+// ======================================================
+// CACHE KEY
+// ======================================================
+
+const getParamsKey = (
+
+  prefix,
+
+  params = {}
+
+) =>
+
+  `${prefix}:${JSON.stringify(params)}`
+
+
+// ======================================================
+// UPDATE CACHE
+// ======================================================
+
+const updateCache = (
+
+  key,
+
+  value
+
+) => {
+
+  if (
+
+    value === null ||
+
+    value === undefined
+
+  ) {
+
+    return false
+
+  }
+
+
+  if (
+
+    Array.isArray(value) &&
+
+    value.length === 0
+
+  ) {
+
+    return false
+
+  }
+
+
+  VehicleCache.set(
+
+    key,
+
+    value
+
+  )
+
+
+  return true
+
+}
+
+
+// ======================================================
+// VEHICLE SYNC SERVICE
+// ======================================================
+
 export default class VehicleSyncService {
+
 
   // ====================================================
   // START
@@ -53,45 +138,27 @@ export default class VehicleSyncService {
 
     registerProviders()
 
+    return true
+
   }
 
+
   // ====================================================
-  // CACHE
+  // PROVIDERS
   // ====================================================
 
-  static updateCache(key, value) {
+  static registerProviders() {
 
-    if (
+    registerProviders()
 
-      value == null
+    return (
 
-    ) {
-
-      return
-
-    }
-
-    if (
-
-      Array.isArray(value) &&
-
-      value.length === 0
-
-    ) {
-
-      return
-
-    }
-
-    VehicleCache.set(
-
-      key,
-
-      value
+      OnlineVehicleSource.providers || []
 
     )
 
   }
+
 
   // ====================================================
   // VEHICLE TYPES
@@ -101,121 +168,302 @@ export default class VehicleSyncService {
 
     registerProviders()
 
-    const data =
 
-      await OnlineVehicleSource.getVehicleTypes()
+    try {
 
-    this.updateCache(
+      const data =
 
-      'vehicleTypes',
+        await OnlineVehicleSource
 
-      data
+          .getVehicleTypes()
 
-    )
+
+      return updateCache(
+
+        'vehicleTypes',
+
+        data
+
+      )
+
+    }
+
+    catch (error) {
+
+      console.error(
+
+        '[VehicleSyncService] syncVehicleTypes',
+
+        error
+
+      )
+
+      return false
+
+    }
 
   }
+
 
   // ====================================================
   // BRANDS
   // ====================================================
 
-  static async syncBrands(vehicleType) {
+  static async syncBrands(
+
+    vehicleType = ''
+
+  ) {
 
     registerProviders()
 
-    const data =
 
-      await OnlineVehicleSource.getBrands(
+    try {
 
-        vehicleType
+      const data =
+
+        await OnlineVehicleSource
+
+          .getBrands(
+
+            vehicleType
+
+          )
+
+
+      return updateCache(
+
+        `brands:${vehicleType || '__all__'}`,
+
+        data
 
       )
 
-    this.updateCache(
+    }
 
-      `brands:${vehicleType || '__all__'}`,
+    catch (error) {
 
-      data
+      console.error(
 
-    )
+        '[VehicleSyncService] syncBrands',
+
+        error
+
+      )
+
+      return false
+
+    }
 
   }
+
 
   // ====================================================
   // MODELS
   // ====================================================
 
-  static async syncModels(params) {
+  static async syncModels(
+
+    params = {}
+
+  ) {
 
     registerProviders()
 
-    const data =
 
-      await OnlineVehicleSource.getModels(
+    try {
 
-        params
+      const data =
+
+        await OnlineVehicleSource
+
+          .getModels(
+
+            params
+
+          )
+
+
+      return updateCache(
+
+        getParamsKey(
+
+          'models',
+
+          params
+
+        ),
+
+        data
 
       )
 
-    this.updateCache(
+    }
 
-      `models:${JSON.stringify(params)}`,
+    catch (error) {
 
-      data
+      console.error(
 
-    )
+        '[VehicleSyncService] syncModels',
+
+        error
+
+      )
+
+      return false
+
+    }
 
   }
+
 
   // ====================================================
   // YEARS
   // ====================================================
 
-  static async syncYears(params) {
+  static async syncYears(
+
+    params = {}
+
+  ) {
 
     registerProviders()
 
-    const data =
 
-      await OnlineVehicleSource.getYears(
+    try {
 
-        params
+      const data =
+
+        await OnlineVehicleSource
+
+          .getYears(
+
+            params
+
+          )
+
+
+      return updateCache(
+
+        getParamsKey(
+
+          'years',
+
+          params
+
+        ),
+
+        data
 
       )
 
-    this.updateCache(
+    }
 
-      `years:${JSON.stringify(params)}`,
+    catch (error) {
 
-      data
+      console.error(
 
-    )
+        '[VehicleSyncService] syncYears',
+
+        error
+
+      )
+
+      return false
+
+    }
 
   }
+
 
   // ====================================================
   // VEHICLE
   // ====================================================
 
-  static async syncVehicle(params) {
+  static async syncVehicle(
+
+    params = {}
+
+  ) {
 
     registerProviders()
 
-    const data =
 
-      await OnlineVehicleSource.findVehicle(
+    try {
 
-        params
+      const data =
+
+        await OnlineVehicleSource
+
+          .findVehicle(
+
+            params
+
+          )
+
+
+      return updateCache(
+
+        getParamsKey(
+
+          'vehicle',
+
+          params
+
+        ),
+
+        data
 
       )
 
-    this.updateCache(
+    }
 
-      `vehicle:${JSON.stringify(params)}`,
+    catch (error) {
 
-      data
+      console.error(
 
-    )
+        '[VehicleSyncService] syncVehicle',
+
+        error
+
+      )
+
+      return false
+
+    }
+
+  }
+
+
+  // ====================================================
+  // SYNC EVERYTHING
+  // ====================================================
+
+  static async syncAll() {
+
+    registerProviders()
+
+
+    return {
+
+      vehicleTypes:
+
+        await this.syncVehicleTypes()
+
+    }
+
+  }
+
+
+  // ====================================================
+  // CLEAR CACHE
+  // ====================================================
+
+  static clearCache() {
+
+    VehicleCache.clear()
+
+    return true
 
   }
 

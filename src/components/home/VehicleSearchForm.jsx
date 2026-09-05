@@ -1,279 +1,403 @@
+// ======================================================
+// EL OLA ERP
+// Vehicle Search Form
+//
+// AI-FIRST VEHICLE SEARCH
+// ======================================================
+
 import React from 'react'
+
 
 export default function VehicleSearchForm({
 
-  vehicleTypes = [],
-  brands = [],
-  models = [],
-  years = [],
-
-  form,
+  form = {},
   setForm,
 
   onSearch
 
 }) {
 
-  const update = (key, value) => {
 
-    const next = {
+  // ====================================================
+  // AI QUERY
+  // ====================================================
+
+  const vehicleQuery =
+    form?.vehicleQuery || ''
+
+
+  // ====================================================
+  // UPDATE AI QUERY
+  // ====================================================
+
+  const updateQuery = value => {
+
+    if (
+      typeof setForm !== 'function'
+    ) {
+
+      return
+
+    }
+
+
+    setForm({
 
       ...form,
 
-      [key]: value
+      // ------------------------------------------------
+      // AI vehicle search uses vehicleQuery.
+      //
+      // Do NOT put the complete sentence in model.
+      // The useVehicleSearch hook detects vehicleQuery
+      // and sends it through the AI vehicle-search path.
+      // ------------------------------------------------
 
-    }
+      vehicleType: '',
 
-    // ====================================================
-    // RESET DEPENDENT FIELDS
-    // ====================================================
+      brand: '',
 
-    if (key === 'vehicleType') {
+      model: '',
 
-      next.brand = ''
-      next.model = ''
-      next.year = ''
+      year: '',
 
-    }
+      vehicleQuery: value
 
-    if (key === 'brand') {
-
-      next.model = ''
-      next.year = ''
-
-    }
-
-    if (key === 'model') {
-
-      next.year = ''
-
-    }
-
-    setForm(next)
+    })
 
   }
 
+
+  // ====================================================
+  // SEARCH
+  // ====================================================
+
+  const submitSearch = () => {
+
+    const query =
+      String(
+        vehicleQuery ?? ''
+      ).trim()
+
+
+    if (!query) {
+
+      return
+
+    }
+
+
+    if (
+      typeof onSearch === 'function'
+    ) {
+
+      onSearch()
+
+    }
+
+  }
+
+
+  // ====================================================
+  // KEYBOARD SEARCH
+  // ====================================================
+
+  const handleKeyDown = event => {
+
+    if (
+      event.key !== 'Enter'
+    ) {
+
+      return
+
+    }
+
+
+    event.preventDefault()
+
+    submitSearch()
+
+  }
+
+
+  // ====================================================
+  // RENDER
+  // ====================================================
+
   return (
 
-    <div className="grid lg:grid-cols-5 gap-4">
+    <div
+      className="
+        w-full
+        max-w-5xl
+        mx-auto
+      "
+    >
 
-      {/* ==================================================== */}
-      {/* VEHICLE TYPE */}
-      {/* ==================================================== */}
+      {/* ==================================================
+          AI SEARCH INTRO
+      ================================================== */}
 
-      <select
-
-        value={form.vehicleType || ''}
-
-        onChange={(e) => update('vehicleType', e.target.value)}
-
-        className="p-4 rounded-2xl bg-slate-900 border border-slate-700"
-
+      <div
+        className="
+          text-center
+          mb-6
+        "
       >
 
-        <option value="">نوع المركبة</option>
+        <div
+          className="
+            inline-flex
+            items-center
+            justify-center
+            rounded-full
+            bg-yellow-500/10
+            border
+            border-yellow-500/30
+            px-5
+            py-2
+            text-yellow-400
+            font-black
+            text-sm
+            mb-4
+          "
+        >
 
-        {
+          🤖 البحث بالذكاء الاصطناعي
 
-          vehicleTypes.map(item => (
+        </div>
 
-            <option
 
-              key={item.id}
+        <h3
+          className="
+            text-2xl
+            md:text-3xl
+            font-black
+            text-white
+          "
+        >
 
-              value={item.id}
+          اكتب بيانات مركبتك
 
-            >
+        </h3>
 
-              {item.name}
 
-            </option>
+        <p
+          className="
+            text-gray-400
+            mt-3
+            text-base
+            md:text-lg
+          "
+        >
 
-          ))
+          اكتب نوع المركبة والماركة والموديل والسنة
+          بأي طريقة طبيعية، والذكاء الاصطناعي سيحدد المركبة المناسبة.
 
-        }
+        </p>
 
-      </select>
+      </div>
 
-      {/* ==================================================== */}
-      {/* BRAND */}
-      {/* ==================================================== */}
 
-      <select
+      {/* ==================================================
+          AI INPUT
+      ================================================== */}
 
-        value={form.brand || ''}
-
-        onChange={(e) => update('brand', e.target.value)}
-
-        className="p-4 rounded-2xl bg-slate-900 border border-slate-700"
-
+      <div
+        className="
+          space-y-4
+        "
       >
 
-        <option value="">الشركة المصنعة</option>
+        <label
+          htmlFor="vehicle-ai-search"
+          className="
+            block
+            text-white
+            font-black
+            text-lg
+            text-right
+          "
+        >
 
-        {
+          بيانات المركبة
 
-          brands.map(item => {
+        </label>
 
-            const value =
 
-              typeof item === 'object'
-                ? item.name
-                : item
-
-            const key =
-
-              typeof item === 'object'
-                ? item.id
-                : item
-
-            return (
-
-              <option
-
-                key={key}
-
-                value={value}
-
-              >
-
-                {value}
-
-              </option>
-
+        <input
+          id="vehicle-ai-search"
+          type="text"
+          value={vehicleQuery}
+          onChange={event =>
+            updateQuery(
+              event.target.value
             )
+          }
+          onKeyDown={
+            handleKeyDown
+          }
+          placeholder="
+            مثال: تويوتا كورولا 2020
+          "
+          autoComplete="off"
+          dir="auto"
+          className="
+            w-full
+            p-5
+            md:p-6
+            rounded-2xl
+            bg-slate-950
+            border-2
+            border-slate-700
+            hover:border-slate-600
+            focus:border-yellow-400
+            text-white
+            text-lg
+            md:text-xl
+            font-bold
+            outline-none
+            transition
+            placeholder:text-gray-500
+          "
+        />
 
-          })
 
-        }
+        {/* ==================================================
+            EXAMPLES
+        ================================================== */}
 
-      </select>
+        <div
+          className="
+            text-gray-400
+            text-sm
+            md:text-base
+            text-center
+            leading-8
+          "
+        >
 
-      {/* ==================================================== */}
-      {/* MODEL */}
-      {/* ==================================================== */}
+          أمثلة:
 
-      <select
+          <span
+            className="
+              text-yellow-400
+              font-bold
+              mx-1
+            "
+          >
+            تويوتا كورولا 2020
+          </span>
 
-        value={form.model || ''}
+          أو
 
-        onChange={(e) => update('model', e.target.value)}
+          <span
+            className="
+              text-yellow-400
+              font-bold
+              mx-1
+            "
+          >
+            BMW X5 2019
+          </span>
 
-        className="p-4 rounded-2xl bg-slate-900 border border-slate-700"
+          أو
 
-      >
+          <span
+            className="
+              text-yellow-400
+              font-bold
+              mx-1
+            "
+          >
+            شيفروليه أوبترا 2021
+          </span>
 
-        <option value="">الموديل</option>
+        </div>
 
-        {
 
-          models.map(item => {
+        {/* ==================================================
+            SEARCH BUTTON
+        ================================================== */}
 
-            const value =
+        <button
+          type="button"
+          onClick={
+            submitSearch
+          }
+          disabled={
+            !String(
+              vehicleQuery ?? ''
+            ).trim()
+          }
+          className="
+            w-full
+            rounded-2xl
+            bg-yellow-500
+            hover:bg-yellow-400
+            disabled:bg-slate-700
+            disabled:text-gray-500
+            disabled:cursor-not-allowed
+            text-black
+            py-5
+            md:py-6
+            font-black
+            text-xl
+            transition
+            shadow-lg
+          "
+        >
 
-              typeof item === 'object'
-                ? item.name
-                : item
+          🤖 ابحث عن مركبتي بالذكاء الاصطناعي
 
-            const key =
+        </button>
 
-              typeof item === 'object'
-                ? item.id
-                : item
 
-            return (
+        {/* ==================================================
+            AI EXPLANATION
+        ================================================== */}
 
-              <option
+        <div
+          className="
+            rounded-2xl
+            bg-slate-800/60
+            border
+            border-slate-700
+            p-4
+            text-center
+          "
+        >
 
-                key={key}
+          <div
+            className="
+              text-yellow-400
+              font-black
+              mb-1
+            "
+          >
 
-                value={value}
+            لا تحتاج إلى اختيار الماركة أو الموديل يدويًا
 
-              >
+          </div>
 
-                {value}
 
-              </option>
+          <div
+            className="
+              text-gray-400
+              text-sm
+              leading-7
+            "
+          >
 
-            )
+            اكتب معلومات المركبة فقط، وسيقوم النظام
+            بتحليلها وتحديد المركبة ثم البحث عن
+            الإطارات والبطاريات والزيوت المتوافقة معها.
 
-          })
+          </div>
 
-        }
+        </div>
 
-      </select>
-
-      {/* ==================================================== */}
-      {/* YEAR */}
-      {/* ==================================================== */}
-
-      <select
-
-        value={form.year || ''}
-
-        onChange={(e) => update('year', e.target.value)}
-
-        className="p-4 rounded-2xl bg-slate-900 border border-slate-700"
-
-      >
-
-        <option value="">سنة الصنع</option>
-
-        {
-
-          years.map(item => {
-
-            const value =
-
-              typeof item === 'object'
-                ? item.name
-                : item
-
-            const key =
-
-              typeof item === 'object'
-                ? item.id
-                : item
-
-            return (
-
-              <option
-
-                key={key}
-
-                value={value}
-
-              >
-
-                {value}
-
-              </option>
-
-            )
-
-          })
-
-        }
-
-      </select>
-
-      {/* ==================================================== */}
-      {/* SEARCH */}
-      {/* ==================================================== */}
-
-      <button
-
-        type="button"
-
-        onClick={onSearch}
-
-        className="rounded-2xl bg-yellow-500 hover:bg-yellow-600 text-black font-black"
-
-      >
-
-        🔍 بحث
-
-      </button>
+      </div>
 
     </div>
 

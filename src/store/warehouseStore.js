@@ -1,11 +1,26 @@
+// ======================================================
+// Elola ERP Enterprise
+// Warehouse Store
+// ======================================================
+
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-import createWarehouse from './warehouse/helpers/createWarehouse'
-import addProductToWarehouseHelper from './warehouse/helpers/addProductToWarehouse'
-import addWarehouseTransaction from './warehouse/helpers/addWarehouseTransaction'
+import createWarehouse
+  from './warehouse/helpers/createWarehouse'
 
-const STORAGE_KEY = 'elola_warehouses'
+import addProductToWarehouseHelper
+  from './warehouse/helpers/addProductToWarehouse'
+
+import addWarehouseTransaction
+  from './warehouse/helpers/addWarehouseTransaction'
+
+import ProductEngine
+  from '../core/engines/product/ProductEngine'
+
+
+const STORAGE_KEY =
+  'elola_warehouses'
 
 
 // ==========================================
@@ -18,7 +33,9 @@ const generateId = () => {
     typeof crypto !== 'undefined' &&
     typeof crypto.randomUUID === 'function'
   ) {
+
     return crypto.randomUUID()
+
   }
 
   return (
@@ -27,6 +44,7 @@ const generateId = () => {
       .toString(36)
       .slice(2)
   )
+
 }
 
 
@@ -43,12 +61,20 @@ const normalizeProduct = (
     product.id ||
     generateId()
 
+
   const productName =
     String(
       product.productName ||
       product.name ||
       ''
     ).trim()
+
+
+  const quantity =
+    Number(
+      product.quantity || 0
+    )
+
 
   return {
 
@@ -66,10 +92,7 @@ const normalizeProduct = (
       product.name ||
       productName,
 
-    quantity:
-      Number(
-        product.quantity || 0
-      ),
+    quantity,
 
     incoming:
       Number(
@@ -89,7 +112,7 @@ const normalizeProduct = (
     availableQuantity:
       Number(
         product.availableQuantity ??
-        product.quantity ??
+        quantity ??
         0
       ),
 
@@ -164,6 +187,7 @@ export const useWarehouseStore = create(
             warehouse
           )
 
+
         set(state => ({
 
           warehouses: [
@@ -175,6 +199,7 @@ export const useWarehouseStore = create(
           ]
 
         }))
+
 
         return newWarehouse
 
@@ -239,6 +264,7 @@ export const useWarehouseStore = create(
                   warehouse.id
                 ) !==
                 String(id)
+
             )
 
         })),
@@ -265,282 +291,542 @@ export const useWarehouseStore = create(
           ) || null,
 
 
-      // ==========================================
+      // ==================================================
       // ADD PRODUCT FROM WAREHOUSE PAGE
-      // ==========================================
+      // ==================================================
       //
-      // القاعدة:
-      // إنشاء المنتج الجديد يتم من صفحة المخازن.
+      // IMPORTANT ARCHITECTURE
       //
-      // Products page لا تنشئ Product جديد.
+      // Warehouse page is the ONLY place where a new
+      // product is introduced.
       //
-      // ==========================================
+      // The product MUST first be persisted to the
+      // Product Master through ProductEngine.
+      //
+      // Product Master:
+      //      Firestore / products
+      //
+      // Inventory:
+      //      Firestore / inventory
+      //
+      // Warehouse Store:
+      //      Zustand / localStorage
+      //
+      // Technical compatibility NEVER depends on quantity.
+      //
+      // ==================================================
 
-      addProductToWarehouse: (
-        warehouseId,
-        product = {}
-      ) => {
+      addProductToWarehouse:
 
-        if (
-          !warehouseId ||
-          !product
-        ) {
+        async (
+          warehouseId,
+          product = {}
+        ) => {
 
-          return {
+          // ==========================================
+          // VALIDATE INPUT
+          // ==========================================
 
-            success: false,
+          if (
+            !warehouseId ||
+            !product
+          ) {
 
-            data: null,
+            return {
 
-            message:
-              'المخزن والمنتج مطلوبان',
+              success: false,
 
-            errors: []
+              data: null,
+
+              message:
+                'المخزن والمنتج مطلوبان',
+
+              errors: []
+
+            }
 
           }
 
-        }
+
+          // ==========================================
+          // FIND WAREHOUSE
+          // ==========================================
+
+          const warehouse =
+            get()
+              .warehouses
+              .find(
+                item =>
+
+                  String(
+                    item.id
+                  ) ===
+                  String(
+                    warehouseId
+                  )
+
+              )
 
 
-        // ==========================================
-        // FIND WAREHOUSE
-        // ==========================================
+          if (!warehouse) {
 
-        const warehouse =
-          get()
-            .warehouses
-            .find(
-              item =>
+            return {
 
-                String(
-                  item.id
-                ) ===
-                String(
-                  warehouseId
-                )
+              success: false,
+
+              data: null,
+
+              message:
+                'المخزن غير موجود',
+
+              errors: []
+
+            }
+
+          }
+
+
+          // ==========================================
+          // PRODUCT NAME
+          // ==========================================
+
+          const productName =
+            String(
+              product.productName ||
+              product.name ||
+              ''
+            ).trim()
+
+
+          if (!productName) {
+
+            return {
+
+              success: false,
+
+              data: null,
+
+              message:
+                'اسم المنتج مطلوب',
+
+              errors: []
+
+            }
+
+          }
+
+
+          // ==========================================
+          // EXISTING PRODUCT ID
+          // ==========================================
+          //
+          // A supplied productId means that this is
+          // already an existing Product Master.
+          //
+          // A missing productId means this is a NEW
+          // Product Master and ProductEngine must create it.
+          //
+          // ==========================================
+
+          const existingProductId =
+            product.productId ||
+            product.id ||
+            null
+
+
+          // ==========================================
+          // PREVENT DUPLICATE LOCAL WAREHOUSE PRODUCT
+          // ==========================================
+
+          if (existingProductId) {
+
+            const existingProduct =
+              (
+                warehouse.products ||
+                []
+              ).find(
+                item =>
+
+                  String(
+                    item.productId
+                  ) ===
+                  String(
+                    existingProductId
+                  )
+
+                  ||
+
+                  String(
+                    item.id
+                  ) ===
+                  String(
+                    existingProductId
+                  )
+              )
+
+
+            if (existingProduct) {
+
+              return {
+
+                success: false,
+
+                data:
+                  existingProduct,
+
+                message:
+                  'المنتج موجود بالفعل في هذا المخزن',
+
+                errors: []
+
+              }
+
+            }
+
+          }
+
+
+          // ==========================================
+          // PREPARE PRODUCT DATA
+          // ==========================================
+
+          const quantity =
+            Number(
+              product.quantity || 0
             )
 
 
-        if (!warehouse) {
-
-          return {
-
-            success: false,
-
-            data: null,
-
-            message:
-              'المخزن غير موجود',
-
-            errors: []
-
-          }
-
-        }
+          const minimumStock =
+            Number(
+              product.minimumStock || 0
+            )
 
 
-        // ==========================================
-        // PRODUCT NAME
-        // ==========================================
-
-        const productName =
-          String(
-            product.productName ||
-            product.name ||
-            ''
-          ).trim()
+          const maximumStock =
+            Number(
+              product.maximumStock || 0
+            )
 
 
-        if (!productName) {
-
-          return {
-
-            success: false,
-
-            data: null,
-
-            message:
-              'اسم المنتج مطلوب',
-
-            errors: []
-
-          }
-
-        }
+          const reorderPoint =
+            Number(
+              product.reorderPoint || 0
+            )
 
 
-        // ==========================================
-        // PRODUCT ID
-        // ==========================================
-        //
-        // إذا كان المنتج موجودًا بالفعل في النظام
-        // نحتفظ بمعرفه.
-        //
-        // إذا كان المنتج جديدًا من صفحة المخازن
-        // ننشئ له معرفًا هنا.
-        //
-        // ==========================================
+          // ==========================================
+          // CREATE PRODUCT MASTER
+          // ==========================================
+          //
+          // NEW PRODUCTS MUST ENTER THE SYSTEM THROUGH
+          // ProductEngine.
+          //
+          // ProductEngine will:
+          //
+          // 1. Validate product.
+          // 2. Normalize technical/product data.
+          // 3. Create Firestore Product Master.
+          // 4. Obtain the REAL Firestore product ID.
+          // 5. Create the initial Inventory record.
+          //
+          // ==========================================
 
-        const productId =
-          product.productId ||
-          product.id ||
-          generateId()
+          let masterProductId =
+            existingProductId
 
 
-        // ==========================================
-        // PREVENT DUPLICATE
-        // ==========================================
+          let persistedProduct = null
 
-        const existingProduct =
-          (
-            warehouse.products ||
-            []
-          ).find(
-            item =>
 
-              String(
-                item.productId
-              ) ===
-              String(
-                productId
+          if (!masterProductId) {
+
+            console.log(
+              '[WarehouseStore] Creating NEW Product Master:',
+              {
+                warehouseId,
+                productName
+              }
+            )
+
+
+            const productResult =
+              await ProductEngine.create({
+
+                ...product,
+
+                name:
+                  product.name ||
+                  productName,
+
+                productName,
+
+                warehouseId,
+
+                quantity,
+
+                minimumStock,
+
+                maximumStock,
+
+                reorderPoint
+
+              })
+
+
+            // ==========================================
+            // PRODUCT MASTER CREATION FAILED
+            // ==========================================
+
+            if (
+              !productResult?.success
+            ) {
+
+              console.error(
+                '[WarehouseStore] Product Master creation failed:',
+                productResult
               )
 
-              ||
 
-              String(
-                item.id
-              ) ===
-              String(
-                productId
+              return {
+
+                success: false,
+
+                data:
+                  productResult?.data ||
+                  null,
+
+                message:
+                  productResult?.message ||
+                  'فشل إنشاء المنتج',
+
+                errors:
+                  productResult?.errors ||
+                  []
+
+              }
+
+            }
+
+
+            masterProductId =
+              productResult
+                ?.data
+                ?.id
+
+
+            if (!masterProductId) {
+
+              console.error(
+                '[WarehouseStore] ProductEngine returned no product ID:',
+                productResult
               )
-          )
 
 
-        if (existingProduct) {
+              return {
 
-          return {
+                success: false,
 
-            success: false,
+                data: null,
 
-            data: existingProduct,
+                message:
+                  'تم إنشاء المنتج ولكن لم يتم الحصول على معرف المنتج',
 
-            message:
-              'المنتج موجود بالفعل في هذا المخزن',
+                errors: []
 
-            errors: []
+              }
+
+            }
+
+
+            persistedProduct =
+              productResult.data
+
+
+            console.log(
+              '[WarehouseStore] Product Master created:',
+              {
+                productId:
+                  masterProductId,
+
+                productName,
+
+                warehouseId
+              }
+            )
 
           }
 
-        }
+
+          // ==========================================
+          // NORMALIZE LOCAL WAREHOUSE PRODUCT
+          // ==========================================
+          //
+          // IMPORTANT:
+          //
+          // The REAL Firestore Product ID is used here.
+          //
+          // We do NOT keep the temporary local ID generated
+          // before ProductEngine.create().
+          //
+          // ==========================================
+
+          const normalizedProduct =
+            normalizeProduct({
+
+              ...product,
+
+              ...(
+                persistedProduct ||
+                {}
+              ),
+
+              id:
+                masterProductId,
+
+              productId:
+                masterProductId,
+
+              productName,
+
+              name:
+                product.name ||
+                productName,
+
+              quantity,
+
+              availableQuantity:
+                quantity,
+
+              minimumStock,
+
+              maximumStock,
+
+              reorderPoint,
+
+              warehouseId
+
+            })
 
 
-        // ==========================================
-        // PREPARE PRODUCT
-        // ==========================================
+          // ==========================================
+          // ADD TO LOCAL WAREHOUSE STORE
+          // ==========================================
 
-        const normalizedProduct =
-          normalizeProduct({
+          set(state => ({
 
-            ...product,
+            warehouses:
 
-            id:
-              productId,
+              addProductToWarehouseHelper(
 
-            productId,
+                state.warehouses,
 
-            productName,
+                warehouseId,
 
-            name:
-              product.name ||
-              productName
+                normalizedProduct
 
-          })
+              )
+
+          }))
 
 
-        // ==========================================
-        // ADD TO WAREHOUSE
-        // ==========================================
+          // ==========================================
+          // GET CREATED LOCAL PRODUCT
+          // ==========================================
 
-        set(state => ({
+          const updatedWarehouse =
+            get()
+              .warehouses
+              .find(
+                item =>
 
-          warehouses:
+                  String(
+                    item.id
+                  ) ===
+                  String(
+                    warehouseId
+                  )
 
-            addProductToWarehouseHelper(
+              )
 
-              state.warehouses,
+
+          const createdProduct =
+            (
+              updatedWarehouse?.products ||
+              []
+            ).find(
+              item =>
+
+                String(
+                  item.productId
+                ) ===
+                String(
+                  masterProductId
+                )
+
+            )
+
+
+          // ==========================================
+          // LOG SUCCESS
+          // ==========================================
+
+          console.log(
+            '[WarehouseStore] PRODUCT CREATION COMPLETE:',
+            {
+
+              productId:
+                masterProductId,
+
+              productName,
 
               warehouseId,
 
-              normalizedProduct
+              quantity,
 
-            )
+              firestoreProductMaster:
+                !existingProductId,
 
-        }))
-
-
-        // ==========================================
-        // GET CREATED PRODUCT
-        // ==========================================
-
-        const updatedWarehouse =
-          get()
-            .warehouses
-            .find(
-              item =>
-
-                String(
-                  item.id
-                ) ===
-                String(
-                  warehouseId
+              localWarehouseProduct:
+                Boolean(
+                  createdProduct
                 )
-            )
 
-
-        const createdProduct =
-          (
-            updatedWarehouse?.products ||
-            []
-          ).find(
-            item =>
-
-              String(
-                item.productId
-              ) ===
-              String(
-                productId
-              )
-
+            }
           )
 
 
-        return {
+          // ==========================================
+          // RETURN
+          // ==========================================
 
-          success: true,
+          return {
 
-          data: {
+            success: true,
 
-            productId,
+            data: {
 
-            product:
-              createdProduct ||
-              normalizedProduct,
+              productId:
+                masterProductId,
 
-            warehouseId,
+              product:
+                createdProduct ||
+                normalizedProduct,
 
-            inventoryCreated:
-              true
+              warehouseId,
 
-          },
+              inventoryCreated:
+                !existingProductId
 
-          message:
-            'تم إنشاء المنتج وإضافته إلى المخزن بنجاح',
+            },
 
-          errors: []
+            message:
+              'تم إنشاء المنتج وإضافته إلى المخزن بنجاح',
 
-        }
+            errors: []
 
-      },
+          }
+
+        },
 
 
       // ==========================================
@@ -587,6 +873,7 @@ export const useWarehouseStore = create(
                       product => {
 
                         const matches =
+
                           String(
                             product.productId
                           ) ===
@@ -629,6 +916,7 @@ export const useWarehouseStore = create(
                 }
 
               }
+
             )
 
         })),
@@ -700,6 +988,7 @@ export const useWarehouseStore = create(
                 String(
                   warehouseId
                 )
+
             )
 
 
@@ -739,6 +1028,7 @@ export const useWarehouseStore = create(
               String(
                 productId
               )
+
           )
 
 
@@ -761,10 +1051,12 @@ export const useWarehouseStore = create(
             product.quantity || 0
           )
 
+
         const currentIncoming =
           Number(
             product.incoming || 0
           )
+
 
         const currentOutgoing =
           Number(
@@ -775,8 +1067,10 @@ export const useWarehouseStore = create(
         let newQuantity =
           currentQuantity
 
+
         let newIncoming =
           currentIncoming
+
 
         let newOutgoing =
           currentOutgoing
@@ -789,6 +1083,7 @@ export const useWarehouseStore = create(
           newQuantity =
             currentQuantity +
             amount
+
 
           newIncoming =
             currentIncoming +
@@ -821,6 +1116,7 @@ export const useWarehouseStore = create(
           newQuantity =
             currentQuantity -
             amount
+
 
           newOutgoing =
             currentOutgoing +
@@ -982,6 +1278,7 @@ export const useWarehouseStore = create(
                       productItem => {
 
                         const matches =
+
                           String(
                             productItem.productId
                           ) ===
@@ -1028,6 +1325,7 @@ export const useWarehouseStore = create(
                         }
 
                       }
+
                     ),
 
                   transactions: [
@@ -1044,6 +1342,7 @@ export const useWarehouseStore = create(
                 }
 
               }
+
             )
 
         }))
@@ -1125,11 +1424,13 @@ export const useWarehouseStore = create(
                         String(
                           productId
                         )
+
                     )
 
                 }
 
               }
+
             )
 
         })),
@@ -1155,6 +1456,7 @@ export const useWarehouseStore = create(
                 String(
                   warehouseId
                 )
+
             )
 
 
@@ -1204,6 +1506,7 @@ export const useWarehouseStore = create(
                     String(
                       productId
                     )
+
                 )
 
 
@@ -1242,6 +1545,7 @@ export const useWarehouseStore = create(
               }
 
             }
+
           )
 
 
@@ -1311,6 +1615,7 @@ export const useWarehouseStore = create(
 
 
                   if (
+
                     productName.includes(
                       value
                     )
@@ -1326,6 +1631,7 @@ export const useWarehouseStore = create(
                     brand.includes(
                       value
                     )
+
                   ) {
 
                     results.push({
@@ -1343,9 +1649,11 @@ export const useWarehouseStore = create(
                   }
 
                 }
+
               )
 
             }
+
           )
 
 
@@ -1424,9 +1732,11 @@ export const useWarehouseStore = create(
                   })
 
                 }
+
               )
 
             }
+
           )
 
 
@@ -1456,6 +1766,7 @@ export const useWarehouseStore = create(
                 String(
                   warehouseId
                 )
+
             )
 
 
@@ -1480,6 +1791,7 @@ export const useWarehouseStore = create(
                 String(
                   productId
                 )
+
             )
 
         )
@@ -1537,3 +1849,6 @@ export const useWarehouseStore = create(
   )
 
 )
+
+
+export default useWarehouseStore

@@ -78,6 +78,366 @@ const normalizeViscosity = value =>
 
 
 // ======================================================
+// PARSE TIRE SIZE
+//
+// Supports:
+// 205/55/16
+// 205*55*16
+// 205/55R16
+// 205 55 16
+// 205-55-16
+// ======================================================
+
+const parseTireSize = value => {
+
+  const text =
+    String(value ?? '')
+      .trim()
+      .toUpperCase()
+      .replace(/×/g, '*')
+      .replace(/R/g, '/')
+      .replace(/-/g, '/')
+      .replace(/\*/g, '/')
+      .replace(/\\/g, '/')
+      .replace(/\s+/g, '')
+
+  const match =
+    text.match(
+      /(\d{3})\/(\d{2})\/(\d{2}(?:\.\d+)?)/
+    )
+
+  if (!match) {
+    return null
+  }
+
+  return {
+
+    width:
+      Number(match[1]),
+
+    profile:
+      Number(match[2]),
+
+    rim:
+      Number(match[3]),
+
+    size:
+      `${match[1]}/${match[2]}/${match[3]}`
+
+  }
+
+}
+
+
+// ======================================================
+// EXTRACT TIRE DATA
+// ======================================================
+
+const extractTireData = product => {
+
+  const tire =
+    product?.tire ||
+    product?.tireData ||
+    product?.tireSpecification ||
+    product?.tireSpecifications ||
+    product?.specifications?.tire ||
+    product?.typeData?.tire ||
+    {}
+
+
+  let width =
+    tire?.width ??
+    tire?.sectionWidth ??
+    product?.width ??
+    product?.sectionWidth
+
+
+  let profile =
+    tire?.profile ??
+    tire?.height ??
+    tire?.aspectRatio ??
+    product?.profile ??
+    product?.aspectRatio
+
+
+  let rim =
+    tire?.rim ??
+    tire?.rimSize ??
+    tire?.wheelDiameter ??
+    product?.rim ??
+    product?.rimSize
+
+
+  const directSizeCandidates = [
+
+    tire?.size,
+    tire?.tireSize,
+    tire?.dimension,
+
+    product?.tireSize,
+    product?.size,
+    product?.dimension,
+
+    product?.name,
+    product?.productName,
+    product?.shortName,
+    product?.title,
+    product?.sku,
+    product?.code,
+    product?.barcode,
+
+    product?.description
+
+  ]
+
+
+  let parsed = null
+
+
+  for (
+    const candidate of directSizeCandidates
+  ) {
+
+    parsed =
+      parseTireSize(candidate)
+
+    if (parsed) {
+      break
+    }
+
+  }
+
+
+  if (parsed) {
+
+    width =
+      width ??
+      parsed.width
+
+    profile =
+      profile ??
+      parsed.profile
+
+    rim =
+      rim ??
+      parsed.rim
+
+  }
+
+
+  const normalizedWidth =
+    Number(width)
+
+  const normalizedProfile =
+    Number(profile)
+
+  const normalizedRim =
+    Number(rim)
+
+
+  const validWidth =
+    Number.isFinite(normalizedWidth) &&
+    normalizedWidth > 0
+
+
+  const validProfile =
+    Number.isFinite(normalizedProfile) &&
+    normalizedProfile > 0
+
+
+  const validRim =
+    Number.isFinite(normalizedRim) &&
+    normalizedRim > 0
+
+
+  if (
+    !validWidth &&
+    !validProfile &&
+    !validRim
+  ) {
+    return null
+  }
+
+
+  return {
+
+    width:
+      validWidth
+        ? normalizedWidth
+        : null,
+
+    profile:
+      validProfile
+        ? normalizedProfile
+        : null,
+
+    rim:
+      validRim
+        ? normalizedRim
+        : null,
+
+    size:
+      parsed?.size ||
+      (
+        validWidth &&
+        validProfile &&
+        validRim
+          ? `${normalizedWidth}/${normalizedProfile}/${normalizedRim}`
+          : ''
+      )
+
+  }
+
+}
+
+
+// ======================================================
+// EXTRACT BATTERY DATA
+// ======================================================
+
+const extractBatteryData = product => {
+
+  const battery =
+    product?.battery ||
+    product?.batteryData ||
+    product?.batterySpecification ||
+    product?.batterySpecifications ||
+    product?.specifications?.battery ||
+    product?.typeData?.battery ||
+    {}
+
+
+  const candidates = [
+
+    battery?.capacity,
+    battery?.ampereHour,
+    battery?.ah,
+    battery?.amp,
+    battery?.ampHours,
+
+    product?.capacity,
+    product?.ampereHour,
+    product?.ah,
+    product?.amp,
+    product?.ampHours,
+
+    product?.model,
+    product?.productName,
+    product?.name
+
+  ]
+
+
+  return {
+
+    capacity:
+      candidates.find(
+        value =>
+          value !== undefined &&
+          value !== null &&
+          String(value).trim() !== ''
+      ) ?? ''
+
+  }
+
+}
+
+
+// ======================================================
+// EXTRACT OIL DATA
+// ======================================================
+
+const extractOilData = product => {
+
+  const oil =
+    product?.oil ||
+    product?.oilData ||
+    product?.oilSpecification ||
+    product?.oilSpecifications ||
+    product?.specifications?.oil ||
+    product?.typeData?.oil ||
+    {}
+
+
+  const viscosity =
+    oil?.viscosity ??
+    oil?.grade ??
+    product?.viscosity ??
+    product?.grade ??
+    product?.oilGrade ??
+    product?.model ??
+    product?.productName ??
+    product?.name ??
+    ''
+
+
+  return {
+
+    viscosity:
+      String(viscosity ?? '').trim()
+
+  }
+
+}
+
+
+// ======================================================
+// NORMALIZE PRODUCT FOR TECHNICAL SEARCH
+// ======================================================
+
+const normalizeProductForCompatibility = product => {
+
+  if (!product) {
+    return null
+  }
+
+
+  const type =
+    normalizeProductType(
+      product?.type ||
+      product?.category ||
+      product?.productType
+    )
+
+
+  const tire =
+    type === 'tire'
+      ? extractTireData(product)
+      : null
+
+
+  const battery =
+    type === 'battery'
+      ? extractBatteryData(product)
+      : null
+
+
+  const oil =
+    type === 'oil'
+      ? extractOilData(product)
+      : null
+
+
+  return {
+
+    ...product,
+
+    type,
+
+    tire,
+
+    battery,
+
+    oil,
+
+    compatibilityCatalogReady: true
+
+  }
+
+}
+
+
+// ======================================================
 // REPOSITORY
 // ======================================================
 
@@ -123,24 +483,23 @@ class ProductsRepository
     }
 
 
+    const data =
+      Array.isArray(result?.data)
+        ? result.data
+        : []
+
+
     return {
 
       success: true,
 
-      data:
-        Array.isArray(
-          result?.data
-        )
-          ? result.data
-          : [],
+      data,
 
       message:
         result?.message || '',
 
       errors:
-        Array.isArray(
-          result?.errors
-        )
+        Array.isArray(result?.errors)
           ? result.errors
           : []
 
@@ -151,6 +510,12 @@ class ProductsRepository
 
   // ==================================================
   // GET ALL PRODUCTS DATA ONLY
+  //
+  // This is the technical product catalog.
+  //
+  // IMPORTANT:
+  // This function does NOT use warehouse availability
+  // as a compatibility condition.
   // ==================================================
 
   async getAllData() {
@@ -168,11 +533,73 @@ class ProductsRepository
     }
 
 
-    return Array.isArray(
-      result?.data
+    const products =
+      Array.isArray(result?.data)
+        ? result.data
+        : []
+
+
+    const normalizedProducts =
+      products
+        .map(
+          normalizeProductForCompatibility
+        )
+        .filter(Boolean)
+
+
+    console.log(
+      '[ProductsRepository] TECHNICAL PRODUCT CATALOG:',
+      {
+        rawCount:
+          products.length,
+
+        normalizedCount:
+          normalizedProducts.length,
+
+        products:
+          normalizedProducts.map(
+            product => ({
+
+              id:
+                product?.id,
+
+              name:
+                product?.name ||
+                product?.productName,
+
+              type:
+                product?.type,
+
+              tire:
+                product?.tire,
+
+              battery:
+                product?.battery,
+
+              oil:
+                product?.oil
+
+            })
+          )
+
+      }
     )
-      ? result.data
-      : []
+
+
+    return normalizedProducts
+
+  }
+
+
+  // ==================================================
+  // GET TECHNICAL CATALOG
+  //
+  // Explicit name for vehicle compatibility code.
+  // ==================================================
+
+  async getCompatibilityCatalog() {
+
+    return this.getAllData()
 
   }
 
@@ -232,7 +659,15 @@ class ProductsRepository
         }
 
 
+        const battery =
+          extractBatteryData(
+            product
+          )
+
+
         const candidates = [
+
+          battery?.capacity,
 
           product?.battery?.capacity,
 
@@ -324,36 +759,29 @@ class ProductsRepository
 
 
         const tire =
-          product?.tire ||
-          product?.tireData ||
-          product?.tireSpecification ||
-          product?.tireSpecifications ||
-          {}
+          extractTireData(
+            product
+          )
 
 
         return (
 
           Number(
-            tire?.width ??
-            product?.width
+            tire?.width
           ) ===
           Number(width)
 
           &&
 
           Number(
-            tire?.height ??
-            tire?.profile ??
-            product?.profile
+            tire?.profile
           ) ===
           Number(profile)
 
           &&
 
           Number(
-            tire?.rim ??
-            tire?.rimSize ??
-            product?.rim
+            tire?.rim
           ) ===
           Number(rim)
 
@@ -434,7 +862,15 @@ class ProductsRepository
       oils.filter(
         product => {
 
+          const oil =
+            extractOilData(
+              product
+            )
+
+
           const candidates = [
+
+            oil?.viscosity,
 
             product?.oil?.viscosity,
 
@@ -467,15 +903,22 @@ class ProductsRepository
           console.log(
             'OIL CHECK:',
             {
+
               id:
                 product?.id,
+
               name:
                 product?.name,
+
               type:
                 product?.type,
+
               requested,
+
               candidates,
+
               match
+
             }
           )
 
