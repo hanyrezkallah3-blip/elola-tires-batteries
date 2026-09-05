@@ -2285,8 +2285,12 @@ const searchVehicleWithAI = async query => {
     !text
   ) {
     return {
+      query:
+        '',
+
       response:
         null,
+
       results:
         []
     }
@@ -2362,6 +2366,9 @@ const searchVehicleWithAI = async query => {
     ) {
 
       return {
+        query:
+          text,
+
         response,
 
         results:
@@ -2387,6 +2394,9 @@ const searchVehicleWithAI = async query => {
     )
 
     return {
+      query:
+        text,
+
       response,
 
       results:
@@ -2403,6 +2413,9 @@ const searchVehicleWithAI = async query => {
     )
 
     return {
+      query:
+        text,
+
       response:
         null,
 
@@ -2596,8 +2609,53 @@ export default function useVehicleSearch() {
                 ? aiResult.results
                 : []
 
+            // ------------------------------------------------
+            // IMPORTANT MARKET DEMAND CONTRACT
+            // ------------------------------------------------
+            //
+            // search() historically returns the result array.
+            // Keep that behavior so existing consumers continue
+            // to work.
+            //
+            // At the same time, attach the REAL AI query to the
+            // returned array so HomeVehicleSearch can use:
+            //
+            // response.query
+            //
+            // This fixes:
+            //
+            // searchQuery: ''
+            //
+            // becoming:
+            //
+            // searchQuery: 'toyota corolla 2021'
+            //
+            // without changing the result-array contract.
+            // ------------------------------------------------
+
+            finalResults.query =
+              String(
+                aiResult?.query ??
+                aiQuery
+              ).trim()
+
+            finalResults.searchQuery =
+              finalResults.query
+
+            finalResults.searchType =
+              'vehicle'
+
+            finalResults.aiResponse =
+              aiResult?.response ??
+              null
+
             setResults(
               finalResults
+            )
+
+            console.log(
+              '[Vehicle Search] Returning AI results with query:',
+              finalResults.query
             )
 
             return finalResults
