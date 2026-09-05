@@ -3,6 +3,18 @@
 // Home Search Results
 // ======================================================
 
+import {
+  useState
+} from 'react'
+
+import useMarketDemandStore
+  from '../../store/marketDemandStore'
+
+
+// ======================================================
+// NORMALIZE TYPE
+// ======================================================
+
 const normalizeType = value => {
 
   const type =
@@ -184,6 +196,21 @@ const getProductType = product => {
 
 
 // ======================================================
+// GET PRODUCT ID
+// ======================================================
+
+const getProductId = product => {
+
+  return (
+    product?.id ??
+    product?.productId ??
+    product?.sku ??
+    ''
+  )
+}
+
+
+// ======================================================
 // RESULT CARD
 // ======================================================
 
@@ -192,6 +219,18 @@ const ResultCard = ({
   index,
   onAddToCart
 }) => {
+
+  const [
+    feedbackOpen,
+    setFeedbackOpen
+  ] = useState(false)
+
+
+  const [
+    feedbackSent,
+    setFeedbackSent
+  ] = useState(false)
+
 
   const productName =
     product?.name ||
@@ -246,6 +285,56 @@ const ResultCard = ({
       product?.hasOffer ||
       product?.offerPrice != null
     )
+
+
+  // ====================================================
+  // CUSTOMER FEEDBACK
+  // ====================================================
+
+  const submitFeedback = reason => {
+
+    if (!reason) {
+      return
+    }
+
+
+    try {
+
+      useMarketDemandStore
+        .getState()
+        .recordFeedback({
+
+          product,
+
+          reason,
+
+          searchContext:
+            product?.searchContext ||
+            product?.vehicleSearchContext ||
+            {},
+
+          metadata: {
+            source:
+              'HomeSearchResults'
+          }
+
+        })
+
+
+      setFeedbackSent(true)
+
+      setFeedbackOpen(false)
+
+    } catch (error) {
+
+      console.error(
+        '[MarketDemand] feedback tracking failed:',
+        error
+      )
+
+    }
+
+  }
 
 
   return (
@@ -379,7 +468,7 @@ const ResultCard = ({
                   text-3xl
                   font-black
                   tracking-wide
-                "
+              "
               >
                 {tireSize || 'مقاس غير محدد'}
               </div>
@@ -685,6 +774,232 @@ const ResultCard = ({
           )
         }
 
+
+        {/* ==================================================
+            CUSTOMER FEEDBACK
+        ================================================== */}
+
+        {
+          !feedbackSent ? (
+
+            <div
+              className="
+                mt-4
+              "
+            >
+
+              {
+                !feedbackOpen ? (
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFeedbackOpen(true)
+                    }
+                    className="
+                      w-full
+                      rounded-2xl
+                      border
+                      border-slate-700
+                      text-gray-300
+                      hover:border-yellow-500
+                      hover:text-yellow-400
+                      py-3
+                      font-bold
+                      transition
+                    "
+                  >
+                    لم أقرر شراء هذا المنتج
+                  </button>
+
+                ) : (
+
+                  <div
+                    className="
+                      bg-slate-800
+                      border
+                      border-slate-700
+                      rounded-2xl
+                      p-4
+                    "
+                  >
+
+                    <div
+                      className="
+                        text-white
+                        font-black
+                        mb-3
+                      "
+                    >
+                      ما السبب؟
+                    </div>
+
+
+                    <div
+                      className="
+                        grid
+                        grid-cols-1
+                        gap-2
+                      "
+                    >
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          submitFeedback(
+                            'price'
+                          )
+                        }
+                        className="
+                          text-right
+                          px-4
+                          py-3
+                          rounded-xl
+                          bg-slate-900
+                          text-gray-300
+                          hover:text-yellow-400
+                          hover:border-yellow-500
+                          border
+                          border-slate-700
+                        "
+                      >
+                        السعر غير مناسب
+                      </button>
+
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          submitFeedback(
+                            'unavailable'
+                          )
+                        }
+                        className="
+                          text-right
+                          px-4
+                          py-3
+                          rounded-xl
+                          bg-slate-900
+                          text-gray-300
+                          hover:text-yellow-400
+                          border
+                          border-slate-700
+                        "
+                      >
+                        المنتج غير متوفر
+                      </button>
+
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          submitFeedback(
+                            'not_needed'
+                          )
+                        }
+                        className="
+                          text-right
+                          px-4
+                          py-3
+                          rounded-xl
+                          bg-slate-900
+                          text-gray-300
+                          hover:text-yellow-400
+                          border
+                          border-slate-700
+                        "
+                      >
+                        لم أعد بحاجة إليه
+                      </button>
+
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          submitFeedback(
+                            'alternative'
+                          )
+                        }
+                        className="
+                          text-right
+                          px-4
+                          py-3
+                          rounded-xl
+                          bg-slate-900
+                          text-gray-300
+                          hover:text-yellow-400
+                          border
+                          border-slate-700
+                        "
+                      >
+                        اخترت منتجًا آخر
+                      </button>
+
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          submitFeedback(
+                            'other'
+                          )
+                        }
+                        className="
+                          text-right
+                          px-4
+                          py-3
+                          rounded-xl
+                          bg-slate-900
+                          text-gray-300
+                          hover:text-yellow-400
+                          border
+                          border-slate-700
+                        "
+                      >
+                        سبب آخر
+                      </button>
+
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFeedbackOpen(false)
+                        }
+                        className="
+                          text-gray-500
+                          hover:text-white
+                          py-2
+                          font-bold
+                        "
+                      >
+                        إلغاء
+                      </button>
+
+                    </div>
+
+                  </div>
+
+                )
+              }
+
+            </div>
+
+          ) : (
+
+            <div
+              className="
+                mt-4
+                text-center
+                text-green-400
+                font-bold
+                py-3
+              "
+            >
+              شكرًا، تم تسجيل رأيك.
+            </div>
+
+          )
+        }
+
       </div>
 
     </div>
@@ -859,9 +1174,7 @@ export default function HomeSearchResults({
 
                     <ResultCard
                       key={
-                        product?.id ||
-                        product?.productId ||
-                        product?.sku ||
+                        getProductId(product) ||
                         index
                       }
                       product={product}

@@ -3,10 +3,17 @@
 // Home Vehicle Search
 // ======================================================
 
-import { useState } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState
+} from 'react'
 
 import useVehicleSearch
   from '../../hooks/useVehicleSearch'
+
+import useMarketDemandStore
+  from '../../store/marketDemandStore'
 
 import VehicleSearchForm
   from './VehicleSearchForm'
@@ -46,6 +53,95 @@ export default function HomeVehicleSearch({
 
 
   // ====================================================
+  // MARKET DEMAND
+  // ====================================================
+
+  const searchContextRef =
+    useRef({
+      searchType: 'vehicle',
+      searchQuery: ''
+    })
+
+
+  const buildSearchContext = searchTab => {
+
+    const currentForm =
+      form || {}
+
+
+    return {
+
+      searchType:
+        searchTab ||
+        'vehicle',
+
+      searchQuery:
+        searchTab === 'vehicle'
+          ? [
+              currentForm.vehicleType ||
+                currentForm.type ||
+                '',
+              currentForm.make ||
+                '',
+              currentForm.model ||
+                '',
+              currentForm.year ||
+                ''
+            ]
+              .filter(Boolean)
+              .join(' ')
+          : searchTab === 'tire'
+            ? (
+                currentForm.tireSize ||
+                ''
+              )
+            : searchTab === 'battery'
+              ? (
+                  currentForm.capacity ||
+                  ''
+                )
+              : searchTab === 'oil'
+                ? (
+                    currentForm.viscosity ||
+                    ''
+                  )
+                : '',
+
+      vehicleType:
+        currentForm.vehicleType ||
+        currentForm.type ||
+        '',
+
+      make:
+        currentForm.make ||
+        '',
+
+      model:
+        currentForm.model ||
+        '',
+
+      year:
+        currentForm.year ||
+        '',
+
+      tireSize:
+        currentForm.tireSize ||
+        '',
+
+      capacity:
+        currentForm.capacity ||
+        '',
+
+      viscosity:
+        currentForm.viscosity ||
+        ''
+
+    }
+
+  }
+
+
+  // ====================================================
   // ADD TO CART
   // ====================================================
 
@@ -76,7 +172,10 @@ export default function HomeVehicleSearch({
         product?.offerPrice ??
         product?.salePrice ??
         product?.price ??
-        0
+        0,
+
+      searchContext:
+        searchContextRef.current
 
     })
 
@@ -89,13 +188,119 @@ export default function HomeVehicleSearch({
 
   const handleSearch = async searchTab => {
 
+    const searchContext =
+      buildSearchContext(
+        searchTab
+      )
+
+
+    searchContextRef.current =
+      searchContext
+
+
+    // --------------------------------------------------
+    // MARKET DEMAND: REQUEST
+    // --------------------------------------------------
+
+    try {
+
+      useMarketDemandStore
+        .getState()
+        .recordRequest({
+
+          query:
+            searchContext.searchQuery,
+
+          searchType:
+            searchContext.searchType,
+
+          searchContext,
+
+          products:
+            [],
+
+          metadata: {
+            source:
+              'HomeVehicleSearch'
+          }
+
+        })
+
+    } catch (error) {
+
+      console.error(
+        '[MarketDemand] request tracking failed:',
+        error
+      )
+
+    }
+
+
     setSearched(true)
+
 
     await search(
       searchTab
     )
 
   }
+
+
+  // ====================================================
+  // MARKET DEMAND: VIEWED RESULTS
+  // ====================================================
+
+  useEffect(() => {
+
+    if (
+      !searched ||
+      loading ||
+      !Array.isArray(results) ||
+      results.length === 0
+    ) {
+      return
+    }
+
+
+    try {
+
+      const demandStore =
+        useMarketDemandStore
+          .getState()
+
+
+      results.forEach(product => {
+
+        demandStore.recordViewed({
+
+          product,
+
+          searchContext:
+            searchContextRef.current,
+
+          metadata: {
+            source:
+              'HomeVehicleSearch'
+          }
+
+        })
+
+      })
+
+    } catch (error) {
+
+      console.error(
+        '[MarketDemand] viewed tracking failed:',
+        error
+      )
+
+    }
+
+  }, [
+    searched,
+    loading,
+    results
+  ])
 
 
   // ====================================================

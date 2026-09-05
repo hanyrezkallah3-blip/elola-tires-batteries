@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { useInventoryStore } from './inventoryStore'
 import { useWalletStore } from './walletStore'
+import useMarketDemandStore from './marketDemandStore'
 import appendListItemWithId from './helpers/appendListItemWithId'
 
 const generateId = () =>
@@ -476,7 +477,8 @@ export const useWebsiteStore = create(
               ? orders
               : []
         }),
-              addOrder: (order) =>
+
+      addOrder: (order) =>
 
         set((state) => {
 
@@ -508,6 +510,87 @@ export const useWebsiteStore = create(
             ...order
 
           }
+
+          // ================= MARKET DEMAND =================
+          //
+          // A successfully created order is a Purchase event.
+          //
+          // This tracking is intentionally isolated from
+          // the order state itself so Market Demand analytics
+          // cannot break the checkout/order flow.
+          //
+          // Technical vehicle compatibility remains completely
+          // independent from inventory availability.
+          //
+
+          try {
+
+            useMarketDemandStore
+              .getState()
+              .recordPurchase({
+
+                order:
+                  newOrder,
+
+                products:
+                  Array.isArray(
+                    newOrder.items
+                  )
+                    ? newOrder.items
+                    : [],
+
+                searchContext:
+                  newOrder.searchContext ||
+                  newOrder.vehicleSearchContext ||
+                  {
+
+                    vehicleType:
+                      newOrder.vehicleType ||
+                      newOrder.vehicle?.type ||
+                      '',
+
+                    make:
+                      newOrder.make ||
+                      newOrder.vehicle?.make ||
+                      '',
+
+                    model:
+                      newOrder.model ||
+                      newOrder.vehicle?.model ||
+                      '',
+
+                    year:
+                      newOrder.year ||
+                      newOrder.vehicle?.year ||
+                      '',
+
+                    searchType:
+                      newOrder.searchType ||
+                      'website',
+
+                    searchQuery:
+                      newOrder.searchQuery ||
+                      ''
+
+                  }
+
+              })
+
+            console.log(
+              '[MarketDemand] Purchase recorded',
+              newOrder
+            )
+
+          } catch (error) {
+
+            console.error(
+              '[MarketDemand] purchase tracking failed:',
+              error
+            )
+
+          }
+
+          // ================= CASHBACK =================
 
           if (commission > 0) {
 
@@ -1242,7 +1325,8 @@ export const useWebsiteStore = create(
           ]
 
         })),
-              // ================= WALLET SYSTEM =================
+
+      // ================= WALLET SYSTEM =================
 
       walletEnabled: true,
 

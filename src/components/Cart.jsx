@@ -12,10 +12,22 @@
 // NEVER use inventoryStore.stockItems here for website
 // sales because website products live inside:
 // warehouse.products
+//
+// MARKET DEMAND:
+// This component tracks the real customer journey:
+//
+// Cart opened / existing cart
+// -> Checkout Started
+// -> Purchase
+// OR
+// -> Cart Abandoned
+//
+// Technical vehicle/VehDB logic is NOT modified here.
 // ======================================================
 
 import {
   useMemo,
+  useRef,
   useState
 } from 'react'
 
@@ -26,6 +38,9 @@ import {
 import {
   useWarehouseStore
 } from '../store/warehouseStore'
+
+import useMarketDemandStore
+  from '../store/marketDemandStore'
 
 
 // ======================================================
@@ -43,6 +58,71 @@ const toNumber = (
   return Number.isFinite(number)
     ? number
     : fallback
+
+}
+
+
+// ======================================================
+// MARKET DEMAND CONTEXT
+// ======================================================
+
+const getItemSearchContext = (
+  item
+) => {
+
+  if (!item) {
+    return {}
+  }
+
+
+  return {
+
+    vehicleType:
+      item.vehicleType ||
+      item.vehicle?.type ||
+      '',
+
+    make:
+      item.make ||
+      item.vehicle?.make ||
+      '',
+
+    model:
+      item.model ||
+      item.vehicle?.model ||
+      '',
+
+    year:
+      item.year ||
+      item.vehicle?.year ||
+      '',
+
+    searchType:
+      item.searchType ||
+      item.searchContext?.searchType ||
+      'website',
+
+    searchQuery:
+      item.searchQuery ||
+      item.searchContext?.searchQuery ||
+      '',
+
+    tireSize:
+      item.tireSize ||
+      item.searchContext?.tireSize ||
+      '',
+
+    batteryCapacity:
+      item.batteryCapacity ||
+      item.searchContext?.batteryCapacity ||
+      '',
+
+    oilViscosity:
+      item.oilViscosity ||
+      item.searchContext?.oilViscosity ||
+      ''
+
+  }
 
 }
 
@@ -144,6 +224,17 @@ export default function Cart({
 
 
   // ====================================================
+  // MARKET DEMAND SESSION FLAGS
+  // ====================================================
+
+  const checkoutStartedRef =
+    useRef(false)
+
+  const purchaseCompletedRef =
+    useRef(false)
+
+
+  // ====================================================
   // SAFE CART
   // ====================================================
 
@@ -158,6 +249,266 @@ export default function Cart({
       [cart]
 
     )
+
+
+  // ====================================================
+  // RESET PURCHASE FLAG AFTER CART BECOMES EMPTY
+  //
+  // This allows the next shopping session to be tracked
+  // normally.
+  // ====================================================
+
+  if (
+    safeCart.length === 0 &&
+    purchaseCompletedRef.current
+  ) {
+
+    purchaseCompletedRef.current =
+      false
+
+    checkoutStartedRef.current =
+      false
+
+  }
+
+
+  // ====================================================
+  // MARKET DEMAND
+  // CHECKOUT START
+  // ====================================================
+
+  const trackCheckoutStarted = () => {
+
+    if (
+      checkoutStartedRef.current
+    ) {
+
+      return
+
+    }
+
+
+    if (
+      safeCart.length === 0
+    ) {
+
+      return
+
+    }
+
+
+    try {
+
+      useMarketDemandStore
+        .getState()
+        .recordCheckoutStarted({
+
+          products:
+            safeCart,
+
+          searchContext:
+            safeCart.length === 1
+
+              ? getItemSearchContext(
+                  safeCart[0]
+                )
+
+              : {
+                  searchType:
+                    'website-cart',
+
+                  searchQuery:
+                    '',
+
+                  vehicleType:
+                    '',
+
+                  make:
+                    '',
+
+                  model:
+                    '',
+
+                  year:
+                    ''
+                },
+
+          metadata: {
+
+            source:
+              'Cart',
+
+            cartSize:
+              safeCart.length,
+
+            cartTotal:
+              safeCart.reduce(
+
+                (
+                  accumulator,
+                  item
+                ) => {
+
+                  const price =
+                    toNumber(
+                      item.offerPrice ??
+                      item.salePrice ??
+                      item.price ??
+                      0
+                    )
+
+                  const quantity =
+                    toNumber(
+                      item.quantity,
+                      1
+                    )
+
+                  return (
+                    accumulator +
+                    price * quantity
+                  )
+
+                },
+
+                0
+
+              )
+
+          }
+
+        })
+
+
+      checkoutStartedRef.current =
+        true
+
+
+      console.info(
+        '[MarketDemand] Checkout started',
+        {
+          products:
+            safeCart.length
+        }
+      )
+
+    }
+
+    catch (
+      error
+    ) {
+
+      console.error(
+        '[MarketDemand] checkout tracking failed:',
+        error
+      )
+
+    }
+
+  }
+
+
+  // ====================================================
+  // MARKET DEMAND
+  // CART ABANDONED
+  //
+  // This is recorded only when the customer leaves the
+  // cart while products are still present and a purchase
+  // has not completed.
+  // ====================================================
+
+  const trackCartAbandoned = (
+    source = 'Cart'
+  ) => {
+
+    if (
+      safeCart.length === 0
+    ) {
+
+      return
+
+    }
+
+
+    if (
+      purchaseCompletedRef.current
+    ) {
+
+      return
+
+    }
+
+
+    try {
+
+      useMarketDemandStore
+        .getState()
+        .recordCartAbandoned({
+
+          products:
+            safeCart,
+
+          searchContext:
+            safeCart.length === 1
+
+              ? getItemSearchContext(
+                  safeCart[0]
+                )
+
+              : {
+                  searchType:
+                    'website-cart',
+
+                  searchQuery:
+                    '',
+
+                  vehicleType:
+                    '',
+
+                  make:
+                    '',
+
+                  model:
+                    '',
+
+                  year:
+                    ''
+                },
+
+          metadata: {
+
+            source,
+
+            cartSize:
+              safeCart.length
+
+          }
+
+        })
+
+
+      console.info(
+        '[MarketDemand] Cart abandoned',
+        {
+          source,
+          products:
+            safeCart.length
+        }
+      )
+
+    }
+
+    catch (
+      error
+    ) {
+
+      console.error(
+        '[MarketDemand] cart abandonment tracking failed:',
+        error
+      )
+
+    }
+
+  }
 
 
   // ====================================================
@@ -687,6 +1038,16 @@ export default function Cart({
     }
 
 
+    // ================================================
+    // MARKET DEMAND
+    //
+    // Customer has reached the actual checkout/order
+    // confirmation stage.
+    // ================================================
+
+    trackCheckoutStarted()
+
+
     setLoading(true)
 
 
@@ -930,6 +1291,43 @@ export default function Cart({
 
 
       // ================================================
+      // MARKET DEMAND SEARCH CONTEXT
+      //
+      // Preserve the search context that originally led
+      // to the products entering the cart.
+      // ================================================
+
+      const primarySearchContext =
+        safeCart.length === 1
+
+          ? getItemSearchContext(
+              safeCart[0]
+            )
+
+          : {
+
+              searchType:
+                'website-cart',
+
+              searchQuery:
+                '',
+
+              vehicleType:
+                '',
+
+              make:
+                '',
+
+              model:
+                '',
+
+              year:
+                ''
+
+            }
+
+
+      // ================================================
       // CREATE ORDER
       // ================================================
 
@@ -974,6 +1372,16 @@ export default function Cart({
           transactions[0]?.warehouseId ||
           '',
 
+        // ============================================
+        // MARKET DEMAND CONTEXT
+        // ============================================
+
+        searchContext:
+          primarySearchContext,
+
+        vehicleSearchContext:
+          primarySearchContext,
+
         createdBy:
           'website',
 
@@ -989,9 +1397,32 @@ export default function Cart({
       }
 
 
-      addOrder(
-        orderData
-      )
+      // ================================================
+      // CREATE ORDER
+      //
+      // websiteStore.addOrder is responsible for the
+      // actual order persistence and purchase tracking.
+      // ================================================
+
+      const orderResult =
+        addOrder(
+          orderData
+        )
+
+
+      // ================================================
+      // MARKET DEMAND
+      //
+      // The Cart itself does not create a second
+      // PURCHASE event here.
+      //
+      // websiteStore.addOrder is the single source for
+      // purchase tracking, preventing duplicate purchase
+      // events.
+      // ================================================
+
+      purchaseCompletedRef.current =
+        true
 
 
       // ================================================
@@ -1089,6 +1520,17 @@ ${total} جنيه
       error
     ) {
 
+      // ================================================
+      // IMPORTANT
+      //
+      // If order processing fails, we DO NOT mark the
+      // journey as purchased.
+      // ================================================
+
+      purchaseCompletedRef.current =
+        false
+
+
       console.error(
         'Cart Order Error:',
         error
@@ -1125,6 +1567,10 @@ ${total} جنيه
       event.target.id ===
       'cart-backdrop'
     ) {
+
+      trackCartAbandoned(
+        'Cart Backdrop'
+      )
 
       setOpen(false)
 
@@ -1216,9 +1662,15 @@ ${total} جنيه
 
             type="button"
 
-            onClick={() =>
+            onClick={() => {
+
+              trackCartAbandoned(
+                'Cart Close Button'
+              )
+
               setOpen(false)
-            }
+
+            }}
 
             className="
               bg-red-600
