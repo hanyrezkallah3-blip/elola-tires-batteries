@@ -1030,63 +1030,298 @@ export const useWebsiteStore = create(
 
       addToCart: (item) =>
 
-        set((state) => {
+  set((state) => {
 
-          const cart =
-            [...state.cart]
+    const cart =
+      [...state.cart]
 
-          const index =
-            cart.findIndex(
+    const index =
+      cart.findIndex(
 
-              (i) =>
+        (i) =>
 
-                String(i.id) ===
-                String(item.id)
+          String(i.id) ===
+          String(item.id)
 
-            )
+      )
 
-          if (index !== -1) {
 
-            cart[index] = {
+    // ==================================================
+    // MARKET DEMAND CONTEXT
+    //
+    // Preserve the original search context that caused
+    // this product to be added to the cart.
+    // ==================================================
 
-              ...cart[index],
+    const searchContext = {
+
+      ...(item.searchContext || {}),
+
+      searchType:
+        item.searchContext?.searchType ||
+        item.searchType ||
+        'website',
+
+      searchQuery:
+        item.searchContext?.searchQuery ||
+        item.searchQuery ||
+        '',
+
+      vehicleType:
+        item.searchContext?.vehicleType ||
+        item.vehicleType ||
+        '',
+
+      make:
+        item.searchContext?.make ||
+        item.make ||
+        '',
+
+      model:
+        item.searchContext?.model ||
+        item.model ||
+        '',
+
+      year:
+        item.searchContext?.year ||
+        item.year ||
+        '',
+
+      tireSize:
+        item.searchContext?.tireSize ||
+        item.tireSize ||
+        '',
+
+      capacity:
+        item.searchContext?.capacity ||
+        item.capacity ||
+        '',
+
+      viscosity:
+        item.searchContext?.viscosity ||
+        item.viscosity ||
+        '',
+
+      batteryCapacity:
+        item.searchContext?.batteryCapacity ||
+        item.batteryCapacity ||
+        '',
+
+      oilViscosity:
+        item.searchContext?.oilViscosity ||
+        item.oilViscosity ||
+        ''
+
+    }
+
+
+    // ==================================================
+    // EXISTING CART ITEM
+    // ==================================================
+
+    if (index !== -1) {
+
+      const updatedItem = {
+
+        ...cart[index],
+
+        // Keep the original search context if it exists.
+        // Otherwise use the context from this add operation.
+        searchContext:
+          Object.keys(
+            cart[index].searchContext || {}
+          ).length > 0
+
+            ? cart[index].searchContext
+
+            : searchContext,
+
+        quantity:
+
+          Number(
+            cart[index].quantity || 1
+          ) + 1
+
+      }
+
+
+      cart[index] =
+        updatedItem
+
+
+      // ==================================================
+      // MARKET DEMAND
+      // Record the actual ADD TO CART action.
+      // ==================================================
+
+      try {
+
+        useMarketDemandStore
+          .getState()
+          .recordAddedToCart({
+
+            products: [
+              updatedItem
+            ],
+
+            searchContext:
+              updatedItem.searchContext,
+
+            metadata: {
+
+              source:
+                'websiteStore.addToCart',
+
+              cartId:
+                updatedItem.cartId,
 
               quantity:
+                updatedItem.quantity,
 
-                Number(
-                  cart[index].quantity || 1
-                ) + 1
+              action:
+                'quantity_increased'
 
             }
 
-            return {
-              cart
-            }
+          })
+
+        console.log(
+          '[MarketDemand] Added to cart',
+          updatedItem
+        )
+
+      } catch (error) {
+
+        console.error(
+          '[MarketDemand] add-to-cart tracking failed:',
+          error
+        )
+
+      }
+
+
+      return {
+        cart
+      }
+
+    }
+
+
+    // ==================================================
+    // NEW CART ITEM
+    // ==================================================
+
+    const cartItem = {
+
+      ...item,
+
+      searchContext,
+
+      // Keep these fields directly available as well.
+      searchType:
+        searchContext.searchType,
+
+      searchQuery:
+        searchContext.searchQuery,
+
+      vehicleType:
+        searchContext.vehicleType,
+
+      make:
+        searchContext.make,
+
+      model:
+        searchContext.model,
+
+      year:
+        searchContext.year,
+
+      tireSize:
+        searchContext.tireSize,
+
+      capacity:
+        searchContext.capacity,
+
+      viscosity:
+        searchContext.viscosity,
+
+      quantity:
+        1,
+
+      cartId:
+        generateId()
+
+    }
+
+
+    const updatedCart = [
+
+      ...cart,
+
+      cartItem
+
+    ]
+
+
+    // ==================================================
+    // MARKET DEMAND
+    // Record the actual ADD TO CART action.
+    // ==================================================
+
+    try {
+
+      useMarketDemandStore
+        .getState()
+        .recordAddedToCart({
+
+          products: [
+            cartItem
+          ],
+
+          searchContext:
+            cartItem.searchContext,
+
+          metadata: {
+
+            source:
+              'websiteStore.addToCart',
+
+            cartId:
+              cartItem.cartId,
+
+            quantity:
+              cartItem.quantity,
+
+            action:
+              'new_item'
 
           }
 
-          return {
+        })
 
-            cart: [
+      console.log(
+        '[MarketDemand] Added to cart',
+        cartItem
+      )
 
-              ...cart,
+    } catch (error) {
 
-              {
+      console.error(
+        '[MarketDemand] add-to-cart tracking failed:',
+        error
+      )
 
-                ...item,
+    }
 
-                quantity: 1,
 
-                cartId:
-                  generateId()
+    return {
 
-              }
+      cart:
+        updatedCart
 
-            ]
+    }
 
-          }
-
-        }),
+  }),
 
       increaseCartQuantity: (cartId) =>
 

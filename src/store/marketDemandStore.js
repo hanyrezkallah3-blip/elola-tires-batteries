@@ -1,38 +1,53 @@
 // ======================================================
 // EL OLA ERP
-// Market Demand Analytics Store
+// Market Demand Store
 // ======================================================
 //
 // RESPONSIBILITY
 // ------------------------------------------------------
-// Tracks consumer demand independently from inventory.
+// Records and analyzes real consumer demand.
 //
 // IMPORTANT
 // ------------------------------------------------------
-// A product request is recorded whether the product is:
-// 1. Available
-// 2. Unavailable
+// Market Demand is separate from:
+// - Product Master
+// - Inventory
+// - Vehicle compatibility
 //
-// Demand is NOT the same as inventory.
-// Demand is NOT the same as completed orders.
+// Compatibility is determined elsewhere.
+// This store only records what the customer requested,
+// viewed, added, purchased, abandoned, or reported.
 //
-// EVENT FLOW
+// PRODUCT ATTRIBUTION
 // ------------------------------------------------------
-// requested
-//      ↓
-// viewed
-//      ↓
-// added_to_cart
-//      ↓
-// checkout_started
-//      ↓
-// purchased
+// Every product event is normalized from:
+// - product
+// - products[]
+// - order.items
 //
-// A request may also end as:
-// not_added_to_cart
-// cart_abandoned
-// purchase_abandoned
-// cancelled
+// This prevents "منتج غير محدد" when callers provide
+// a products array.
+//
+// VEHICLE CONTEXT
+// ------------------------------------------------------
+// Vehicle context is stored with every event.
+//
+// Priority:
+// 1. Explicit event searchContext.
+// 2. Product searchContext.
+// 3. Product vehicleSearchContext.
+// 4. Order searchContext.
+// 5. Order vehicleSearchContext.
+// 6. Order vehicle fields.
+// 7. Previous event from the same product/session.
+//
+// IMPORTANT FIX
+// ------------------------------------------------------
+// Vehicle context sources are MERGED field-by-field.
+// Empty values from a lower-priority source are never
+// allowed to overwrite valid vehicle information.
+//
+// Existing persisted demand events are preserved.
 //
 // ======================================================
 
@@ -41,119 +56,558 @@ import { persist } from 'zustand/middleware'
 
 
 // ======================================================
-// ID
+// NORMALIZE TEXT
 // ======================================================
 
-const generateId = () =>
-  Date.now().toString() +
-  Math.random()
-    .toString(36)
-    .slice(2)
+const normalizeText = value => {
 
-
-// ======================================================
-// NORMALIZE
-// ======================================================
-
-const normalizeText = value =>
-  String(value ?? '')
+  return String(
+    value ?? ''
+  )
     .trim()
     .toLowerCase()
+}
 
+
+// ======================================================
+// FIRST NON-EMPTY VALUE
+// ======================================================
+
+const firstValue = (...values) => {
+
+  for (
+    const value of values
+  ) {
+
+    if (
+      value !== undefined &&
+      value !== null &&
+      String(value).trim() !== ''
+    ) {
+
+      return value
+    }
+  }
+
+  return ''
+}
+
+
+// ======================================================
+// NORMALIZE PRODUCT
+// ======================================================
 
 const normalizeProduct = product => {
 
   if (!product) {
-    return {
-      productId: '',
-      productName: 'منتج غير محدد',
-      type: '',
-      brand: '',
-      model: '',
-      size: '',
-      sku: ''
-    }
+    return null
   }
 
+  const id =
+    product.id ??
+    product.productId ??
+    product.sku ??
+    product.code ??
+    null
+
+  const name =
+    product.name ??
+    product.productName ??
+    product.title ??
+    product.description ??
+    ''
+
+  const brand =
+    product.brand ??
+    product.brandName ??
+    ''
+
+  const category =
+    product.category ??
+    product.type ??
+    product.productType ??
+    ''
+
+  const price =
+    product.offerPrice ??
+    product.salePrice ??
+    product.price ??
+    0
+
+  const quantity =
+    product.quantity ??
+    product.availableQuantity ??
+    product.stock ??
+    0
+
+  const available =
+    typeof product.isAvailable === 'boolean'
+      ? product.isAvailable
+      : typeof product.available === 'boolean'
+        ? product.available
+        : Number(quantity) > 0
+
   return {
+    ...product,
+
+    id,
+
     productId:
       product.productId ??
       product.id ??
-      product.selectedProductId ??
-      product.selectedWarehouseProductId ??
-      '',
+      id,
+
+    name:
+      name || 'منتج',
 
     productName:
       product.productName ??
-      product.name ??
-      product.title ??
-      product.productNameAr ??
-      'منتج غير محدد',
+      name ??
+      'منتج',
 
-    type:
-      product.type ??
-      product.category ??
-      product.productType ??
+    brand,
+
+    category,
+
+    price,
+
+    quantity,
+
+    available,
+
+    isAvailable:
+      typeof product.isAvailable === 'boolean'
+        ? product.isAvailable
+        : available
+  }
+}
+
+
+// ======================================================
+// PRODUCT KEY
+// ======================================================
+
+const getProductKey = product => {
+
+  if (!product) {
+    return ''
+  }
+
+  const id =
+    product.id ??
+    product.productId ??
+    product.sku ??
+    product.code
+
+  if (
+    id !== null &&
+    id !== undefined &&
+    String(id).trim() !== ''
+  ) {
+    return String(id)
+  }
+
+  const name =
+    product.name ??
+    product.productName ??
+    product.title ??
+    ''
+
+  return normalizeText(
+    name
+  )
+}
+
+
+// ======================================================
+// PRODUCT COLLECTION
+// ======================================================
+//
+// IMPORTANT FIX
+// ------------------------------------------------------
+// Some callers provide the same product in both:
+//
+//   products: [product]
+//   product: product
+//
+// Previously both references were added, which caused
+// duplicate events such as:
+//
+//   viewed → 2
+//
+// for a single product.
+//
+// We now add the explicit `product` only when it is not
+// already represented inside `products[]`.
+//
+// This is intentionally limited to the duplicate
+// product/product-array case and does NOT deduplicate
+// legitimate repeated order items.
+//
+// ======================================================
+
+const collectProducts = ({
+  product,
+  products,
+  order
+} = {}) => {
+
+  const output = []
+
+  if (
+    Array.isArray(products)
+  ) {
+
+    output.push(
+      ...products
+    )
+  }
+
+  if (
+    product
+  ) {
+
+    const productKey =
+      getProductKey(
+        product
+      )
+
+    const alreadyIncluded =
+      productKey &&
+      output.some(
+        item =>
+          getProductKey(
+            item
+          ) === productKey
+      )
+
+    if (
+      !alreadyIncluded
+    ) {
+
+      output.push(
+        product
+      )
+    }
+  }
+
+  if (
+    output.length === 0 &&
+    Array.isArray(order?.items)
+  ) {
+
+    output.push(
+      ...order.items
+    )
+  }
+
+  return output
+    .filter(Boolean)
+    .map(
+      normalizeProduct
+    )
+    .filter(Boolean)
+}
+
+
+// ======================================================
+// SEARCH CONTEXT
+// ======================================================
+
+const normalizeSearchContext = (
+  searchContext = {}
+) => {
+
+  const context =
+    searchContext || {}
+
+  return {
+    searchType:
+      context.searchType ??
       '',
 
-    brand:
-      product.brand ??
-      product.manufacturer ??
+    searchQuery:
+      context.searchQuery ??
+      context.query ??
+      '',
+
+    vehicleType:
+      context.vehicleType ??
+      context.type ??
+      '',
+
+    make:
+      context.make ??
       '',
 
     model:
-      product.model ??
+      context.model ??
+      context.modelFromSearch ??
       '',
 
-    size:
-      product.size ??
-      product.tire?.size ??
-      product.tireSize ??
-      product.capacity ??
-      product.viscosity ??
+    modelFromSearch:
+      context.modelFromSearch ??
+      context.model ??
       '',
 
-    sku:
-      product.sku ??
-      product.code ??
+    year:
+      context.year ??
       '',
 
-    salePrice:
-      Number(
-        product.salePrice ??
-        product.price ??
-        0
-      ) || 0,
-
-    image:
-      product.image ??
-      product.imageUrl ??
+    tireSize:
+      context.tireSize ??
       '',
 
-    technicalRequirement:
-      Boolean(
-        product.technicalRequirement
-      ),
-
-    compatibilitySource:
-      product.compatibilitySource ??
+    capacity:
+      context.capacity ??
       '',
 
-    isAvailable:
-      Boolean(
-        product.isAvailable ??
-        product.available ??
-        false
-      ),
+    viscosity:
+      context.viscosity ??
+      '',
 
-    availableQuantity:
-      Number(
-        product.availableQuantity ??
-        product.quantity ??
-        product.stock ??
-        0
-      ) || 0
+    ...context
   }
+}
+
+
+// ======================================================
+// MERGE SEARCH CONTEXTS
+// ======================================================
+//
+// IMPORTANT
+// ------------------------------------------------------
+// Merges contexts field-by-field.
+// A blank value from one source cannot erase a valid
+// value from another source.
+//
+// Priority is from LEFT to RIGHT.
+// The RIGHTMOST non-empty value wins.
+//
+// ======================================================
+
+const mergeSearchContexts = (
+  ...contexts
+) => {
+
+  const normalizedContexts =
+    contexts
+      .filter(Boolean)
+      .map(
+        normalizeSearchContext
+      )
+
+
+  const merged = {}
+
+
+  for (
+    const context
+    of normalizedContexts
+  ) {
+
+    Object.entries(
+      context
+    )
+      .forEach(
+        ([key, value]) => {
+
+          if (
+            value === undefined ||
+            value === null
+          ) {
+            return
+          }
+
+          if (
+            typeof value === 'string' &&
+            value.trim() === ''
+          ) {
+            return
+          }
+
+          if (
+            Array.isArray(value) &&
+            value.length === 0
+          ) {
+            return
+          }
+
+          merged[key] = value
+        }
+      )
+  }
+
+
+  return normalizeSearchContext(
+    merged
+  )
+}
+
+
+// ======================================================
+// VEHICLE CONTEXT CHECK
+// ======================================================
+
+const hasVehicleContext = context => {
+
+  if (!context) {
+    return false
+  }
+
+  return Boolean(
+    String(
+      context.vehicleType ??
+      ''
+    ).trim() ||
+
+    String(
+      context.make ??
+      ''
+    ).trim() ||
+
+    String(
+      context.modelFromSearch ??
+      context.model ??
+      ''
+    ).trim() ||
+
+    String(
+      context.year ??
+      ''
+    ).trim()
+  )
+}
+
+
+// ======================================================
+// VEHICLE CONTEXT
+// ======================================================
+
+const buildVehicleContext = context => {
+
+  const normalized =
+    normalizeSearchContext(
+      context
+    )
+
+  return {
+
+    vehicleType:
+      normalized.vehicleType ??
+      '',
+
+    make:
+      normalized.make ??
+      '',
+
+    model:
+      firstValue(
+        normalized.modelFromSearch,
+        normalized.model
+      ),
+
+    modelFromSearch:
+      firstValue(
+        normalized.modelFromSearch,
+        normalized.model
+      ),
+
+    year:
+      normalized.year ??
+      ''
+  }
+}
+
+
+// ======================================================
+// AVAILABILITY
+// ======================================================
+
+const resolveAvailability = (
+  product,
+  explicitAvailability
+) => {
+
+  if (
+    typeof explicitAvailability === 'boolean'
+  ) {
+    return explicitAvailability
+  }
+
+  if (
+    typeof explicitAvailability === 'string'
+  ) {
+
+    const value =
+      normalizeText(
+        explicitAvailability
+      )
+
+    if (
+      [
+        'available',
+        'متوفر',
+        'true',
+        'yes'
+      ].includes(value)
+    ) {
+      return true
+    }
+
+    if (
+      [
+        'unavailable',
+        'غير متوفر',
+        'false',
+        'no'
+      ].includes(value)
+    ) {
+      return false
+    }
+  }
+
+  if (!product) {
+    return false
+  }
+
+  if (
+    typeof product.isAvailable === 'boolean'
+  ) {
+    return product.isAvailable
+  }
+
+  if (
+    typeof product.available === 'boolean'
+  ) {
+    return product.available
+  }
+
+  if (
+    product.availableQuantity !== undefined
+  ) {
+    return Number(
+      product.availableQuantity
+    ) > 0
+  }
+
+  if (
+    product.quantity !== undefined
+  ) {
+    return Number(
+      product.quantity
+    ) > 0
+  }
+
+  if (
+    product.stock !== undefined
+  ) {
+    return Number(
+      product.stock
+    ) > 0
+  }
+
+  return false
 }
 
 
@@ -187,49 +641,40 @@ export const MARKET_DEMAND_EVENTS = {
   PURCHASE_ABANDONED:
     'purchase_abandoned',
 
-  CANCELLED:
-    'cancelled',
-
   FEEDBACK:
     'feedback'
 }
 
 
 // ======================================================
-// NO PURCHASE REASONS
+// REASONS
 // ======================================================
 
 export const MARKET_DEMAND_REASONS = {
 
-  OUT_OF_STOCK:
-    'out_of_stock',
+  PRICE:
+    'price',
 
-  PRICE_HIGH:
-    'price_high',
+  ALTERNATIVE:
+    'alternative',
 
-  NOT_SUITABLE:
-    'not_suitable',
+  NOT_NEEDED:
+    'not_needed',
 
-  WRONG_SPECIFICATION:
-    'wrong_specification',
+  UNAVAILABLE:
+    'unavailable',
 
-  WRONG_BRAND:
-    'wrong_brand',
+  SHIPPING:
+    'shipping',
 
-  LOOKING_FOR_ALTERNATIVE:
-    'looking_for_alternative',
+  PAYMENT:
+    'payment',
 
-  WILL_BUY_LATER:
-    'will_buy_later',
+  TRUST:
+    'trust',
 
-  LEFT_PAGE:
-    'left_page',
-
-  CART_ABANDONED:
-    'cart_abandoned',
-
-  CHECKOUT_ABANDONED:
-    'checkout_abandoned',
+  WAITING:
+    'waiting',
 
   OTHER:
     'other'
@@ -242,35 +687,29 @@ export const MARKET_DEMAND_REASONS = {
 
 export const MARKET_DEMAND_REASON_LABELS = {
 
-  out_of_stock:
+  price:
+    'السعر',
+
+  alternative:
+    'وجد بديلًا',
+
+  not_needed:
+    'لم يعد يحتاج المنتج',
+
+  unavailable:
     'المنتج غير متوفر',
 
-  price_high:
-    'السعر مرتفع',
+  shipping:
+    'الشحن',
 
-  not_suitable:
-    'المنتج غير مناسب',
+  payment:
+    'الدفع',
 
-  wrong_specification:
-    'المواصفات غير مناسبة',
+  trust:
+    'الثقة',
 
-  wrong_brand:
-    'أبحث عن ماركة أخرى',
-
-  looking_for_alternative:
-    'أبحث عن بديل',
-
-  will_buy_later:
-    'سأشتري لاحقًا',
-
-  left_page:
-    'غادر الصفحة',
-
-  cart_abandoned:
-    'ترك السلة بدون إتمام الطلب',
-
-  checkout_abandoned:
-    'بدأ الشراء ولم يكمله',
+  waiting:
+    'الانتظار',
 
   other:
     'سبب آخر'
@@ -278,203 +717,775 @@ export const MARKET_DEMAND_REASON_LABELS = {
 
 
 // ======================================================
+// EVENT ID
+// ======================================================
+
+const createEventId = () => {
+
+  return (
+    Date.now().toString(36) +
+    Math.random()
+      .toString(36)
+      .slice(2)
+  )
+}
+
+
+// ======================================================
+// VEHICLE CONTEXT RESOLUTION
+// ======================================================
+//
+// Priority:
+// 1. Explicit context
+// 2. Product context
+// 3. Order context
+// 4. Previous event for same product/session
+//
+// IMPORTANT
+// ------------------------------------------------------
+// Contexts are merged without allowing empty fields
+// to overwrite valid values.
+//
+// ======================================================
+
+const resolveEventContext = ({
+  product,
+  searchContext,
+  order,
+  existingEvents = [],
+  sessionId
+} = {}) => {
+
+  const explicitContext =
+    normalizeSearchContext(
+      searchContext
+    )
+
+
+  const productSearchContext =
+    normalizeSearchContext(
+      product?.searchContext || {}
+    )
+
+
+  const productVehicleContext =
+    normalizeSearchContext(
+      product?.vehicleSearchContext || {}
+    )
+
+
+  const productContext =
+    mergeSearchContexts(
+      productSearchContext,
+      productVehicleContext
+    )
+
+
+  const orderSearchContext =
+    normalizeSearchContext(
+      order?.searchContext || {}
+    )
+
+
+  const orderVehicleSearchContext =
+    normalizeSearchContext(
+      order?.vehicleSearchContext || {}
+    )
+
+
+  const orderVehicleFields =
+    normalizeSearchContext({
+
+      vehicleType:
+        order?.vehicleType ??
+        order?.vehicle?.type ??
+        '',
+
+      make:
+        order?.make ??
+        order?.vehicle?.make ??
+        '',
+
+      model:
+        order?.model ??
+        order?.vehicle?.model ??
+        '',
+
+      year:
+        order?.year ??
+        order?.vehicle?.year ??
+        '',
+
+      searchType:
+        order?.searchType ??
+        '',
+
+      searchQuery:
+        order?.searchQuery ??
+        ''
+    })
+
+
+  // ----------------------------------------------------
+  // EXPLICIT CONTEXT
+  // ----------------------------------------------------
+
+  if (
+    hasVehicleContext(
+      explicitContext
+    )
+  ) {
+
+    return {
+      context:
+        mergeSearchContexts(
+          productContext,
+          explicitContext
+        ),
+
+      source:
+        'explicit'
+    }
+  }
+
+
+  // ----------------------------------------------------
+  // PRODUCT CONTEXT
+  // ----------------------------------------------------
+
+  if (
+    hasVehicleContext(
+      productContext
+    )
+  ) {
+
+    return {
+      context:
+        productContext,
+
+      source:
+        'product'
+    }
+  }
+
+
+  // ----------------------------------------------------
+  // ORDER CONTEXT
+  // ----------------------------------------------------
+
+  const orderContext =
+    mergeSearchContexts(
+      orderSearchContext,
+      orderVehicleSearchContext,
+      orderVehicleFields
+    )
+
+
+  if (
+    hasVehicleContext(
+      orderContext
+    )
+  ) {
+
+    return {
+      context:
+        orderContext,
+
+      source:
+        'order'
+    }
+  }
+
+
+  // ----------------------------------------------------
+  // PREVIOUS EVENT
+  // SAME PRODUCT + SAME SESSION
+  // ----------------------------------------------------
+
+  if (
+    sessionId
+  ) {
+
+    const productKey =
+      getProductKey(
+        product
+      )
+
+    if (
+      productKey
+    ) {
+
+      for (
+        let index =
+          existingEvents.length - 1;
+        index >= 0;
+        index -= 1
+      ) {
+
+        const previous =
+          existingEvents[index]
+
+
+        if (
+          String(
+            previous.sessionId ??
+            ''
+          ) !==
+          String(
+            sessionId
+          )
+        ) {
+          continue
+        }
+
+
+        const previousKey =
+          previous.productId
+            ? String(
+                previous.productId
+              )
+            : normalizeText(
+                previous.productName
+              )
+
+
+        if (
+          previousKey !==
+          productKey
+        ) {
+          continue
+        }
+
+
+        const previousContext =
+          normalizeSearchContext(
+            previous.searchContext
+          )
+
+
+        if (
+          hasVehicleContext(
+            previousContext
+          )
+        ) {
+
+          return {
+
+            context:
+              previousContext,
+
+            source:
+              'previous-session-event'
+          }
+        }
+      }
+    }
+  }
+
+
+  // ----------------------------------------------------
+  // NO VEHICLE CONTEXT
+  // ----------------------------------------------------
+
+  return {
+
+    context:
+      explicitContext,
+
+    source:
+      'none'
+  }
+}
+
+
+// ======================================================
+// EVENT FACTORY
+// ======================================================
+
+const createDemandEvent = ({
+  type,
+  product,
+  availability,
+  searchContext,
+  searchContextSource,
+  sessionId,
+  customerId,
+  orderId,
+  quantity,
+  reason,
+  metadata
+}) => {
+
+  const normalizedProduct =
+    normalizeProduct(
+      product
+    )
+
+
+  const context =
+    normalizeSearchContext(
+      searchContext
+    )
+
+
+  const vehicleContext =
+    buildVehicleContext(
+      context
+    )
+
+
+  return {
+
+    id:
+      createEventId(),
+
+    type,
+
+    timestamp:
+      new Date().toISOString(),
+
+    product:
+      normalizedProduct,
+
+    productId:
+      normalizedProduct?.id ??
+      normalizedProduct?.productId ??
+      null,
+
+    productName:
+      normalizedProduct?.name ??
+      normalizedProduct?.productName ??
+      '',
+
+    availability:
+      resolveAvailability(
+        normalizedProduct,
+        availability
+      ),
+
+    quantity:
+      Number(quantity) > 0
+        ? Number(quantity)
+        : 1,
+
+    reason:
+      reason ??
+      null,
+
+    searchContext:
+      context,
+
+    searchType:
+      context.searchType,
+
+    searchQuery:
+      context.searchQuery,
+
+    vehicleType:
+      vehicleContext.vehicleType,
+
+    make:
+      vehicleContext.make,
+
+    model:
+      vehicleContext.model,
+
+    modelFromSearch:
+      vehicleContext.modelFromSearch,
+
+    year:
+      vehicleContext.year,
+
+    tireSize:
+      context.tireSize,
+
+    capacity:
+      context.capacity,
+
+    viscosity:
+      context.viscosity,
+
+    sessionId:
+      sessionId ??
+      null,
+
+    customerId:
+      customerId ??
+      null,
+
+    orderId:
+      orderId ??
+      null,
+
+    metadata: {
+
+      ...(metadata || {}),
+
+      vehicleContextSource:
+        searchContextSource ??
+        'none',
+
+      hasVehicleContext:
+        hasVehicleContext(
+          context
+        )
+    }
+  }
+}
+
+
+// ======================================================
 // STORE
 // ======================================================
 
-export const useMarketDemandStore = create(
+const useMarketDemandStore = create(
 
   persist(
 
     (set, get) => ({
 
       // ==================================================
-      // DATA
+      // STATE
       // ==================================================
 
       demandEvents: [],
 
-      demandVersion: 1,
+      demandVersion: 3,
 
 
       // ==================================================
-      // RECORD EVENT
+      // COMPATIBILITY ALIAS
       // ==================================================
 
-      recordEvent: ({
-        eventType,
-        product,
-        availability,
-        searchContext = {},
-        sessionId = '',
-        customerId = '',
-        orderId = '',
-        quantity = 1,
-        reason = '',
-        metadata = {}
-      } = {}) => {
+      get events() {
 
-        if (!eventType) {
-          return null
-        }
-
-        const normalized =
-          normalizeProduct(product)
-
-        const event = {
-
-          id:
-            generateId(),
-
-          eventType,
-
-          createdAt:
-            new Date().toISOString(),
-
-          productId:
-            normalized.productId,
-
-          productName:
-            normalized.productName,
-
-          type:
-            normalized.type,
-
-          brand:
-            normalized.brand,
-
-          model:
-            normalized.model,
-
-          size:
-            normalized.size,
-
-          sku:
-            normalized.sku,
-
-          salePrice:
-            normalized.salePrice,
-
-          image:
-            normalized.image,
-
-          technicalRequirement:
-            normalized.technicalRequirement,
-
-          compatibilitySource:
-            normalized.compatibilitySource,
-
-          // ----------------------------------------------
-          // AVAILABILITY AT EVENT TIME
-          // ----------------------------------------------
-
-          isAvailable:
-            availability?.isAvailable ??
-            normalized.isAvailable,
-
-          availableQuantity:
-            Number(
-              availability?.availableQuantity ??
-              normalized.availableQuantity ??
-              0
-            ) || 0,
-
-          // ----------------------------------------------
-          // CONTEXT
-          // ----------------------------------------------
-
-          vehicleType:
-            searchContext.vehicleType ??
-            '',
-
-          make:
-            searchContext.make ??
-            '',
-
-          modelFromSearch:
-            searchContext.model ??
-            '',
-
-          year:
-            searchContext.year ??
-            '',
-
-          searchType:
-            searchContext.searchType ??
-            searchContext.type ??
-            '',
-
-          searchQuery:
-            searchContext.searchQuery ??
-            searchContext.query ??
-            '',
-
-          // ----------------------------------------------
-          // USER / ORDER
-          // ----------------------------------------------
-
-          sessionId,
-
-          customerId,
-
-          orderId,
-
-          quantity:
-            Math.max(
-              1,
-              Number(quantity) || 1
-            ),
-
-          reason,
-
-          metadata
-        }
-
-        set(state => ({
-
-          demandEvents: [
-            event,
-            ...(state.demandEvents || [])
-          ]
-
-        }))
-
-        return event
+        return get()
+          .demandEvents
       },
 
 
       // ==================================================
-      // REQUESTED
+      // INTERNAL MULTI-PRODUCT EVENT RECORDER
+      // ==================================================
+
+      recordProductsEvent: ({
+        type,
+        product,
+        products,
+        order,
+        availability,
+        searchContext,
+        sessionId,
+        customerId,
+        orderId,
+        quantity,
+        reason,
+        metadata
+      } = {}) => {
+
+        const items =
+          collectProducts({
+            product,
+            products,
+            order
+          })
+
+
+        if (
+          items.length === 0
+        ) {
+
+          console.warn(
+            '[MarketDemand] No real product supplied:',
+            type
+          )
+
+          return []
+        }
+
+
+        const existingEvents =
+          get().demandEvents
+
+
+        const events =
+          items.map(
+            item => {
+
+              const resolved =
+                resolveEventContext({
+
+                  product:
+                    item,
+
+                  searchContext,
+
+                  order,
+
+                  existingEvents,
+
+                  sessionId
+                })
+
+
+              const itemContext =
+                resolved.context
+
+
+              return createDemandEvent({
+
+                type,
+
+                product:
+                  item,
+
+                availability:
+                  availability ??
+                  item.isAvailable ??
+                  item.available,
+
+                searchContext:
+                  itemContext,
+
+                searchContextSource:
+                  resolved.source,
+
+                sessionId,
+
+                customerId,
+
+                orderId:
+                  orderId ??
+                  order?.id ??
+                  order?.orderId ??
+                  null,
+
+                quantity:
+                  item.quantity ??
+                  quantity ??
+                  1,
+
+                reason,
+
+                metadata: {
+
+                  ...(metadata || {}),
+
+                  productSource:
+                    'real-product'
+                }
+              })
+            }
+          )
+
+
+        set(
+          state => ({
+
+            demandEvents: [
+
+              ...state.demandEvents,
+
+              ...events
+            ]
+          })
+        )
+
+
+        // ==================================================
+        // DEBUG — ACTUAL STORED EVENT CONTEXT
+        // ==================================================
+        //
+        // This does NOT modify event logic.
+        // It only exposes the exact data that was stored.
+        //
+        // ==================================================
+
+        events.forEach(
+          event => {
+
+            console.log(
+              '[MarketDemand][DEBUG] EVENT STORED',
+              {
+                type:
+                  event.type,
+
+                productId:
+                  event.productId,
+
+                productName:
+                  event.productName,
+
+                searchType:
+                  event.searchType,
+
+                searchQuery:
+                  event.searchQuery,
+
+                vehicleType:
+                  event.vehicleType,
+
+                make:
+                  event.make,
+
+                model:
+                  event.model,
+
+                modelFromSearch:
+                  event.modelFromSearch,
+
+                year:
+                  event.year,
+
+                tireSize:
+                  event.tireSize,
+
+                capacity:
+                  event.capacity,
+
+                viscosity:
+                  event.viscosity,
+
+                hasVehicleContext:
+                  event.metadata?.hasVehicleContext,
+
+                vehicleContextSource:
+                  event.metadata?.vehicleContextSource,
+
+                sessionId:
+                  event.sessionId,
+
+                orderId:
+                  event.orderId,
+
+                eventId:
+                  event.id
+              }
+            )
+          }
+        )
+
+
+        return events
+      },
+
+
+      // ==================================================
+      // GENERIC EVENT
+      // ==================================================
+
+      recordEvent: ({
+        type,
+        product,
+        products,
+        order,
+        availability,
+        searchContext,
+        sessionId,
+        customerId,
+        orderId,
+        quantity = 1,
+        reason,
+        metadata
+      } = {}) => {
+
+        return get()
+          .recordProductsEvent({
+
+            type,
+
+            product,
+
+            products,
+
+            order,
+
+            availability,
+
+            searchContext,
+
+            sessionId,
+
+            customerId,
+
+            orderId,
+
+            quantity,
+
+            reason,
+
+            metadata
+          })
+      },
+
+
+      // ==================================================
+      // REQUEST
       // ==================================================
 
       recordRequest: ({
         product,
+        products = [],
         availability,
         searchContext,
         sessionId,
         customerId,
         quantity = 1,
-        metadata
+        metadata,
+        query,
+        searchType
       } = {}) => {
 
-        return get().recordEvent({
+        const context =
+          normalizeSearchContext({
 
-          eventType:
-            MARKET_DEMAND_EVENTS.REQUESTED,
+            ...(searchContext || {}),
 
-          product,
+            searchQuery:
+              searchContext?.searchQuery ??
+              query ??
+              '',
 
-          availability,
+            searchType:
+              searchContext?.searchType ??
+              searchType ??
+              ''
+          })
 
-          searchContext,
 
-          sessionId,
+        const events =
+          get()
+            .recordProductsEvent({
 
-          customerId,
+              type:
+                MARKET_DEMAND_EVENTS.REQUESTED,
 
-          quantity,
+              product,
 
-          metadata
-        })
+              products,
+
+              availability,
+
+              searchContext:
+                context,
+
+              sessionId,
+
+              customerId,
+
+              quantity,
+
+              metadata
+            })
+
+
+        console.log(
+          '[MarketDemand] Request recorded:',
+          events.length
+        )
+
+
+        return events
       },
 
 
@@ -484,40 +1495,51 @@ export const useMarketDemandStore = create(
 
       recordViewed: ({
         product,
-        availability,
+        products = [],
         searchContext,
         sessionId,
         customerId,
         metadata
       } = {}) => {
 
-        return get().recordEvent({
+        const events =
+          get()
+            .recordProductsEvent({
 
-          eventType:
-            MARKET_DEMAND_EVENTS.VIEWED,
+              type:
+                MARKET_DEMAND_EVENTS.VIEWED,
 
-          product,
+              product,
 
-          availability,
+              products,
 
-          searchContext,
+              searchContext,
 
-          sessionId,
+              sessionId,
 
-          customerId,
+              customerId,
 
-          metadata
-        })
+              metadata
+            })
+
+
+        console.log(
+          '[MarketDemand] Viewed recorded:',
+          events.length
+        )
+
+
+        return events
       },
 
 
       // ==================================================
-      // ADD TO CART
+      // ADDED TO CART
       // ==================================================
 
       recordAddedToCart: ({
         product,
-        availability,
+        products = [],
         searchContext,
         sessionId,
         customerId,
@@ -525,61 +1547,80 @@ export const useMarketDemandStore = create(
         metadata
       } = {}) => {
 
-        return get().recordEvent({
+        const events =
+          get()
+            .recordProductsEvent({
 
-          eventType:
-            MARKET_DEMAND_EVENTS.ADDED_TO_CART,
+              type:
+                MARKET_DEMAND_EVENTS.ADDED_TO_CART,
 
-          product,
+              product,
 
-          availability,
+              products,
 
-          searchContext,
+              searchContext,
 
-          sessionId,
+              sessionId,
 
-          customerId,
+              customerId,
 
-          quantity,
+              quantity,
 
-          metadata
-        })
+              metadata
+            })
+
+
+        console.log(
+          '[MarketDemand] Added to cart:',
+          events.length
+        )
+
+
+        return events
       },
 
 
       // ==================================================
-      // CHECKOUT START
+      // CHECKOUT STARTED
       // ==================================================
 
       recordCheckoutStarted: ({
         product,
-        availability,
+        products = [],
         searchContext,
         sessionId,
         customerId,
-        quantity = 1,
         metadata
       } = {}) => {
 
-        return get().recordEvent({
+        const events =
+          get()
+            .recordProductsEvent({
 
-          eventType:
-            MARKET_DEMAND_EVENTS.CHECKOUT_STARTED,
+              type:
+                MARKET_DEMAND_EVENTS.CHECKOUT_STARTED,
 
-          product,
+              product,
 
-          availability,
+              products,
 
-          searchContext,
+              searchContext,
 
-          sessionId,
+              sessionId,
 
-          customerId,
+              customerId,
 
-          quantity,
+              metadata
+            })
 
-          metadata
-        })
+
+        console.log(
+          '[MarketDemand] Checkout started:',
+          events.length
+        )
+
+
+        return events
       },
 
 
@@ -589,72 +1630,164 @@ export const useMarketDemandStore = create(
 
       recordPurchase: ({
         product,
-        availability,
+        products = [],
+        order,
         searchContext,
         sessionId,
         customerId,
         orderId,
-        quantity = 1,
+        quantity,
         metadata
       } = {}) => {
 
-        return get().recordEvent({
+        const orderItems =
+          Array.isArray(
+            products
+          ) &&
+          products.length > 0
 
-          eventType:
-            MARKET_DEMAND_EVENTS.PURCHASED,
+            ? products
 
-          product,
+            : Array.isArray(
+                order?.items
+              )
 
-          availability,
+              ? order.items
 
-          searchContext,
+              : []
 
-          sessionId,
 
-          customerId,
+        const orderContext =
+          mergeSearchContexts(
 
-          orderId,
+            order?.searchContext,
 
-          quantity,
+            order?.vehicleSearchContext,
 
-          metadata
-        })
+            {
+              vehicleType:
+                order?.vehicleType ??
+                order?.vehicle?.type ??
+                '',
+
+              make:
+                order?.make ??
+                order?.vehicle?.make ??
+                '',
+
+              model:
+                order?.model ??
+                order?.vehicle?.model ??
+                '',
+
+              modelFromSearch:
+                order?.modelFromSearch ??
+                order?.model ??
+                order?.vehicle?.model ??
+                '',
+
+              year:
+                order?.year ??
+                order?.vehicle?.year ??
+                '',
+
+              searchType:
+                order?.searchType ??
+                '',
+
+              searchQuery:
+                order?.searchQuery ??
+                ''
+            },
+
+            searchContext
+          )
+
+
+        const events =
+          get()
+            .recordProductsEvent({
+
+              type:
+                MARKET_DEMAND_EVENTS.PURCHASED,
+
+              product,
+
+              products:
+                orderItems,
+
+              order,
+
+              searchContext:
+                orderContext,
+
+              sessionId,
+
+              customerId,
+
+              orderId:
+                orderId ??
+                order?.id ??
+                order?.orderId ??
+                null,
+
+              quantity,
+
+              metadata: {
+
+                ...(metadata || {}),
+
+                source:
+                  metadata?.source ??
+                  'order'
+              }
+            })
+
+
+        console.log(
+          '[MarketDemand] Purchase recorded:',
+          events.length
+        )
+
+
+        return events
       },
 
 
       // ==================================================
-      // NOT ADDED
+      // NOT ADDED TO CART
       // ==================================================
 
       recordNotAddedToCart: ({
         product,
-        availability,
+        products = [],
         searchContext,
         sessionId,
         customerId,
-        reason = '',
+        reason,
         metadata
       } = {}) => {
 
-        return get().recordEvent({
+        return get()
+          .recordProductsEvent({
 
-          eventType:
-            MARKET_DEMAND_EVENTS.NOT_ADDED_TO_CART,
+            type:
+              MARKET_DEMAND_EVENTS.NOT_ADDED_TO_CART,
 
-          product,
+            product,
 
-          availability,
+            products,
 
-          searchContext,
+            searchContext,
 
-          sessionId,
+            sessionId,
 
-          customerId,
+            customerId,
 
-          reason,
+            reason,
 
-          metadata
-        })
+            metadata
+          })
       },
 
 
@@ -664,36 +1797,34 @@ export const useMarketDemandStore = create(
 
       recordCartAbandoned: ({
         product,
-        availability,
+        products = [],
         searchContext,
         sessionId,
         customerId,
-        reason = MARKET_DEMAND_REASONS.CART_ABANDONED,
-        quantity = 1,
+        reason,
         metadata
       } = {}) => {
 
-        return get().recordEvent({
+        return get()
+          .recordProductsEvent({
 
-          eventType:
-            MARKET_DEMAND_EVENTS.CART_ABANDONED,
+            type:
+              MARKET_DEMAND_EVENTS.CART_ABANDONED,
 
-          product,
+            product,
 
-          availability,
+            products,
 
-          searchContext,
+            searchContext,
 
-          sessionId,
+            sessionId,
 
-          customerId,
+            customerId,
 
-          reason,
+            reason,
 
-          quantity,
-
-          metadata
-        })
+            metadata
+          })
       },
 
 
@@ -703,46 +1834,7 @@ export const useMarketDemandStore = create(
 
       recordPurchaseAbandoned: ({
         product,
-        availability,
-        searchContext,
-        sessionId,
-        customerId,
-        reason = MARKET_DEMAND_REASONS.CHECKOUT_ABANDONED,
-        quantity = 1,
-        metadata
-      } = {}) => {
-
-        return get().recordEvent({
-
-          eventType:
-            MARKET_DEMAND_EVENTS.PURCHASE_ABANDONED,
-
-          product,
-
-          availability,
-
-          searchContext,
-
-          sessionId,
-
-          customerId,
-
-          reason,
-
-          quantity,
-
-          metadata
-        })
-      },
-
-
-      // ==================================================
-      // FEEDBACK
-      // ==================================================
-
-      recordFeedback: ({
-        product,
-        availability,
+        products = [],
         searchContext,
         sessionId,
         customerId,
@@ -750,25 +1842,70 @@ export const useMarketDemandStore = create(
         metadata
       } = {}) => {
 
-        return get().recordEvent({
+        return get()
+          .recordProductsEvent({
 
-          eventType:
-            MARKET_DEMAND_EVENTS.FEEDBACK,
+            type:
+              MARKET_DEMAND_EVENTS.PURCHASE_ABANDONED,
 
-          product,
+            product,
 
-          availability,
+            products,
 
-          searchContext,
+            searchContext,
 
-          sessionId,
+            sessionId,
 
-          customerId,
+            customerId,
 
-          reason,
+            reason,
 
-          metadata
-        })
+            metadata
+          })
+      },
+
+
+      // ==================================================
+      // CUSTOMER FEEDBACK
+      // ==================================================
+
+      recordFeedback: ({
+        product,
+        products = [],
+        searchContext,
+        sessionId,
+        customerId,
+        reason,
+        metadata
+      } = {}) => {
+
+        if (
+          !reason
+        ) {
+          return []
+        }
+
+
+        return get()
+          .recordProductsEvent({
+
+            type:
+              MARKET_DEMAND_EVENTS.FEEDBACK,
+
+            product,
+
+            products,
+
+            searchContext,
+
+            sessionId,
+
+            customerId,
+
+            reason,
+
+            metadata
+          })
       },
 
 
@@ -778,68 +1915,63 @@ export const useMarketDemandStore = create(
 
       getProductEvents: productId => {
 
-        const normalizedId =
-          String(productId ?? '')
+        const wanted =
+          String(
+            productId ?? ''
+          )
 
-        return (
-          get().demandEvents || []
-        ).filter(
-          event =>
-            String(
-              event.productId ?? ''
-            ) === normalizedId
-        )
+
+        return get()
+          .demandEvents
+          .filter(
+            event =>
+              String(
+                event.productId ?? ''
+              ) === wanted
+          )
       },
 
 
       // ==================================================
-      // AGGREGATED PRODUCT ANALYTICS
+      // PRODUCT ANALYTICS
       // ==================================================
 
       getProductAnalytics: () => {
 
-        const events =
-          get().demandEvents || []
+        const groups = {}
 
-        const map =
-          new Map()
 
-        events.forEach(event => {
+        for (
+          const event
+          of get().demandEvents
+        ) {
 
           const key =
-            event.productId ||
-            `name:${normalizeText(
-              event.productName
-            )}`
+            event.productId
+              ? String(
+                  event.productId
+                )
+              : normalizeText(
+                  event.productName
+                )
 
-          if (!map.has(key)) {
 
-            map.set(key, {
+          if (!key) {
+            continue
+          }
+
+
+          if (!groups[key]) {
+
+            groups[key] = {
 
               productId:
-                event.productId || '',
+                event.productId ??
+                null,
 
               productName:
                 event.productName ||
-                'منتج غير محدد',
-
-              type:
-                event.type || '',
-
-              brand:
-                event.brand || '',
-
-              model:
-                event.model || '',
-
-              size:
-                event.size || '',
-
-              sku:
-                event.sku || '',
-
-              image:
-                event.image || '',
+                'منتج',
 
               requested:
                 0,
@@ -865,19 +1997,13 @@ export const useMarketDemandStore = create(
               purchaseAbandoned:
                 0,
 
-              cancelled:
-                0,
-
               unavailableRequests:
                 0,
 
               availableRequests:
                 0,
 
-              totalRequestedQuantity:
-                0,
-
-              totalPurchasedQuantity:
+              totalQuantityPurchased:
                 0,
 
               revenue:
@@ -885,51 +2011,32 @@ export const useMarketDemandStore = create(
 
               reasons: {},
 
-              firstRequestedAt:
-                null,
-
-              lastRequestedAt:
-                null
-            })
+              vehicleContexts: {}
+            }
           }
 
-          const item =
-            map.get(key)
 
-          switch (event.eventType) {
+          const item =
+            groups[key]
+
+
+          switch (
+            event.type
+          ) {
 
             case MARKET_DEMAND_EVENTS.REQUESTED:
 
               item.requested += 1
 
-              item.totalRequestedQuantity +=
-                Number(event.quantity || 1)
-
               if (
-                event.isAvailable
+                event.availability
               ) {
+
                 item.availableRequests += 1
-              }
-              else {
+
+              } else {
+
                 item.unavailableRequests += 1
-              }
-
-              if (
-                !item.firstRequestedAt ||
-                event.createdAt <
-                  item.firstRequestedAt
-              ) {
-                item.firstRequestedAt =
-                  event.createdAt
-              }
-
-              if (
-                !item.lastRequestedAt ||
-                event.createdAt >
-                  item.lastRequestedAt
-              ) {
-                item.lastRequestedAt =
-                  event.createdAt
               }
 
               break
@@ -960,12 +2067,18 @@ export const useMarketDemandStore = create(
 
               item.purchased += 1
 
-              item.totalPurchasedQuantity +=
-                Number(event.quantity || 1)
+              item.totalQuantityPurchased +=
+                Number(
+                  event.quantity || 1
+                )
 
               item.revenue +=
-                Number(event.salePrice || 0) *
-                Number(event.quantity || 1)
+                Number(
+                  event.product?.price || 0
+                ) *
+                Number(
+                  event.quantity || 1
+                )
 
               break
 
@@ -991,87 +2104,104 @@ export const useMarketDemandStore = create(
               break
 
 
-            case MARKET_DEMAND_EVENTS.CANCELLED:
-
-              item.cancelled += 1
-
-              break
-
-
             case MARKET_DEMAND_EVENTS.FEEDBACK:
 
-              if (event.reason) {
-
-                item.reasons[event.reason] =
-                  Number(
-                    item.reasons[event.reason] || 0
-                  ) + 1
-              }
-
               break
+
 
             default:
 
               break
           }
 
+
           if (
             event.reason
           ) {
 
-            item.reasons[event.reason] =
-              Number(
-                item.reasons[event.reason] || 0
+            item.reasons[
+              event.reason
+            ] =
+              (
+                item.reasons[
+                  event.reason
+                ] || 0
               ) + 1
           }
 
-        })
 
-        return Array
-          .from(map.values())
-          .map(item => ({
+          const context =
+            event.searchContext ||
+            {}
 
-            ...item,
 
-            cartConversionRate:
-              item.requested > 0
-                ? (
-                    item.addedToCart /
-                    item.requested
-                  ) * 100
-                : 0,
-
-            purchaseConversionRate:
-              item.requested > 0
-                ? (
-                    item.purchased /
-                    item.requested
-                  ) * 100
-                : 0,
-
-            cartToPurchaseRate:
-              item.addedToCart > 0
-                ? (
-                    item.purchased /
-                    item.addedToCart
-                  ) * 100
-                : 0,
-
-            unavailableRate:
-              item.requested > 0
-                ? (
-                    item.unavailableRequests /
-                    item.requested
-                  ) * 100
-                : 0,
-
-            notPurchased:
-              Math.max(
-                0,
-                item.requested -
-                item.purchased
+          const vehicleKey =
+            [
+              context.vehicleType,
+              context.make,
+              context.modelFromSearch ||
+                context.model,
+              context.year
+            ]
+              .map(
+                value =>
+                  String(
+                    value ?? ''
+                  ).trim()
               )
-          }))
+              .filter(Boolean)
+              .join(' ')
+
+
+          if (
+            vehicleKey
+          ) {
+
+            item.vehicleContexts[
+              vehicleKey
+            ] =
+              (
+                item.vehicleContexts[
+                  vehicleKey
+                ] || 0
+              ) + 1
+          }
+        }
+
+
+        return Object.values(
+          groups
+        )
+          .map(
+            item => ({
+
+              ...item,
+
+              purchaseConversionRate:
+                item.requested > 0
+                  ? (
+                      item.purchased /
+                      item.requested
+                    ) * 100
+                  : 0,
+
+              addToCartRate:
+                item.requested > 0
+                  ? (
+                      item.addedToCart /
+                      item.requested
+                    ) * 100
+                  : 0,
+
+              viewRate:
+                item.requested > 0
+                  ? (
+                      item.viewed /
+                      item.requested
+                    ) * 100
+                  : 0
+            })
+          )
       },
 
 
@@ -1081,59 +2211,164 @@ export const useMarketDemandStore = create(
 
       getSummary: () => {
 
-        const products =
-          get().getProductAnalytics()
+        const events =
+          get().demandEvents
 
-        return products.reduce(
 
-          (summary, product) => {
+        let totalRequests = 0
+        let totalViews = 0
+        let totalAddedToCart = 0
+        let totalCheckoutStarted = 0
+        let totalPurchased = 0
+        let totalNotPurchased = 0
+        let totalUnavailableRequests = 0
+        let totalAvailableRequests = 0
+        let totalRevenue = 0
 
-            summary.totalProducts += 1
 
-            summary.totalRequests +=
-              product.requested
+        for (
+          const event
+          of events
+        ) {
 
-            summary.totalViews +=
-              product.viewed
+          switch (
+            event.type
+          ) {
 
-            summary.totalAddedToCart +=
-              product.addedToCart
+            case MARKET_DEMAND_EVENTS.REQUESTED:
 
-            summary.totalCheckoutStarted +=
-              product.checkoutStarted
+              totalRequests += 1
 
-            summary.totalPurchased +=
-              product.purchased
+              if (
+                event.availability
+              ) {
 
-            summary.totalNotPurchased +=
-              product.notPurchased
+                totalAvailableRequests += 1
 
-            summary.totalUnavailableRequests +=
-              product.unavailableRequests
+              } else {
 
-            summary.totalAvailableRequests +=
-              product.availableRequests
+                totalUnavailableRequests += 1
+              }
 
-            summary.totalRevenue +=
-              product.revenue
+              break
 
-            return summary
 
-          },
+            case MARKET_DEMAND_EVENTS.VIEWED:
 
-          {
-            totalProducts: 0,
-            totalRequests: 0,
-            totalViews: 0,
-            totalAddedToCart: 0,
-            totalCheckoutStarted: 0,
-            totalPurchased: 0,
-            totalNotPurchased: 0,
-            totalUnavailableRequests: 0,
-            totalAvailableRequests: 0,
-            totalRevenue: 0
+              totalViews += 1
+
+              break
+
+
+            case MARKET_DEMAND_EVENTS.ADDED_TO_CART:
+
+              totalAddedToCart += 1
+
+              break
+
+
+            case MARKET_DEMAND_EVENTS.CHECKOUT_STARTED:
+
+              totalCheckoutStarted += 1
+
+              break
+
+
+            case MARKET_DEMAND_EVENTS.PURCHASED:
+
+              totalPurchased += 1
+
+              totalRevenue +=
+                Number(
+                  event.product?.price || 0
+                ) *
+                Number(
+                  event.quantity || 1
+                )
+
+              break
+
+
+            default:
+
+              break
           }
-        )
+        }
+
+
+        totalNotPurchased =
+          Math.max(
+            0,
+            totalRequests -
+            totalPurchased
+          )
+
+
+        const totalProducts =
+          get()
+            .getProductAnalytics()
+            .length
+
+
+        const purchaseConversionRate =
+          totalRequests > 0
+            ? (
+                totalPurchased /
+                totalRequests
+              ) * 100
+            : 0
+
+
+        const addToCartRate =
+          totalRequests > 0
+            ? (
+                totalAddedToCart /
+                totalRequests
+              ) * 100
+            : 0
+
+
+        return {
+
+          totalProducts,
+
+          totalRequests,
+
+          totalRequested:
+            totalRequests,
+
+          totalViews,
+
+          totalViewed:
+            totalViews,
+
+          totalAddedToCart,
+
+          totalCheckoutStarted,
+
+          totalPurchased,
+
+          totalNotPurchased,
+
+          totalUnavailableRequests,
+
+          totalUnavailable:
+            totalUnavailableRequests,
+
+          totalAvailableRequests,
+
+          totalRevenue,
+
+          purchaseConversionRate,
+
+          conversionRate:
+            purchaseConversionRate,
+
+          addToCartRate,
+
+          cartConversionRate:
+            addToCartRate
+        }
       },
 
 
@@ -1141,10 +2376,9 @@ export const useMarketDemandStore = create(
       // TOP REQUESTED
       // ==================================================
 
-      getTopRequestedProducts: limit => {
-
-        const count =
-          Number(limit) || 10
+      getTopRequestedProducts: (
+        limit = 10
+      ) => {
 
         return get()
           .getProductAnalytics()
@@ -1153,7 +2387,10 @@ export const useMarketDemandStore = create(
               b.requested -
               a.requested
           )
-          .slice(0, count)
+          .slice(
+            0,
+            limit
+          )
       },
 
 
@@ -1161,10 +2398,9 @@ export const useMarketDemandStore = create(
       // TOP PURCHASED
       // ==================================================
 
-      getTopPurchasedProducts: limit => {
-
-        const count =
-          Number(limit) || 10
+      getTopPurchasedProducts: (
+        limit = 10
+      ) => {
 
         return get()
           .getProductAnalytics()
@@ -1173,110 +2409,154 @@ export const useMarketDemandStore = create(
               b.purchased -
               a.purchased
           )
-          .slice(0, count)
+          .slice(
+            0,
+            limit
+          )
       },
 
 
       // ==================================================
-      // HIGH DEMAND / LOW AVAILABILITY
+      // SUPPLY OPPORTUNITIES
       // ==================================================
 
-      getSupplyOpportunities: limit => {
-
-        const count =
-          Number(limit) || 10
+      getSupplyOpportunities: (
+        limit = 10
+      ) => {
 
         return get()
           .getProductAnalytics()
           .filter(
-            product =>
-              product.requested > 0 &&
-              product.unavailableRequests > 0
+            item =>
+              item.requested > 0 &&
+              (
+                item.unavailableRequests > 0 ||
+                item.purchased === 0
+              )
+          )
+          .map(
+            item => ({
+
+              ...item,
+
+              demandScore:
+                item.requested +
+                (
+                  item.unavailableRequests *
+                  2
+                ) +
+                (
+                  item.purchased *
+                  3
+                ),
+
+              supplyRisk:
+                item.unavailableRequests >
+                0
+                  ? 'high'
+                  : 'medium'
+            })
           )
           .sort(
-            (a, b) => {
-
-              const scoreA =
-                a.unavailableRequests *
-                a.requested
-
-              const scoreB =
-                b.unavailableRequests *
-                b.requested
-
-              return scoreB - scoreA
-            }
+            (a, b) =>
+              b.demandScore -
+              a.demandScore
           )
-          .slice(0, count)
+          .slice(
+            0,
+            limit
+          )
       },
 
 
       // ==================================================
-      // TOP NON PURCHASED
+      // TOP NOT PURCHASED
       // ==================================================
 
-      getTopNotPurchasedProducts: limit => {
-
-        const count =
-          Number(limit) || 10
+      getTopNotPurchasedProducts: (
+        limit = 10
+      ) => {
 
         return get()
           .getProductAnalytics()
+          .map(
+            item => ({
+
+              ...item,
+
+              notPurchased:
+                Math.max(
+                  0,
+                  item.requested -
+                  item.purchased
+                )
+            })
+          )
           .filter(
-            product =>
-              product.notPurchased > 0
+            item =>
+              item.notPurchased > 0
           )
           .sort(
             (a, b) =>
               b.notPurchased -
               a.notPurchased
           )
-          .slice(0, count)
+          .slice(
+            0,
+            limit
+          )
       },
 
 
       // ==================================================
-      // REASONS ANALYTICS
+      // REASON ANALYTICS
       // ==================================================
 
       getReasonAnalytics: () => {
 
-        const events =
-          get().demandEvents || []
-
         const reasons = {}
 
-        events
-          .filter(
-            event =>
-              Boolean(event.reason)
+
+        for (
+          const event
+          of get().demandEvents
+        ) {
+
+          if (
+            !event.reason
+          ) {
+            continue
+          }
+
+
+          reasons[
+            event.reason
+          ] =
+            (
+              reasons[
+                event.reason
+              ] || 0
+            ) + 1
+        }
+
+
+        return Object.entries(
+          reasons
+        )
+          .map(
+            ([reason, count]) => ({
+
+              reason,
+
+              label:
+                MARKET_DEMAND_REASON_LABELS[
+                  reason
+                ] ||
+                reason,
+
+              count
+            })
           )
-          .forEach(event => {
-
-            const key =
-              event.reason
-
-            if (!reasons[key]) {
-
-              reasons[key] = {
-
-                reason:
-                  key,
-
-                label:
-                  MARKET_DEMAND_REASON_LABELS[key] ??
-                  key,
-
-                count:
-                  0
-              }
-            }
-
-            reasons[key].count += 1
-          })
-
-        return Object
-          .values(reasons)
           .sort(
             (a, b) =>
               b.count -
@@ -1291,155 +2571,599 @@ export const useMarketDemandStore = create(
 
       getVehicleAnalytics: () => {
 
-        const events =
-          get().demandEvents || []
+        const vehicles = {}
 
-        const map =
-          new Map()
 
-        events
-          .filter(
-            event =>
-              event.eventType ===
-              MARKET_DEMAND_EVENTS.REQUESTED
-          )
-          .forEach(event => {
+        for (
+          const event
+          of get().demandEvents
+        ) {
 
-            const key = [
-              event.vehicleType,
-              event.make,
-              event.modelFromSearch,
-              event.year
+          const context =
+            normalizeSearchContext(
+
+              mergeSearchContexts(
+
+                event.searchContext,
+
+                {
+                  vehicleType:
+                    event.vehicleType,
+
+                  make:
+                    event.make,
+
+                  model:
+                    event.modelFromSearch ??
+                    event.model,
+
+                  modelFromSearch:
+                    event.modelFromSearch ??
+                    event.model,
+
+                  year:
+                    event.year
+                }
+              )
+            )
+
+
+          const vehicleType =
+            String(
+              context.vehicleType ??
+              ''
+            ).trim()
+
+
+          const make =
+            String(
+              context.make ??
+              ''
+            ).trim()
+
+
+          const model =
+            String(
+              context.modelFromSearch ??
+              context.model ??
+              ''
+            ).trim()
+
+
+          const year =
+            String(
+              context.year ??
+              ''
+            ).trim()
+
+
+          const vehicleKey =
+            [
+              vehicleType,
+              make,
+              model,
+              year
             ]
               .filter(Boolean)
-              .join('|')
+              .join(' ')
 
-            if (!key) {
-              return
+
+          if (
+            !vehicleKey
+          ) {
+            continue
+          }
+
+
+          if (
+            !vehicles[
+              vehicleKey
+            ]
+          ) {
+
+            vehicles[
+              vehicleKey
+            ] = {
+
+              vehicle:
+                vehicleKey,
+
+              vehicleType,
+
+              make,
+
+              model,
+
+              year,
+
+              requested:
+                0,
+
+              viewed:
+                0,
+
+              addedToCart:
+                0,
+
+              checkoutStarted:
+                0,
+
+              purchased:
+                0,
+
+              unavailable:
+                0,
+
+              notAddedToCart:
+                0,
+
+              cartAbandoned:
+                0,
+
+              purchaseAbandoned:
+                0,
+
+              products: {},
+
+              productCount:
+                0
             }
+          }
 
-            if (!map.has(key)) {
 
-              map.set(key, {
+          const item =
+            vehicles[
+              vehicleKey
+            ]
 
-                vehicleType:
-                  event.vehicleType,
 
-                make:
-                  event.make,
+          switch (
+            event.type
+          ) {
 
-                model:
-                  event.modelFromSearch,
+            case MARKET_DEMAND_EVENTS.REQUESTED:
 
-                year:
-                  event.year,
+              item.requested += 1
 
-                requests:
+              if (
+                !event.availability
+              ) {
+
+                item.unavailable += 1
+              }
+
+              break
+
+
+            case MARKET_DEMAND_EVENTS.VIEWED:
+
+              item.viewed += 1
+
+              break
+
+
+            case MARKET_DEMAND_EVENTS.ADDED_TO_CART:
+
+              item.addedToCart += 1
+
+              break
+
+
+            case MARKET_DEMAND_EVENTS.CHECKOUT_STARTED:
+
+              item.checkoutStarted += 1
+
+              break
+
+
+            case MARKET_DEMAND_EVENTS.PURCHASED:
+
+              item.purchased += 1
+
+              break
+
+
+            case MARKET_DEMAND_EVENTS.NOT_ADDED_TO_CART:
+
+              item.notAddedToCart += 1
+
+              break
+
+
+            case MARKET_DEMAND_EVENTS.CART_ABANDONED:
+
+              item.cartAbandoned += 1
+
+              break
+
+
+            case MARKET_DEMAND_EVENTS.PURCHASE_ABANDONED:
+
+              item.purchaseAbandoned += 1
+
+              break
+
+
+            default:
+
+              break
+          }
+
+
+          // ----------------------------------------------
+          // PRODUCTS FOR THIS VEHICLE
+          // ----------------------------------------------
+
+          const productKey =
+            event.productId
+              ? String(
+                  event.productId
+                )
+              : normalizeText(
+                  event.productName
+                )
+
+
+          if (
+            productKey
+          ) {
+
+            if (
+              !item.products[
+                productKey
+              ]
+            ) {
+
+              item.products[
+                productKey
+              ] = {
+
+                productId:
+                  event.productId ??
+                  null,
+
+                productName:
+                  event.productName ||
+                  'منتج',
+
+                requested:
                   0,
 
-                unavailableRequests:
+                viewed:
+                  0,
+
+                addedToCart:
                   0,
 
                 purchased:
                   0
-              })
+              }
             }
 
-            const item =
-              map.get(key)
 
-            item.requests += 1
+            const product =
+              item.products[
+                productKey
+              ]
 
-            if (!event.isAvailable) {
-              item.unavailableRequests += 1
-            }
-          })
 
-        events
-          .filter(
-            event =>
-              event.eventType ===
-              MARKET_DEMAND_EVENTS.PURCHASED
-          )
-          .forEach(event => {
-
-            const key = [
-              event.vehicleType,
-              event.make,
-              event.modelFromSearch,
-              event.year
-            ]
-              .filter(Boolean)
-              .join('|')
-
-            if (
-              map.has(key)
+            switch (
+              event.type
             ) {
-              map.get(key).purchased += 1
-            }
-          })
 
-        return Array
-          .from(map.values())
+              case MARKET_DEMAND_EVENTS.REQUESTED:
+
+                product.requested += 1
+
+                break
+
+
+              case MARKET_DEMAND_EVENTS.VIEWED:
+
+                product.viewed += 1
+
+                break
+
+
+              case MARKET_DEMAND_EVENTS.ADDED_TO_CART:
+
+                product.addedToCart += 1
+
+                break
+
+
+              case MARKET_DEMAND_EVENTS.PURCHASED:
+
+                product.purchased += 1
+
+                break
+
+
+              default:
+
+                break
+            }
+          }
+        }
+
+
+        return Object.values(
+          vehicles
+        )
+          .map(
+            item => {
+
+              const products =
+                Object.values(
+                  item.products
+                )
+                  .map(
+                    product => ({
+
+                      ...product,
+
+                      purchaseConversionRate:
+                        product.requested > 0
+                          ? (
+                              product.purchased /
+                              product.requested
+                            ) * 100
+                          : 0
+                    })
+                  )
+                  .sort(
+                    (a, b) =>
+                      b.requested -
+                      a.requested
+                  )
+
+
+              return {
+
+                ...item,
+
+                products,
+
+                productCount:
+                  products.length,
+
+                purchaseConversionRate:
+                  item.requested > 0
+                    ? (
+                        item.purchased /
+                        item.requested
+                      ) * 100
+                    : 0,
+
+                addToCartRate:
+                  item.requested > 0
+                    ? (
+                        item.addedToCart /
+                        item.requested
+                      ) * 100
+                    : 0
+              }
+            }
+          )
           .sort(
             (a, b) =>
-              b.requests -
-              a.requests
+              b.requested -
+              a.requested
           )
       },
 
 
       // ==================================================
-      // DATE FILTER
+      // DATE RANGE
       // ==================================================
 
-      getAnalyticsByDateRange: ({
-        from,
-        to
-      } = {}) => {
+      getAnalyticsByDateRange: (
+        startDate,
+        endDate
+      ) => {
 
         const start =
-          from
-            ? new Date(from).getTime()
+          startDate
+            ? new Date(
+                startDate
+              )
             : null
+
 
         const end =
-          to
-            ? new Date(to).getTime()
+          endDate
+            ? new Date(
+                endDate
+              )
             : null
 
+
         const filtered =
-          (get().demandEvents || [])
-            .filter(event => {
+          get()
+            .demandEvents
+            .filter(
+              event => {
 
-              const timestamp =
-                new Date(
-                  event.createdAt
-                ).getTime()
+                const date =
+                  new Date(
+                    event.timestamp
+                  )
 
-              if (
-                start !== null &&
-                timestamp < start
-              ) {
-                return false
+
+                if (
+                  start &&
+                  date < start
+                ) {
+                  return false
+                }
+
+
+                if (
+                  end &&
+                  date > end
+                ) {
+                  return false
+                }
+
+
+                return true
               }
+            )
 
-              if (
-                end !== null &&
-                timestamp > end
-              ) {
-                return false
-              }
 
-              return true
-            })
+        const analytics =
+          get()
+            .getProductAnalytics()
 
-        return filtered
+
+        return {
+
+          events:
+            filtered,
+
+          totalEvents:
+            filtered.length,
+
+          products:
+            Object.values(
+              filtered.reduce(
+                (
+                  groups,
+                  event
+                ) => {
+
+                  const key =
+                    event.productId
+                      ? String(
+                          event.productId
+                        )
+                      : normalizeText(
+                          event.productName
+                        )
+
+
+                  if (
+                    !key
+                  ) {
+                    return groups
+                  }
+
+
+                  if (
+                    !groups[key]
+                  ) {
+
+                    groups[key] = {
+
+                      productId:
+                        event.productId ??
+                        null,
+
+                      productName:
+                        event.productName ||
+                        'منتج',
+
+                      requested:
+                        0,
+
+                      viewed:
+                        0,
+
+                      addedToCart:
+                        0,
+
+                      purchased:
+                        0
+                    }
+                  }
+
+
+                  switch (
+                    event.type
+                  ) {
+
+                    case MARKET_DEMAND_EVENTS.REQUESTED:
+
+                      groups[key]
+                        .requested += 1
+
+                      break
+
+
+                    case MARKET_DEMAND_EVENTS.VIEWED:
+
+                      groups[key]
+                        .viewed += 1
+
+                      break
+
+
+                    case MARKET_DEMAND_EVENTS.ADDED_TO_CART:
+
+                      groups[key]
+                        .addedToCart += 1
+
+                      break
+
+
+                    case MARKET_DEMAND_EVENTS.PURCHASED:
+
+                      groups[key]
+                        .purchased += 1
+
+                      break
+
+
+                    default:
+
+                      break
+                  }
+
+
+                  return groups
+                },
+                {}
+              )
+            ),
+
+          summary: {
+
+            requested:
+              filtered.filter(
+                e =>
+                  e.type ===
+                  MARKET_DEMAND_EVENTS.REQUESTED
+              ).length,
+
+            viewed:
+              filtered.filter(
+                e =>
+                  e.type ===
+                  MARKET_DEMAND_EVENTS.VIEWED
+              ).length,
+
+            addedToCart:
+              filtered.filter(
+                e =>
+                  e.type ===
+                  MARKET_DEMAND_EVENTS.ADDED_TO_CART
+              ).length,
+
+            purchased:
+              filtered.filter(
+                e =>
+                  e.type ===
+                  MARKET_DEMAND_EVENTS.PURCHASED
+              ).length
+          },
+
+          analytics
+        }
       },
 
 
       // ==================================================
-      // CLEAR DATA
+      // CLEAR
       // ==================================================
 
       clearDemandData: () => {
@@ -1451,20 +3175,20 @@ export const useMarketDemandStore = create(
 
 
       // ==================================================
-      // EXPORT DATA
+      // EXPORT
       // ==================================================
 
       exportDemandData: () => {
 
-        return [
-          ...(get().demandEvents || [])
-        ]
+        return JSON.stringify(
+          get().demandEvents,
+          null,
+          2
+        )
       }
-
     }),
 
     {
-
       name:
         'elola-market-demand-v1',
 
@@ -1476,12 +3200,14 @@ export const useMarketDemandStore = create(
 
           demandVersion:
             state.demandVersion
-
         })
-
     }
   )
 )
 
+
+// ======================================================
+// EXPORT
+// ======================================================
 
 export default useMarketDemandStore
