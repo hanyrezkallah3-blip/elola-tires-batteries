@@ -1,23 +1,26 @@
 // ======================================================
 // EL OLA ERP
 // Cached Vehicle Source
-// Unified Cached + Online Vehicle Source
+// ======================================================
 //
-// ARCHITECTURE:
+// RESPONSIBILITY
+// ------------------------------------------------------
 //
-// VehicleProvider
-//      ↓
-// CachedVehicleSource
-//      ↓
-// VehicleCache
-//      ↓
-// OnlineVehicleSource
-//      ↓
-// CarQuery / NHTSA
+// Persistent vehicle catalog cache.
 //
-// IMPORTANT:
-// This source MUST NOT fall back to manually maintained
-// manufacturer files such as Toyota.js or Hyundai.js.
+// IMPORTANT
+// ------------------------------------------------------
+//
+// 1. Online vehicle data is cached cumulatively.
+// 2. New non-empty results are merged with previous data.
+// 3. Empty online results are NEVER allowed to erase cache.
+// 4. Existing cached data remains available offline.
+// 5. Duplicate vehicles/brands/models/years are removed.
+// 6. This layer does NOT fabricate vehicle data.
+// 7. VehDB fitment cache is handled separately.
+// 8. Brand catalog cache uses a versioned key so an old
+//    limited catalog cannot permanently block expansion.
+//
 // ======================================================
 
 import VehicleCache
@@ -27,23 +30,513 @@ import OnlineVehicleSource
   from './OnlineVehicleSource'
 
 
-export default class CachedVehicleSource {
+// ======================================================
+// CACHE VERSION
+// ======================================================
+//
+// Changing this value intentionally creates a new cache
+// namespace for the expanded vehicle brand catalog.
+//
+// ======================================================
+
+const BRAND_CACHE_VERSION =
+  'v2-expanded'
 
 
-  // ====================================================
-  // CACHE HELPER
-  // ====================================================
+// ======================================================
+// NORMALIZE
+// ======================================================
 
-  static getCached(key) {
+const normalize = value =>
+  String(value ?? '')
+    .trim()
+    .toLowerCase()
 
-    if (!VehicleCache.has(key)) {
 
-      return null
+// ======================================================
+// STABLE VALUE
+// ======================================================
 
+const stableValue = value =>
+  normalize(value)
+    .replace(/\s+/g, ' ')
+
+
+// ======================================================
+// VEHICLE ITEM KEY
+// ======================================================
+
+const getVehicleKey = item => {
+
+  if (
+    item == null
+  ) {
+    return ''
+  }
+
+
+  if (
+    typeof item !== 'object'
+  ) {
+    return stableValue(item)
+  }
+
+
+  const id =
+    item.id ??
+    item.vehicleId ??
+    item.makeId ??
+    item.modelId ??
+    item.code ??
+    item.value
+
+
+  if (
+    id != null &&
+    String(id).trim()
+  ) {
+
+    return `id:${stableValue(id)}`
+  }
+
+
+  const brand =
+    item.brand ??
+    item.make ??
+    item.manufacturer ??
+    ''
+
+
+  const model =
+    item.model ??
+    item.modelName ??
+    ''
+
+
+  const year =
+    item.year ??
+    item.yearFrom ??
+    ''
+
+
+  const vehicleType =
+    item.vehicleType ??
+    item.type ??
+    item.category ??
+    ''
+
+
+  const key =
+    [
+      stableValue(vehicleType),
+      stableValue(brand),
+      stableValue(model),
+      stableValue(year)
+    ]
+      .filter(Boolean)
+      .join('|')
+
+
+  if (
+    key
+  ) {
+    return key
+  }
+
+
+  return stableValue(
+    item.name ??
+    item.label ??
+    ''
+  )
+}
+
+
+// ======================================================
+// GENERIC ITEM KEY
+// ======================================================
+
+const getItemKey = item => {
+
+  if (
+    item == null
+  ) {
+    return ''
+  }
+
+
+  if (
+    typeof item !== 'object'
+  ) {
+    return stableValue(item)
+  }
+
+
+  const id =
+    item.id ??
+    item.value ??
+    item.code ??
+    item.makeId ??
+    item.modelId ??
+    item.vehicleId
+
+
+  if (
+    id != null &&
+    String(id).trim()
+  ) {
+
+    return `id:${stableValue(id)}`
+  }
+
+
+  const name =
+    item.name ??
+    item.label ??
+    item.value ??
+    item.make ??
+    item.model ??
+    item.brand ??
+    item.manufacturer ??
+    ''
+
+
+  return stableValue(name)
+}
+
+
+// ======================================================
+// MERGE LIST
+// ======================================================
+
+const mergeLists = (
+  cached,
+  fresh
+) => {
+
+  const previous =
+    Array.isArray(cached)
+      ? cached
+      : []
+
+
+  const incoming =
+    Array.isArray(fresh)
+      ? fresh
+      : []
+
+
+  if (
+    incoming.length === 0
+  ) {
+
+    return previous
+  }
+
+
+  const map =
+    new Map()
+
+
+  const add = item => {
+
+    if (
+      item == null
+    ) {
+      return
     }
 
+
+    const key =
+      getItemKey(item)
+
+
+    if (
+      !key
+    ) {
+      return
+    }
+
+
+    const existing =
+      map.get(key)
+
+
+    if (
+      existing &&
+      typeof existing === 'object' &&
+      typeof item === 'object'
+    ) {
+
+      map.set(
+        key,
+        {
+          ...existing,
+          ...item
+        }
+      )
+
+      return
+    }
+
+
+    map.set(
+      key,
+      item
+    )
+  }
+
+
+  previous.forEach(add)
+
+  incoming.forEach(add)
+
+
+  return Array.from(
+    map.values()
+  )
+}
+
+
+// ======================================================
+// MERGE VEHICLES
+// ======================================================
+
+const mergeVehicles = (
+  cached,
+  fresh
+) => {
+
+  const previous =
+    Array.isArray(cached)
+      ? cached
+      : []
+
+
+  const incoming =
+    Array.isArray(fresh)
+      ? fresh
+      : []
+
+
+  if (
+    incoming.length === 0
+  ) {
+
+    return previous
+  }
+
+
+  const map =
+    new Map()
+
+
+  const add = vehicle => {
+
+    if (
+      vehicle == null
+    ) {
+      return
+    }
+
+
+    const key =
+      getVehicleKey(vehicle)
+
+
+    if (
+      !key
+    ) {
+      return
+    }
+
+
+    const existing =
+      map.get(key)
+
+
+    if (
+      existing &&
+      typeof existing === 'object' &&
+      typeof vehicle === 'object'
+    ) {
+
+      map.set(
+        key,
+        {
+          ...existing,
+          ...vehicle
+        }
+      )
+
+      return
+    }
+
+
+    map.set(
+      key,
+      vehicle
+    )
+  }
+
+
+  previous.forEach(add)
+
+  incoming.forEach(add)
+
+
+  return Array.from(
+    map.values()
+  )
+}
+
+
+// ======================================================
+// MERGE YEARS
+// ======================================================
+
+const mergeYears = (
+  cached,
+  fresh
+) => {
+
+  const previous =
+    Array.isArray(cached)
+      ? cached
+      : []
+
+
+  const incoming =
+    Array.isArray(fresh)
+      ? fresh
+      : []
+
+
+  const values =
+    [
+      ...previous,
+      ...incoming
+    ]
+      .map(value => {
+
+        if (
+          typeof value === 'object'
+        ) {
+
+          return (
+            value?.year ??
+            value?.value ??
+            value?.id ??
+            value?.name
+          )
+        }
+
+
+        return value
+      })
+      .filter(
+        value =>
+          value != null &&
+          String(value).trim() !== ''
+      )
+
+
+  const unique =
+    new Map()
+
+
+  values.forEach(value => {
+
+    const key =
+      stableValue(value)
+
+
+    if (
+      !key
+    ) {
+      return
+    }
+
+
+    if (
+      !unique.has(key)
+    ) {
+
+      unique.set(
+        key,
+        value
+      )
+    }
+  })
+
+
+  return Array.from(
+    unique.values()
+  )
+    .sort(
+      (a, b) =>
+        Number(b) -
+        Number(a)
+    )
+}
+
+
+// ======================================================
+// IS EMPTY
+// ======================================================
+
+const isEmptyValue = value => {
+
+  if (
+    value == null
+  ) {
+    return true
+  }
+
+
+  if (
+    Array.isArray(value)
+  ) {
+
+    return value.length === 0
+  }
+
+
+  if (
+    typeof value === 'object'
+  ) {
+
+    return Object.keys(
+      value
+    ).length === 0
+  }
+
+
+  return (
+    String(value).trim() === ''
+  )
+}
+
+
+// ======================================================
+// CACHE SOURCE
+// ======================================================
+
+class CachedVehicleSource {
+
+  // ====================================================
+  // READ CACHE
+  // ====================================================
+
+  getCached(
+    key
+  ) {
+
     const value =
-      VehicleCache.get(key)
+      VehicleCache.get(
+        key
+      )
+
 
     if (
       Array.isArray(value)
@@ -52,21 +545,38 @@ export default class CachedVehicleSource {
       return value.length > 0
         ? value
         : null
-
     }
+
 
     if (
-      value !== null &&
-      value !== undefined &&
-      value !== ''
+      value == null
     ) {
 
-      return value
-
+      return null
     }
 
-    return null
 
+    if (
+      typeof value === 'object'
+    ) {
+
+      return Object.keys(
+        value
+      ).length > 0
+        ? value
+        : null
+    }
+
+
+    if (
+      String(value).trim() === ''
+    ) {
+
+      return null
+    }
+
+
+    return value
   }
 
 
@@ -74,106 +584,129 @@ export default class CachedVehicleSource {
   // SAVE CACHE
   // ====================================================
 
-  static save(key, value) {
+  save(
+    key,
+    value
+  ) {
 
     if (
-      value === null ||
-      value === undefined
+      isEmptyValue(value)
     ) {
 
       return value
-
     }
 
-    if (
-      Array.isArray(value) &&
-      value.length === 0
-    ) {
-
-      return value
-
-    }
 
     VehicleCache.set(
       key,
       value
     )
 
-    return value
 
+    return value
   }
 
 
   // ====================================================
-  // GENERIC SOURCE
+  // RESOLVE
   // ====================================================
 
-  static async resolve(
+  async resolve(
     key,
-    loader
+    loader,
+    options = {}
   ) {
 
     const cached =
-      this.getCached(key)
+      this.getCached(
+        key
+      )
+
 
     if (
-      cached !== null
+      cached != null
     ) {
 
       return cached
-
     }
+
 
     try {
 
-      const online =
+      const fresh =
         await loader()
 
+
       if (
-        online === null ||
-        online === undefined
+        isEmptyValue(fresh)
       ) {
 
-        return Array.isArray(
-          cached
+        return (
+          cached ??
+          (
+            Array.isArray(fresh)
+              ? []
+              : null
+          )
         )
-          ? []
-          : null
-
       }
+
 
       if (
-        Array.isArray(online) &&
-        online.length === 0
+        options.merge === true &&
+        Array.isArray(fresh)
       ) {
 
-        return []
+        const merged =
+          options.mergeYears
+            ? mergeYears(
+                cached,
+                fresh
+              )
+            : options.mergeVehicles
+              ? mergeVehicles(
+                  cached,
+                  fresh
+                )
+              : mergeLists(
+                  cached,
+                  fresh
+                )
 
+
+        return this.save(
+          key,
+          merged
+        )
       }
+
 
       return this.save(
         key,
-        online
+        fresh
       )
 
-    }
-
-    catch (error) {
+    } catch (
+      error
+    ) {
 
       console.warn(
-        '[CachedVehicleSource]',
-        key,
+        '[CachedVehicleSource] Online source failed:',
         error
       )
 
-      return Array.isArray(
-        cached
+
+      return (
+        cached ??
+        (
+          Array.isArray(
+            cached
+          )
+            ? []
+            : null
+        )
       )
-        ? cached || []
-        : null
-
     }
-
   }
 
 
@@ -181,17 +714,18 @@ export default class CachedVehicleSource {
   // VEHICLE TYPES
   // ====================================================
 
-  static async getVehicleTypes() {
+  async getVehicleTypes() {
 
     return this.resolve(
       'vehicleTypes',
-
       () =>
         OnlineVehicleSource
-          .getVehicleTypes()
+          .getVehicleTypes(),
 
+      {
+        merge: true
+      }
     )
-
   }
 
 
@@ -199,12 +733,36 @@ export default class CachedVehicleSource {
   // BRANDS
   // ====================================================
 
-  static async getBrands(
+  async getBrands(
     vehicleType
   ) {
 
+    const type =
+      stableValue(
+        vehicleType ||
+        '__all__'
+      )
+
+
+    // --------------------------------------------------
+    // VERSIONED CACHE
+    // --------------------------------------------------
+    //
+    // The old brands:<type> cache may contain the
+    // previous limited catalog.
+    //
+    // The expanded catalog uses a separate namespace.
+    //
+    // --------------------------------------------------
+
     const key =
-      `brands:${vehicleType || '__all__'}`
+      [
+        'brands',
+        BRAND_CACHE_VERSION,
+        type
+      ]
+        .join(':')
+
 
     return this.resolve(
       key,
@@ -213,10 +771,12 @@ export default class CachedVehicleSource {
         OnlineVehicleSource
           .getBrands(
             vehicleType
-          )
+          ),
 
+      {
+        merge: true
+      }
     )
-
   }
 
 
@@ -224,24 +784,136 @@ export default class CachedVehicleSource {
   // MODELS
   // ====================================================
 
-  static async getModels(
+  async getModels(
     params = {}
   ) {
 
-    const key =
-      `models:${JSON.stringify(params)}`
+    const vehicleType =
+      stableValue(
+        params?.vehicleType ??
+        ''
+      )
 
-    return this.resolve(
-      key,
 
-      () =>
-        OnlineVehicleSource
+    const brand =
+      stableValue(
+        params?.brand ??
+        params?.make ??
+        params?.brandId ??
+        ''
+      )
+
+
+    const year =
+      stableValue(
+        params?.year ??
+        ''
+      )
+
+
+    const exactKey =
+      `models:${JSON.stringify(
+        params
+      )}`
+
+
+    const familyKey =
+      [
+        'modelsCatalog',
+        vehicleType || '__all__',
+        brand || '__all__'
+      ]
+        .join(':')
+
+
+    const familyCached =
+      this.getCached(
+        familyKey
+      )
+
+
+    const exactCached =
+      this.getCached(
+        exactKey
+      )
+
+
+    if (
+      familyCached != null &&
+      !year
+    ) {
+
+      return familyCached
+    }
+
+
+    if (
+      exactCached != null
+    ) {
+
+      return exactCached
+    }
+
+
+    try {
+
+      const fresh =
+        await OnlineVehicleSource
           .getModels(
             params
           )
 
-    )
 
+      if (
+        !Array.isArray(fresh) ||
+        fresh.length === 0
+      ) {
+
+        return (
+          familyCached ??
+          exactCached ??
+          []
+        )
+      }
+
+
+      const merged =
+        mergeLists(
+          familyCached,
+          fresh
+        )
+
+
+      this.save(
+        familyKey,
+        merged
+      )
+
+
+      this.save(
+        exactKey,
+        fresh
+      )
+
+
+      return merged
+
+    } catch (
+      error
+    ) {
+
+      console.warn(
+        '[CachedVehicleSource] Models online source failed:',
+        error
+      )
+
+
+      return (
+        familyCached ??
+        exactCached ??
+        []
+      )
+    }
   }
 
 
@@ -249,125 +921,274 @@ export default class CachedVehicleSource {
   // YEARS
   // ====================================================
 
-  static async getYears(
+  async getYears(
     params = {}
   ) {
 
-    const key =
-      `years:${JSON.stringify(params)}`
+    const brand =
+      stableValue(
+        params?.brand ??
+        params?.make ??
+        params?.brandId ??
+        ''
+      )
 
-    return this.resolve(
-      key,
 
-      () =>
-        OnlineVehicleSource
+    const model =
+      stableValue(
+        params?.model ??
+        params?.vehicleId ??
+        ''
+      )
+
+
+    const vehicleType =
+      stableValue(
+        params?.vehicleType ??
+        ''
+      )
+
+
+    const exactKey =
+      `years:${JSON.stringify(
+        params
+      )}`
+
+
+    const familyKey =
+      [
+        'yearsCatalog',
+        vehicleType || '__all__',
+        brand || '__all__',
+        model || '__all__'
+      ]
+        .join(':')
+
+
+    const familyCached =
+      this.getCached(
+        familyKey
+      )
+
+
+    const exactCached =
+      this.getCached(
+        exactKey
+      )
+
+
+    if (
+      familyCached != null
+    ) {
+
+      return mergeYears(
+        familyCached,
+        exactCached
+      )
+    }
+
+
+    if (
+      exactCached != null
+    ) {
+
+      return exactCached
+    }
+
+
+    try {
+
+      const fresh =
+        await OnlineVehicleSource
           .getYears(
             params
           )
 
-    )
 
+      if (
+        !Array.isArray(fresh) ||
+        fresh.length === 0
+      ) {
+
+        return (
+          familyCached ??
+          exactCached ??
+          []
+        )
+      }
+
+
+      const merged =
+        mergeYears(
+          familyCached,
+          fresh
+        )
+
+
+      this.save(
+        familyKey,
+        merged
+      )
+
+
+      this.save(
+        exactKey,
+        fresh
+      )
+
+
+      return merged
+
+    } catch (
+      error
+    ) {
+
+      console.warn(
+        '[CachedVehicleSource] Years online source failed:',
+        error
+      )
+
+
+      return (
+        familyCached ??
+        exactCached ??
+        []
+      )
+    }
   }
 
 
   // ====================================================
-  // VEHICLE
+  // FIND VEHICLE
   // ====================================================
 
-  static async findVehicle(
+  async findVehicle(
     params = {}
   ) {
 
     const key =
-      `vehicle:${JSON.stringify(params)}`
+      `vehicle:${JSON.stringify(
+        params
+      )}`
 
-    return this.resolve(
-      key,
 
-      () =>
-        OnlineVehicleSource
+    const cached =
+      this.getCached(
+        key
+      )
+
+
+    if (
+      cached != null
+    ) {
+
+      return cached
+    }
+
+
+    try {
+
+      const fresh =
+        await OnlineVehicleSource
           .findVehicle(
             params
           )
 
-    )
 
+      if (
+        fresh == null
+      ) {
+
+        return cached ?? null
+      }
+
+
+      return this.save(
+        key,
+        fresh
+      )
+
+    } catch (
+      error
+    ) {
+
+      console.warn(
+        '[CachedVehicleSource] Vehicle lookup failed:',
+        error
+      )
+
+
+      return cached ?? null
+    }
   }
 
 
   // ====================================================
-  // DATABASE
-  // ====================================================
-  //
-  // There is intentionally NO local manufacturer
-  // database fallback here.
-  //
-  // The complete vehicle catalog is obtained from the
-  // online source when requested.
+  // GET ALL
   // ====================================================
 
-  static async getAll() {
+  async getAll() {
 
     const key =
       'vehicleDatabase'
 
-    return this.resolve(
-      key,
 
-      async () => {
+    const cached =
+      this.getCached(
+        key
+      )
 
-        const types =
-          await OnlineVehicleSource
-            .getVehicleTypes()
 
-        const allVehicles = []
+    if (
+      cached != null
+    ) {
 
-        /*
-         * Online providers do not necessarily expose a
-         * single "get all vehicles" endpoint.
-         *
-         * Therefore this method only returns a provider
-         * supplied database if one exists.
-         */
+      return cached
+    }
 
-        if (
-          typeof OnlineVehicleSource
-            .getAll === 'function'
-        ) {
 
-          const result =
-            await OnlineVehicleSource
-              .getAll()
+    try {
 
-          if (
-            Array.isArray(result)
-          ) {
-
-            return result
-
-          }
-
-        }
-
-        /*
-         * Do not manufacture a local database here.
-         */
-
-        if (
-          Array.isArray(types) &&
-          types.length === 0
-        ) {
-
-          return []
-
-        }
+      if (
+        typeof OnlineVehicleSource
+          .getAll !== 'function'
+      ) {
 
         return []
-
       }
 
-    )
 
+      const fresh =
+        await OnlineVehicleSource
+          .getAll()
+
+
+      if (
+        !Array.isArray(fresh) ||
+        fresh.length === 0
+      ) {
+
+        return []
+      }
+
+
+      return this.save(
+        key,
+        fresh
+      )
+
+    } catch (
+      error
+    ) {
+
+      console.warn(
+        '[CachedVehicleSource] getAll failed:',
+        error
+      )
+
+
+      return cached ?? []
+    }
   }
 
 
@@ -375,10 +1196,15 @@ export default class CachedVehicleSource {
   // CLEAR
   // ====================================================
 
-  static clear() {
+  clear() {
 
     VehicleCache.clear()
-
   }
-
 }
+
+
+// ======================================================
+// SINGLETON
+// ======================================================
+
+export default new CachedVehicleSource()

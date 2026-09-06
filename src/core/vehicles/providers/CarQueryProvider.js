@@ -4,15 +4,22 @@
 //
 // Vehicle data provider
 //
-// NOTE:
-// CarQuery API currently has unreliable / invalid HTTPS
-// certificate behavior in browsers.
+// IMPORTANT
+// ------------------------------------------------------
+// CarQuery API is currently unreliable in browsers.
 //
-// Therefore this provider uses the official NHTSA vPIC
-// API over HTTPS as the online fallback/source.
+// This provider therefore uses the official NHTSA vPIC
+// API as its online vehicle catalog source.
 //
-// The public interface remains compatible with the
-// existing VehicleProvider architecture.
+// IMPORTANT CHANGE
+// ------------------------------------------------------
+// Brand catalog is now requested from GetAllMakes instead
+// of GetMakesForVehicleType/car.
+//
+// This prevents the autocomplete catalog from being
+// restricted to only the vehicle-type-specific makes.
+//
+// No manually maintained manufacturer list is used.
 // ======================================================
 
 import VehicleMapper
@@ -135,10 +142,6 @@ export default class CarQueryProvider {
 
   // ====================================================
   // LEGACY BASE URL
-  //
-  // Kept only for compatibility/reference.
-  // We intentionally do NOT request this URL because
-  // its HTTPS certificate is currently invalid/unreliable.
   // ====================================================
 
   static baseUrl =
@@ -157,16 +160,6 @@ export default class CarQueryProvider {
 
   // ====================================================
   // REQUEST
-  //
-  // Compatibility method.
-  //
-  // Existing code may call:
-  //
-  // CarQueryProvider.request({
-  //   cmd: 'getMakes'
-  // })
-  //
-  // We translate those calls to the HTTPS vPIC source.
   // ====================================================
 
   static async request(
@@ -215,10 +208,6 @@ export default class CarQueryProvider {
     }
 
 
-    // ================================================
-    // UNKNOWN COMMAND
-    // ================================================
-
     return null
 
   }
@@ -227,13 +216,26 @@ export default class CarQueryProvider {
   // ====================================================
   // REQUEST MAKES
   // ====================================================
+  //
+  // IMPORTANT:
+  //
+  // Use the complete NHTSA make catalog.
+  //
+  // We intentionally do NOT use:
+  //
+  // GetMakesForVehicleType/car
+  //
+  // because that endpoint limits the catalog according
+  // to vehicle type.
+  //
+  // ====================================================
 
   static async requestMakes() {
 
     const url =
 
       `${this.vpicBaseUrl}` +
-      `/GetMakesForVehicleType/car` +
+      `/GetAllMakes` +
       `?format=json`
 
 
@@ -302,8 +304,6 @@ export default class CarQueryProvider {
 
   // ====================================================
   // PARSE JSONP
-  //
-  // Kept for compatibility with older code.
   // ====================================================
 
   static parseJsonp(
@@ -451,8 +451,21 @@ export default class CarQueryProvider {
   // ====================================================
   // BRANDS
   // ====================================================
+  //
+  // IMPORTANT:
+  //
+  // vehicleType is accepted for API compatibility but
+  // does NOT restrict the manufacturer catalog.
+  //
+  // The autocomplete needs the complete make catalog.
+  //
+  // ====================================================
 
-  static async getBrands() {
+  static async getBrands(
+
+    vehicleType = ''
+
+  ) {
 
     const result =
 
@@ -520,7 +533,16 @@ export default class CarQueryProvider {
 
             label:
               String(name)
-                .trim()
+                .trim(),
+
+            source:
+              'nhtsa',
+
+            vehicleType:
+              vehicleType || '',
+
+            raw:
+              item
 
           }
 
@@ -623,10 +645,6 @@ export default class CarQueryProvider {
         : []
 
 
-    // ==================================================
-    // MAP vPIC RESULT TO PROJECT VEHICLE MODEL
-    // ==================================================
-
     const mapped =
 
       models.map(
@@ -677,21 +695,19 @@ export default class CarQueryProvider {
               'car',
 
             year:
-              year || ''
+              year || '',
+
+            source:
+              'nhtsa',
+
+            raw:
+              item
 
           }
 
         }
       )
 
-
-    // ==================================================
-    // OPTIONAL PROJECT MAPPER
-    //
-    // Keep mapper compatibility where possible.
-    // If the mapper cannot map the vPIC shape,
-    // use the normalized object above.
-    // ==================================================
 
     const normalized =
 
@@ -835,13 +851,6 @@ export default class CarQueryProvider {
       new Date()
         .getFullYear()
 
-
-    // ==================================================
-    // CarQuery historically contained older data.
-    //
-    // The project should not restrict users to the
-    // obsolete CarQuery range, so use the current year.
-    // ==================================================
 
     for (
 

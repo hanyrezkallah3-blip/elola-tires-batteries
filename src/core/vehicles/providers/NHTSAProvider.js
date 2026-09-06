@@ -1,1574 +1,1107 @@
 // ======================================================
 // EL OLA ERP
-// NHTSA Provider
-// Online Vehicle Catalog Provider
+// NHTSA Vehicle Provider
+// ======================================================
 //
 // RESPONSIBILITY
 // ------------------------------------------------------
 //
-// Provides normalized vehicle catalog data from the
-// official NHTSA vPIC API.
+// Online vehicle catalog provider using NHTSA vPIC.
 //
-// IMPORTANT:
-// - No manually maintained manufacturer files.
-// - No Toyota.js / Hyundai.js / etc.
-// - Brands and models come from NHTSA vPIC.
-// - When year is available, models are requested for the
-//   selected make + year.
-// - Vehicle type is also passed when supported.
-// - This provider supplies vehicle catalog information.
-// - It does NOT invent OEM tire, battery, or oil data.
+// IMPORTANT
+// ------------------------------------------------------
+//
+// 1. Provides real vehicle makes/models from vPIC.
+// 2. Vehicle brands are requested by vehicle category.
+// 3. GetAllMakes is intentionally NOT used for the
+//    consumer vehicle brand catalog.
+// 4. This prevents non-vehicle/business manufacturer
+//    names from entering autocomplete.
+// 5. No vehicle data is fabricated.
+// 6. Models remain resolved through vPIC.
+// 7. VehDB fitment is handled separately.
 //
 // ======================================================
 
 import HttpClient
   from '../../network/HttpClient'
 
+// ======================================================
+// BASE URL
+// ======================================================
 
-export default class NHTSAProvider {
-
-
-  // ====================================================
-  // BASE URL
-  // ====================================================
-
-  static baseUrl =
-
-    'https://vpic.nhtsa.dot.gov/api'
+const baseUrl =
+  'https://vpic.nhtsa.dot.gov/api'
 
 
-  // ====================================================
-  // REQUEST
-  // ====================================================
+// ======================================================
+// NORMALIZE
+// ======================================================
 
-  static async request(
+const normalize = value =>
+  String(value ?? '')
+    .trim()
+    .toLowerCase()
 
-    endpoint,
 
-    params = {}
+// ======================================================
+// STABLE VALUE
+// ======================================================
 
-  ) {
+const stableValue = value =>
+  normalize(value)
+    .replace(/\s+/g, ' ')
 
-    try {
 
-      return await HttpClient.get(
+// ======================================================
+// TYPE NORMALIZATION
+// ======================================================
 
-        `${this.baseUrl}${endpoint}`,
+const normalizeVehicleType = value => {
 
-        {
+  const type =
+    stableValue(value)
 
-          format: 'json',
 
-          ...params
+  const aliases = {
 
-        }
+    car:
+      'car',
 
-      )
+    cars:
+      'car',
 
-    }
+    automobile:
+      'car',
 
-    catch (error) {
+    automobiles:
+      'car',
 
-      console.error(
+    suv:
+      'suv',
 
-        '[NHTSAProvider]',
+    suvs:
+      'suv',
 
-        endpoint,
+    truck:
+      'truck',
 
-        error
+    trucks:
+      'truck',
 
-      )
+    pickup:
+      'pickup',
 
-      return null
+    pickups:
+      'pickup',
 
-    }
+    motorcycle:
+      'motorcycle',
+
+    motorcycles:
+      'motorcycle',
+
+    bike:
+      'motorcycle',
+
+    bikes:
+      'motorcycle',
+
+    bus:
+      'bus',
+
+    buses:
+      'bus'
 
   }
 
 
-  // ====================================================
-  // NORMALIZE TEXT
-  // ====================================================
+  return (
+    aliases[type] ??
+    type
+  )
+}
 
-  static normalizeText(
 
-    value
+// ======================================================
+// REQUEST
+// ======================================================
 
+const request = async (
+  endpoint,
+  params = {}
+) => {
+
+  const query =
+    new URLSearchParams(
+      {
+        format: 'json',
+        ...params
+      }
+    )
+
+
+  const url =
+    `${baseUrl}${endpoint}?${query.toString()}`
+
+
+  return HttpClient.get(
+    url
+  )
+}
+
+
+// ======================================================
+// NORMALIZE MAKE RESULT
+// ======================================================
+
+const normalizeMake = (
+  item,
+  vehicleType = ''
+) => {
+
+  if (
+    !item ||
+    typeof item !== 'object'
   ) {
-
-    return String(value ?? '')
-
-      .trim()
-
-      .toLowerCase()
-
-      .replace(/أ|إ|آ/g, 'ا')
-
-      .replace(/ة/g, 'ه')
-
-      .replace(/ى/g, 'ي')
-
-      .replace(/\s+/g, ' ')
-
+    return null
   }
 
 
-  // ====================================================
-  // NORMALIZE VEHICLE TYPE
-  // ====================================================
+  const makeId =
+    item.Make_ID ??
+    item.makeId ??
+    item.id ??
+    ''
 
-  static normalizeVehicleType(
 
-    value
+  const makeName =
+    item.Make_Name ??
+    item.makeName ??
+    item.name ??
+    item.Make ??
+    ''
 
+
+  if (
+    !String(makeName).trim()
   ) {
+    return null
+  }
 
-    const type =
 
-      this.normalizeText(
+  const type =
+    normalizeVehicleType(
+      vehicleType
+    )
 
-        value
 
+  return {
+
+    id:
+      makeId
+        ? String(makeId)
+        : `nhtsa-make-${stableValue(makeName)}`,
+
+    value:
+      String(makeName).trim(),
+
+    name:
+      String(makeName).trim(),
+
+    label:
+      String(makeName).trim(),
+
+    make:
+      String(makeName).trim(),
+
+    brand:
+      String(makeName).trim(),
+
+    manufacturer:
+      String(makeName).trim(),
+
+    vehicleType:
+      type || '',
+
+    source:
+      'nhtsa',
+
+    raw:
+      item
+
+  }
+}
+
+
+// ======================================================
+// NORMALIZE MODEL RESULT
+// ======================================================
+
+const normalizeModel = (
+  item,
+  params = {}
+) => {
+
+  if (
+    !item ||
+    typeof item !== 'object'
+  ) {
+    return null
+  }
+
+
+  const modelId =
+    item.Model_ID ??
+    item.modelId ??
+    item.id ??
+    ''
+
+
+  const modelName =
+    item.Model_Name ??
+    item.modelName ??
+    item.name ??
+    item.Model ??
+    ''
+
+
+  if (
+    !String(modelName).trim()
+  ) {
+    return null
+  }
+
+
+  const make =
+    params?.brand ??
+    params?.make ??
+    params?.manufacturer ??
+    ''
+
+
+  const year =
+    params?.year ??
+    ''
+
+
+  const vehicleType =
+    normalizeVehicleType(
+      params?.vehicleType ??
+      ''
+    )
+
+
+  return {
+
+    id:
+      modelId
+        ? String(modelId)
+        : `nhtsa-model-${stableValue(modelName)}`,
+
+    value:
+      String(modelName).trim(),
+
+    name:
+      String(modelName).trim(),
+
+    label:
+      String(modelName).trim(),
+
+    model:
+      String(modelName).trim(),
+
+    modelName:
+      String(modelName).trim(),
+
+    make:
+      String(make).trim(),
+
+    brand:
+      String(make).trim(),
+
+    manufacturer:
+      String(make).trim(),
+
+    vehicleType:
+      vehicleType,
+
+    year:
+      year
+        ? Number(year)
+        : '',
+
+    source:
+      'nhtsa',
+
+    raw:
+      item
+
+  }
+}
+
+
+// ======================================================
+// DEDUPE
+// ======================================================
+
+const dedupe = (
+  items
+) => {
+
+  const list =
+    Array.isArray(items)
+      ? items
+      : []
+
+
+  const map =
+    new Map()
+
+
+  list.forEach(
+    item => {
+
+      if (
+        !item
+      ) {
+        return
+      }
+
+
+      const name =
+        stableValue(
+          item.name ??
+          item.label ??
+          item.value ??
+          item.model ??
+          item.make ??
+          ''
+        )
+
+
+      if (
+        !name
+      ) {
+        return
+      }
+
+
+      const type =
+        stableValue(
+          item.vehicleType ??
+          ''
+        )
+
+
+      const key =
+        [
+          type,
+          name
+        ]
+          .filter(Boolean)
+          .join('|')
+
+
+      const existing =
+        map.get(key)
+
+
+      if (
+        existing &&
+        typeof existing === 'object'
+      ) {
+
+        map.set(
+          key,
+          {
+            ...existing,
+            ...item
+          }
+        )
+
+        return
+      }
+
+
+      map.set(
+        key,
+        item
       )
-
-
-    if (
-
-      type === 'car' ||
-
-      type === 'cars' ||
-
-      type === 'vehicle' ||
-
-      type === 'passenger' ||
-
-      type === 'passenger car' ||
-
-      type === 'sedan' ||
-
-      type === 'سياره' ||
-
-      type === 'سيارة' ||
-
-      type === 'سيارات'
-
-    ) {
-
-      return 'car'
-
     }
+  )
 
 
-    if (
-
-      type === 'truck' ||
-
-      type === 'trucks' ||
-
-      type === 'lorry' ||
-
-      type === 'شاحنه' ||
-
-      type === 'شاحنة' ||
-
-      type === 'شاحنات'
-
-    ) {
-
-      return 'truck'
-
-    }
+  return Array.from(
+    map.values()
+  )
+}
 
 
-    if (
+// ======================================================
+// PROVIDER
+// ======================================================
 
-      type === 'bus' ||
+const NHTSAProvider = {
 
-      type === 'buses' ||
+  // ====================================================
+  // PROVIDER NAME
+  // ====================================================
 
-      type === 'حافله' ||
-
-      type === 'حافلة' ||
-
-      type === 'اتوبيس' ||
-
-      type === 'أتوبيس'
-
-    ) {
-
-      return 'bus'
-
-    }
-
-
-    if (
-
-      type === 'motorcycle' ||
-
-      type === 'motorcycles' ||
-
-      type === 'motor' ||
-
-      type === 'bike' ||
-
-      type === 'دراجه' ||
-
-      type === 'دراجة' ||
-
-      type === 'دراجة نارية'
-
-    ) {
-
-      return 'motorcycle'
-
-    }
-
-
-    if (
-
-      type === 'suv' ||
-
-      type === 'suvs'
-
-    ) {
-
-      return 'suv'
-
-    }
-
-
-    if (
-
-      type === 'pickup' ||
-
-      type === 'pick-up' ||
-
-      type === 'pickups' ||
-
-      type === 'بيك اب' ||
-
-      type === 'بيك أب'
-
-    ) {
-
-      return 'pickup'
-
-    }
-
-
-    return type
-
-  }
+  name:
+    'NHTSA',
 
 
   // ====================================================
   // GET BRANDS
   // ====================================================
+  //
+  // IMPORTANT
+  // ----------------------------------------------------
+  //
+  // We deliberately do NOT fall back to:
+  //
+  //   /vehicles/GetAllMakes
+  //
+  // because that endpoint contains thousands of
+  // manufacturers that are not suitable for consumer
+  // vehicle autocomplete.
+  //
+  // ====================================================
 
-  static async getBrands(
-
+  async getBrands(
     vehicleType = ''
-
   ) {
 
-    let result = null
-
-
-    // --------------------------------------------------
-    // Prefer the vehicle-type endpoint when a type was
-    // explicitly selected.
-    // --------------------------------------------------
-
-    if (
-
-      vehicleType
-
-    ) {
-
-      const normalizedType =
-
-        this.normalizeVehicleType(
-
-          vehicleType
-
-        )
-
-
-      result =
-
-        await this.request(
-
-          `/vehicles/GetMakesForVehicleType/${encodeURIComponent(
-
-            normalizedType
-
-          )}`
-
-        )
-
-    }
-
-
-    // --------------------------------------------------
-    // If the type-specific endpoint returned nothing,
-    // use the complete NHTSA make catalog.
-    // --------------------------------------------------
-
-    if (
-
-      !Array.isArray(
-
-        result?.Results
-
-      ) ||
-
-      result.Results.length === 0
-
-    ) {
-
-      result =
-
-        await this.request(
-
-          '/vehicles/GetAllMakes'
-
-        )
-
-    }
-
-
-    if (
-
-      !result ||
-
-      !Array.isArray(
-
-        result.Results
-
+    const type =
+      normalizeVehicleType(
+        vehicleType
       )
 
+
+    // --------------------------------------------------
+    // A specific vehicle type is required here.
+    // --------------------------------------------------
+
+    if (
+      !type
     ) {
 
       return []
-
     }
 
 
-    const seen =
+    try {
 
-      new Set()
-
-
-    return result.Results
-
-      .filter(
-
-        make =>
-
-          make &&
-
-          (
-
-            make.Make_ID ||
-
-            make.Make_Name
-
-          )
-
-      )
-
-      .map(
-
-        make => {
-
-          const id =
-
-            make?.Make_ID ??
-
-            make?.make_id ??
-
-            make?.MakeId ??
-
-            make?.Make_Name ??
-
-            ''
+      const response =
+        await request(
+          `/vehicles/GetMakesForVehicleType/${encodeURIComponent(type)}`
+        )
 
 
-          const name =
-
-            make?.Make_Name ??
-
-            make?.make_display ??
-
-            make?.MakeName ??
-
-            id
-
-
-          return {
-
-            id:
-
-              String(id)
-
-                .trim(),
-
-            value:
-
-              String(id)
-
-                .trim(),
-
-            name:
-
-              String(name)
-
-                .trim(),
-
-            label:
-
-              String(name)
-
-                .trim(),
-
-            source:
-
-              'nhtsa',
-
-            raw:
-
-              make
-
-          }
-
-        }
-
-      )
-
-      .filter(
-
-        item =>
-
-          item.id &&
-
-          item.name
-
-      )
-
-      .filter(
-
-        item => {
-
-          const key =
-
-            this.normalizeText(
-
-              item.name
-
+      const results =
+        Array.isArray(
+          response?.Results
+        )
+          ? response.Results
+          : Array.isArray(
+              response?.results
             )
+            ? response.results
+            : []
 
 
-          if (
+      if (
+        results.length === 0
+      ) {
 
-            !key ||
-
-            seen.has(key)
-
-          ) {
-
-            return false
-
-          }
+        console.warn(
+          '[NHTSAProvider] No makes returned for vehicle type:',
+          type
+        )
 
 
-          seen.add(key)
+        return []
+      }
 
-          return true
 
-        }
+      const normalized =
+        results
+          .map(
+            item =>
+              normalizeMake(
+                item,
+                type
+              )
+          )
+          .filter(Boolean)
 
+
+      return dedupe(
+        normalized
       )
 
-  }
+    } catch (
+      error
+    ) {
+
+      console.warn(
+        '[NHTSAProvider] getBrands failed:',
+        error
+      )
+
+
+      return []
+    }
+  },
 
 
   // ====================================================
   // GET MODELS
   // ====================================================
 
-  static async getModels(
-
+  async getModels(
     params = {}
-
   ) {
 
     const brand =
-
-      params?.brand ??
-
-      params?.make ??
-
-      params?.brandId
+      String(
+        params?.brand ??
+        params?.make ??
+        params?.brandId ??
+        ''
+      )
+        .trim()
 
 
     const year =
-
-      params?.year
+      String(
+        params?.year ??
+        ''
+      )
+        .trim()
 
 
     const vehicleType =
-
-      params?.vehicleType ??
-
-      params?.type
+      normalizeVehicleType(
+        params?.vehicleType ??
+        ''
+      )
 
 
     if (
-
       !brand
-
     ) {
 
       return []
-
     }
 
 
-    let result = null
+    const requests = []
 
 
     // --------------------------------------------------
-    // YEAR + MAKE + VEHICLE TYPE
-    // --------------------------------------------------
-    //
-    // NHTSA officially supports:
-    //
-    // GetModelsForMakeYear
-    //
-    // and:
-    //
-    // GetModelsForMakeYear/.../vehicletype/...
-    //
+    // 1. Vehicle type + make + year
     // --------------------------------------------------
 
     if (
-
+      vehicleType &&
       year
-
     ) {
 
-      const encodedBrand =
-
-        encodeURIComponent(
-
-          String(brand)
-
-            .trim()
-
-        )
-
-
-      const encodedYear =
-
-        encodeURIComponent(
-
-          String(year)
-
-            .trim()
-
-        )
-
-
-      if (
-
-        vehicleType
-
-      ) {
-
-        const normalizedType =
-
-          this.normalizeVehicleType(
-
-            vehicleType
-
-          )
-
-
-        result =
-
-          await this.request(
-
-            `/vehicles/GetModelsForMakeYear/make/${encodedBrand}/modelyear/${encodedYear}/vehicletype/${encodeURIComponent(
-
-              normalizedType
-
-            )}`
-
-          )
-
-      }
-
-
-      // ------------------------------------------------
-      // FALLBACK: MAKE + YEAR
-      // ------------------------------------------------
-
-      if (
-
-        !Array.isArray(
-
-          result?.Results
-
-        ) ||
-
-        result.Results.length === 0
-
-      ) {
-
-        result =
-
-          await this.request(
-
-            `/vehicles/GetModelsForMakeYear/make/${encodedBrand}/modelyear/${encodedYear}`
-
-          )
-
-      }
-
+      requests.push(
+        `/vehicles/GetModelsForMakeYear/${encodeURIComponent(brand)}/${encodeURIComponent(year)}/vehicletype/${encodeURIComponent(vehicleType)}`
+      )
     }
 
 
     // --------------------------------------------------
-    // FALLBACK: MAKE ONLY
+    // 2. Vehicle type + make
     // --------------------------------------------------
 
     if (
-
-      !Array.isArray(
-
-        result?.Results
-
-      ) ||
-
-      result.Results.length === 0
-
+      vehicleType
     ) {
 
-      result =
-
-        await this.request(
-
-          `/vehicles/GetModelsForMake/${encodeURIComponent(
-
-            String(brand)
-
-              .trim()
-
-          )}`
-
-        )
-
+      requests.push(
+        `/vehicles/GetModelsForMake/${encodeURIComponent(brand)}/vehicletype/${encodeURIComponent(vehicleType)}`
+      )
     }
 
+
+    // --------------------------------------------------
+    // 3. Make + year
+    // --------------------------------------------------
 
     if (
-
-      !result ||
-
-      !Array.isArray(
-
-        result.Results
-
-      )
-
+      year
     ) {
 
-      return []
-
+      requests.push(
+        `/vehicles/GetModelsForMakeYear/${encodeURIComponent(brand)}/${encodeURIComponent(year)}`
+      )
     }
 
 
-    const seen =
+    // --------------------------------------------------
+    // 4. Make only
+    // --------------------------------------------------
 
-      new Set()
+    requests.push(
+      `/vehicles/GetModelsForMake/${encodeURIComponent(brand)}`
+    )
 
 
-    return result.Results
+    for (
+      const endpoint
+      of requests
+    ) {
 
-      .filter(
+      try {
 
-        model =>
-
-          model &&
-
-          (
-
-            model.Model_ID ||
-
-            model.Model_Name
-
+        const response =
+          await request(
+            endpoint
           )
 
-      )
 
-      .map(
-
-        model => {
-
-          const make =
-
-            model?.Make_Name ??
-
-            model?.make_name ??
-
-            brand
-
-
-          const modelName =
-
-            model?.Model_Name ??
-
-            model?.model_name ??
-
-            model?.model_display ??
-
-            ''
-
-
-          const id =
-
-            model?.Model_ID ??
-
-            `${make}-${modelName}`
-
-
-          return {
-
-            id:
-
-              String(id)
-
-                .trim(),
-
-            value:
-
-              String(id)
-
-                .trim(),
-
-            name:
-
-              String(modelName)
-
-                .trim(),
-
-            label:
-
-              String(modelName)
-
-                .trim(),
-
-            make:
-
-              String(make)
-
-                .trim(),
-
-            brand:
-
-              String(make)
-
-                .trim(),
-
-            manufacturer:
-
-              String(make)
-
-                .trim(),
-
-            model:
-
-              String(modelName)
-
-                .trim(),
-
-            modelName:
-
-              String(modelName)
-
-                .trim(),
-
-            vehicleType:
-
-              this.normalizeVehicleType(
-
-                vehicleType ||
-
-                'car'
-
-              ),
-
-            year:
-
-              year ??
-
-              '',
-
-            source:
-
-              'nhtsa',
-
-            raw:
-
-              model
-
-          }
-
-        }
-
-      )
-
-      .filter(
-
-        item =>
-
-          item.name
-
-      )
-
-      .filter(
-
-        item => {
-
-          const key =
-
-            [
-
-              this.normalizeText(
-
-                item.make
-
-              ),
-
-              this.normalizeText(
-
-                item.model
-
+        const results =
+          Array.isArray(
+            response?.Results
+          )
+            ? response.Results
+            : Array.isArray(
+                response?.results
               )
-
-            ]
-
-              .join('|')
+              ? response.results
+              : []
 
 
-          if (
+        if (
+          results.length === 0
+        ) {
 
-            !key ||
-
-            seen.has(key)
-
-          ) {
-
-            return false
-
-          }
-
-
-          seen.add(key)
-
-          return true
-
+          continue
         }
 
-      )
 
-  }
+        const normalized =
+          results
+            .map(
+              item =>
+                normalizeModel(
+                  item,
+                  params
+                )
+            )
+            .filter(Boolean)
+
+
+        if (
+          normalized.length > 0
+        ) {
+
+          return dedupe(
+            normalized
+          )
+        }
+
+      } catch (
+        error
+      ) {
+
+        console.warn(
+          '[NHTSAProvider] Model request failed:',
+          endpoint,
+          error
+        )
+      }
+    }
+
+
+    return []
+  },
 
 
   // ====================================================
   // GET YEARS
   // ====================================================
 
-  static async getYears(
-
+  async getYears(
     params = {}
-
   ) {
 
-    const make =
-
-      params?.make ??
-
-      params?.brand
-
-
-    const model =
-
-      params?.model
+    const brand =
+      String(
+        params?.brand ??
+        params?.make ??
+        ''
+      )
+        .trim()
 
 
     if (
-
-      !make ||
-
-      !model
-
+      !brand
     ) {
 
       return []
-
     }
 
 
-    /*
-     * vPIC does not provide the previous implementation's
-     * simple "years for exact model" endpoint.
-     *
-     * We therefore build candidate years from the actual
-     * NHTSA model catalog rather than claiming that every
-     * year from 1980 to today belongs to the selected model.
-     *
-     * NHTSA's make/year model endpoint officially supports
-     * model-year filtering.
-     */
-
-
     const currentYear =
-
       new Date()
-
         .getFullYear()
-
-
-    const minimumYear =
-
-      1996
 
 
     const years = []
 
 
-    /*
-     * Querying every year is intentionally done only here,
-     * when the UI specifically asks for years.
-     *
-     * The result is filtered against the selected model.
-     */
+    // --------------------------------------------------
+    // vPIC model data is more reliable than fabricating
+    // years from a generic range.
+    //
+    // Query the available years through model lookups.
+    // --------------------------------------------------
 
     for (
-
-      let year = currentYear;
-
-      year >= minimumYear;
-
-      year--
-
+      let year = 1996;
+      year <= currentYear;
+      year++
     ) {
 
       try {
 
-        const models =
-
-          await this.getModels({
-
-            brand:
-
-              make,
-
-            year
-
-          })
-
-
-        if (
-
-          !Array.isArray(
-
-            models
-
-          ) ||
-
-          models.length === 0
-
-        ) {
-
-          continue
-
-        }
-
-
-        const wantedModel =
-
-          this.normalizeText(
-
-            model
-
+        const response =
+          await request(
+            `/vehicles/GetModelsForMakeYear/${encodeURIComponent(brand)}/${year}`
           )
 
 
-        const found =
-
-          models.some(
-
-            item => {
-
-              const actual =
-
-                this.normalizeText(
-
-                  item?.model ??
-
-                  item?.modelName ??
-
-                  item?.name
-
-                )
-
-
-              return (
-
-                actual ===
-
-                  wantedModel ||
-
-                actual.includes(
-
-                  wantedModel
-
-                ) ||
-
-                wantedModel.includes(
-
-                  actual
-
-                )
-
+        const results =
+          Array.isArray(
+            response?.Results
+          )
+            ? response.Results
+            : Array.isArray(
+                response?.results
               )
-
-            }
-
-          )
+              ? response.results
+              : []
 
 
         if (
-
-          found
-
+          results.length > 0
         ) {
 
           years.push(
-
             year
-
           )
-
         }
 
+      } catch (
+        error
+      ) {
+
+        // ------------------------------------------------
+        // One failed year must not stop the entire lookup.
+        // ------------------------------------------------
+
+        continue
       }
-
-      catch (error) {
-
-        console.warn(
-
-          '[NHTSAProvider] Year lookup failed:',
-
-          make,
-
-          model,
-
-          year,
-
-          error
-
-        )
-
-      }
-
     }
 
 
-    return years
-
-      .sort(
-
-        (a, b) =>
-
-          b - a
-
+    return [
+      ...new Set(
+        years
       )
-
-  }
+    ]
+      .sort(
+        (a, b) =>
+          b - a
+      )
+  },
 
 
   // ====================================================
   // VEHICLE TYPES
   // ====================================================
 
-  static async getVehicleTypes() {
+  async getVehicleTypes() {
 
     return [
 
       {
-
         id:
-
           'car',
 
         value:
-
           'car',
 
         name:
-
           'Car',
 
         label:
-
           'Car',
 
         source:
-
           'nhtsa'
-
       },
 
       {
-
         id:
-
           'truck',
 
         value:
-
           'truck',
 
         name:
-
           'Truck',
 
         label:
-
           'Truck',
 
         source:
-
           'nhtsa'
-
       },
 
       {
-
         id:
-
           'bus',
 
         value:
-
           'bus',
 
         name:
-
           'Bus',
 
         label:
-
           'Bus',
 
         source:
-
           'nhtsa'
-
       },
 
       {
-
         id:
-
           'motorcycle',
 
         value:
-
           'motorcycle',
 
         name:
-
           'Motorcycle',
 
         label:
-
           'Motorcycle',
 
         source:
-
           'nhtsa'
-
       },
 
       {
-
         id:
-
           'suv',
 
         value:
-
           'suv',
 
         name:
-
           'SUV',
 
         label:
-
           'SUV',
 
         source:
-
           'nhtsa'
-
       },
 
       {
-
         id:
-
           'pickup',
 
         value:
-
           'pickup',
 
         name:
-
           'Pickup',
 
         label:
-
           'Pickup',
 
         source:
-
           'nhtsa'
-
       }
 
     ]
-
-  }
+  },
 
 
   // ====================================================
   // FIND VEHICLE
   // ====================================================
 
-  static async findVehicle(
-
+  async findVehicle(
     params = {}
-
   ) {
 
-    const make =
-
-      params?.make ??
-
-      params?.brand
+    const brand =
+      String(
+        params?.brand ??
+        params?.make ??
+        ''
+      )
+        .trim()
 
 
     const model =
-
-      params?.model
+      String(
+        params?.model ??
+        ''
+      )
+        .trim()
 
 
     const year =
-
-      params?.year
-
-
-    const vehicleType =
-
-      params?.vehicleType ??
-
-      params?.type
+      String(
+        params?.year ??
+        ''
+      )
+        .trim()
 
 
     if (
-
-      !make ||
-
-      !model
-
+      !brand
     ) {
 
       return null
-
     }
 
-
-    // --------------------------------------------------
-    // IMPORTANT:
-    //
-    // When year is supplied, query the exact make/year
-    // catalog instead of loading all models for the make.
-    // --------------------------------------------------
 
     const models =
-
-      await this.getModels({
-
-        brand:
-
-          make,
-
-        year,
-
-        vehicleType
-
-      })
-
-
-    if (
-
-      !Array.isArray(
-
-        models
-
-      ) ||
-
-      models.length === 0
-
-    ) {
-
-      return null
-
-    }
-
-
-    const wantedMake =
-
-      this.normalizeText(
-
-        make
-
-      )
-
-
-    const wantedModel =
-
-      this.normalizeText(
-
-        model
-
-      )
-
-
-    const vehicle =
-
-      models.find(
-
-        item => {
-
-          const actualMake =
-
-            this.normalizeText(
-
-              item?.make ??
-
-              item?.brand ??
-
-              item?.manufacturer ??
-
-              ''
-
-            )
-
-
-          const actualModel =
-
-            this.normalizeText(
-
-              item?.model ??
-
-              item?.modelName ??
-
-              item?.name ??
-
-              ''
-
-            )
-
-
-          const makeMatch =
-
-            actualMake ===
-
-              wantedMake ||
-
-            actualMake.includes(
-
-              wantedMake
-
-            ) ||
-
-            wantedMake.includes(
-
-              actualMake
-
-            )
-
-
-          const modelMatch =
-
-            actualModel ===
-
-              wantedModel ||
-
-            actualModel.includes(
-
-              wantedModel
-
-            ) ||
-
-            wantedModel.includes(
-
-              actualModel
-
-            )
-
-
-          return (
-
-            makeMatch &&
-
-            modelMatch
-
-          )
-
+      await this.getModels(
+        {
+          ...params,
+          brand,
+          year
         }
-
       )
 
 
     if (
-
-      !vehicle
-
+      !Array.isArray(models) ||
+      models.length === 0
     ) {
 
       return null
-
     }
+
+
+    const normalizedModel =
+      stableValue(
+        model
+      )
+
+
+    let matched =
+      null
+
+
+    if (
+      normalizedModel
+    ) {
+
+      matched =
+        models.find(
+          item =>
+            stableValue(
+              item.model
+            ) ===
+            normalizedModel
+        )
+
+
+      if (
+        !matched
+      ) {
+
+        matched =
+          models.find(
+            item =>
+              stableValue(
+                item.model
+              )
+                .includes(
+                  normalizedModel
+                ) ||
+              normalizedModel.includes(
+                stableValue(
+                  item.model
+                )
+              )
+          )
+      }
+    }
+
+
+    matched =
+      matched ??
+      models[0]
 
 
     return {
 
-      ...vehicle,
-
       id:
-
-        vehicle?.id ??
-
-        `${make}-${model}-${year || 'unknown'}`,
-
-      vehicleType:
-
-        vehicle?.vehicleType ??
-
-        this.normalizeVehicleType(
-
-          vehicleType ||
-
-          'car'
-
-        ),
-
-      type:
-
-        vehicle?.type ??
-
-        this.normalizeVehicleType(
-
-          vehicleType ||
-
-          'car'
-
-        ),
+        matched.id,
 
       make:
-
-        vehicle?.make ??
-
-        vehicle?.brand ??
-
-        make,
+        matched.make ||
+        brand,
 
       brand:
-
-        vehicle?.brand ??
-
-        vehicle?.make ??
-
-        make,
+        matched.brand ||
+        brand,
 
       manufacturer:
-
-        vehicle?.manufacturer ??
-
-        vehicle?.make ??
-
-        make,
+        matched.manufacturer ||
+        brand,
 
       model:
-
-        vehicle?.model ??
-
-        vehicle?.modelName ??
-
-        model,
+        matched.model,
 
       modelName:
+        matched.modelName ||
+        matched.model,
 
-        vehicle?.modelName ??
-
-        vehicle?.model ??
-
-        model,
+      vehicleType:
+        matched.vehicleType ||
+        normalizeVehicleType(
+          params?.vehicleType
+        ),
 
       year:
-
-        year ??
-
-        vehicle?.year ??
-
-        null,
-
-      yearFrom:
-
-        year ??
-
-        vehicle?.yearFrom ??
-
-        null,
-
-      yearTo:
-
-        year ??
-
-        vehicle?.yearTo ??
-
-        null,
+        year
+          ? Number(year)
+          : (
+              matched.year ||
+              ''
+            ),
 
       source:
-
         'nhtsa',
 
       raw:
-
-        vehicle?.raw ??
-
-        vehicle
+        matched.raw ??
+        matched
 
     }
-
   }
 
 }
+
+
+// ======================================================
+// EXPORT
+// ======================================================
+
+export default NHTSAProvider

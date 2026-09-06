@@ -49,6 +49,26 @@ export default function HomeVehicleSearch({
     brands,
     models,
     years,
+
+    // ==================================================
+    // VEHICLE AUTOCOMPLETE
+    // ==================================================
+
+    brandSuggestions,
+    suggestVehicleBrands,
+    clearBrandSuggestions,
+    selectVehicleBrand,
+    brandsLoading,
+
+    // ==================================================
+    // VEHICLE MODEL AUTOCOMPLETE
+    // ==================================================
+
+    modelSuggestions,
+    suggestVehicleModels,
+    clearVehicleModelSuggestions,
+    modelsLoading,
+
     tireSearchError,
     search
   } = useVehicleSearch()
@@ -64,6 +84,228 @@ export default function HomeVehicleSearch({
       searchType: 'vehicle',
       searchQuery: ''
     })
+
+
+
+  // ====================================================
+  // FIRST NON EMPTY
+  // ====================================================
+
+  const firstNonEmpty =
+    (...values) => {
+
+      for (
+        const value of values
+      ) {
+
+        if (
+          value === null ||
+          value === undefined
+        ) {
+          continue
+        }
+
+
+        if (
+          typeof value === 'number'
+        ) {
+
+          if (
+            Number.isFinite(
+              value
+            )
+          ) {
+            return value
+          }
+
+          continue
+
+        }
+
+
+        const normalized =
+          String(
+            value
+          ).trim()
+
+
+        if (
+          normalized
+        ) {
+          return normalized
+        }
+
+      }
+
+
+      return ''
+
+    }
+
+
+
+  // ====================================================
+  // READ VEHICLE VALUE FROM SEARCH RESPONSE
+  // ====================================================
+  //
+  // The AI/VehicleEngine response can expose vehicle
+  // information through different layers.
+  //
+  // We intentionally check aliases instead of guessing
+  // the vehicle type from the text query.
+  //
+  // ====================================================
+
+  const resolveVehicleContextFromResponse =
+    response => {
+
+      if (
+        !response ||
+        typeof response !== 'object'
+      ) {
+
+        return {}
+
+      }
+
+
+      const candidates = [
+
+        response,
+
+        response.vehicle,
+
+        response.vehicleData,
+
+        response.vehicleInfo,
+
+        response.vehicleContext,
+
+        response.searchContext,
+
+        response.resolvedVehicle,
+
+        response.parsedVehicle,
+
+        response.aiResponse,
+
+        response.aiResponse?.vehicle,
+
+        response.aiResponse?.vehicleData,
+
+        response.aiResponse?.vehicleInfo,
+
+        response.aiResponse?.vehicleContext,
+
+        response.aiResponse?.searchContext,
+
+        response.result,
+
+        response.result?.vehicle,
+
+        response.result?.vehicleData,
+
+        response.result?.vehicleInfo,
+
+        response.result?.vehicleContext,
+
+        response.result?.searchContext
+
+      ]
+        .filter(
+          value =>
+            value &&
+            typeof value === 'object'
+        )
+
+
+      let vehicleType = ''
+      let make = ''
+      let model = ''
+      let year = ''
+
+
+      for (
+        const candidate of candidates
+      ) {
+
+        vehicleType =
+          firstNonEmpty(
+
+            vehicleType,
+
+            candidate.vehicleType,
+
+            candidate.vehicle_type,
+
+            candidate.type,
+
+            candidate.vehicleTypeName,
+
+            candidate.vehicle_type_name
+
+          )
+
+
+        make =
+          firstNonEmpty(
+
+            make,
+
+            candidate.make,
+
+            candidate.brand,
+
+            candidate.manufacturer,
+
+            candidate.vehicleMake
+
+          )
+
+
+        model =
+          firstNonEmpty(
+
+            model,
+
+            candidate.model,
+
+            candidate.vehicleModel,
+
+            candidate.modelName
+
+          )
+
+
+        year =
+          firstNonEmpty(
+
+            year,
+
+            candidate.year,
+
+            candidate.modelYear,
+
+            candidate.vehicleYear
+
+          )
+
+      }
+
+
+      return {
+
+        vehicleType,
+
+        make,
+
+        model,
+
+        year
+
+      }
+
+    }
 
 
 
@@ -174,18 +416,6 @@ export default function HomeVehicleSearch({
 
   // ====================================================
   // NORMALIZE MARKET DEMAND PRODUCTS
-  // ====================================================
-  //
-  // The search engine may return products using
-  // different identity fields.
-  //
-  // Market Demand must always receive a stable:
-  //
-  // - id
-  // - productId
-  // - name
-  // - productName
-  //
   // ====================================================
 
   const normalizeDemandProduct =
@@ -383,18 +613,6 @@ export default function HomeVehicleSearch({
       // ------------------------------------------------
       // EXECUTE THE REAL SEARCH FIRST
       // ------------------------------------------------
-      //
-      // IMPORTANT:
-      // We must NOT record a product request before
-      // knowing which products were actually returned.
-      //
-      // This prevents:
-      //
-      // "منتج غير محدد"
-      //
-      // from being counted as a requested product.
-      //
-      // ------------------------------------------------
 
       let searchResults = []
 
@@ -410,27 +628,60 @@ export default function HomeVehicleSearch({
           )
 
 
-        searchResults =
-          normalizeSearchResults(
-            response
-          )
-
-
         // ------------------------------------------------
-        // FALLBACK:
-        // Some versions of the hook update `results`
-        // but do not return the array directly.
+        // IMPORTANT:
+        //
+        // If search() returns an Array, that Array is the
+        // authoritative result of THIS search.
+        //
+        // An empty Array is a valid result and MUST NOT
+        // be replaced with the previous `results` state.
+        //
+        // This prevents stale products from a previous
+        // search being recorded as Market Demand for the
+        // current search.
         // ------------------------------------------------
 
         if (
-          searchResults.length === 0 &&
-          Array.isArray(results)
+          Array.isArray(response)
         ) {
 
           searchResults =
             normalizeSearchResults(
-              results
+              response
             )
+
+        } else {
+
+          searchResults =
+            normalizeSearchResults(
+              response
+            )
+
+
+          // ------------------------------------------------
+          // FALLBACK:
+          //
+          // Only use the existing `results` state when the
+          // search function did not return an Array at all.
+          //
+          // This preserves compatibility with versions of
+          // the hook that update `results` instead of
+          // returning the array directly.
+          // ------------------------------------------------
+
+          if (
+            searchResults.length === 0 &&
+            !response &&
+            Array.isArray(results)
+          ) {
+
+            searchResults =
+              normalizeSearchResults(
+                results
+              )
+
+          }
 
         }
 
@@ -448,31 +699,83 @@ export default function HomeVehicleSearch({
 
 
 
-      // ------------------------------------------------
+      // ==================================================
+      // RESOLVE AUTHORITATIVE SEARCH CONTEXT
+      // ==================================================
+      //
+      // For vehicle searches, the form is not necessarily
+      // the final authoritative vehicle context.
+      //
+      // The AI/VehicleEngine can resolve:
+      //
+      // - vehicleType
+      // - make
+      // - model
+      // - year
+      //
+      // from the actual search.
+      //
+      // We preserve the form values and only replace them
+      // when the authoritative response contains a value.
+      //
       // IMPORTANT:
-      // USE THE REAL AI SEARCH QUERY
-      // ------------------------------------------------
+      // We NEVER invent a vehicle type from the query.
       //
-      // Vehicle Search may resolve the actual query
-      // internally inside useVehicleSearch.
-      //
-      // Example:
-      //
-      // User form:
-      // Toyota / Corolla / 2021
-      //
-      // Real AI query:
-      // toyota corolla 2021
-      //
-      // The response contains the authoritative query.
-      //
-      // We must use it for Market Demand attribution.
-      //
-      // ------------------------------------------------
+      // ==================================================
 
       if (
         searchTab === 'vehicle'
       ) {
+
+        const resolvedVehicle =
+          resolveVehicleContextFromResponse(
+            response
+          )
+
+
+        const currentContext =
+          searchContextRef.current || {}
+
+
+        const resolvedVehicleType =
+          firstNonEmpty(
+
+            resolvedVehicle.vehicleType,
+
+            currentContext.vehicleType
+
+          )
+
+
+        const resolvedMake =
+          firstNonEmpty(
+
+            resolvedVehicle.make,
+
+            currentContext.make
+
+          )
+
+
+        const resolvedModel =
+          firstNonEmpty(
+
+            resolvedVehicle.model,
+
+            currentContext.model
+
+          )
+
+
+        const resolvedYear =
+          firstNonEmpty(
+
+            resolvedVehicle.year,
+
+            currentContext.year
+
+          )
+
 
         const realVehicleQuery =
           typeof response?.query === 'string'
@@ -480,35 +783,59 @@ export default function HomeVehicleSearch({
             : ''
 
 
-        if (
-          realVehicleQuery
-        ) {
+        searchContextRef.current = {
 
-          searchContextRef.current = {
+          ...currentContext,
 
-            ...searchContextRef.current,
+          searchType:
+            'vehicle',
 
-            searchType:
-              'vehicle',
+          searchQuery:
+            realVehicleQuery ||
+            currentContext.searchQuery ||
+            '',
 
-            searchQuery:
-              realVehicleQuery
+          vehicleType:
+            resolvedVehicleType,
 
-          }
+          make:
+            resolvedMake,
 
+          model:
+            resolvedModel,
 
-          console.log(
-            '[MarketDemand] Vehicle search context resolved',
-            {
-              searchQuery:
-                realVehicleQuery,
-
-              searchContext:
-                searchContextRef.current
-            }
-          )
+          year:
+            resolvedYear
 
         }
+
+
+        console.log(
+          '[MarketDemand] Vehicle search context resolved',
+          {
+            searchQuery:
+              searchContextRef.current.searchQuery,
+
+            vehicleType:
+              searchContextRef.current.vehicleType,
+
+            make:
+              searchContextRef.current.make,
+
+            model:
+              searchContextRef.current.model,
+
+            year:
+              searchContextRef.current.year,
+
+            searchContext:
+              searchContextRef.current,
+
+            responseVehicleContext:
+              resolvedVehicle
+
+          }
+        )
 
       }
 
@@ -516,12 +843,6 @@ export default function HomeVehicleSearch({
 
       // ------------------------------------------------
       // MARKET DEMAND: REQUEST
-      // ------------------------------------------------
-      //
-      // One search can return several products.
-      // Every returned product is a real requested
-      // product and must be counted independently.
-      //
       // ------------------------------------------------
 
       try {
@@ -568,6 +889,12 @@ export default function HomeVehicleSearch({
               query:
                 searchContextRef.current.searchQuery,
 
+              searchType:
+                searchContextRef.current.searchType,
+
+              searchContext:
+                searchContextRef.current,
+
               products:
                 searchResults
 
@@ -576,11 +903,6 @@ export default function HomeVehicleSearch({
 
         } else {
 
-          // --------------------------------------------
-          // Search itself is still useful analytically,
-          // but it is NOT attributed to a fake product.
-          // --------------------------------------------
-
           console.log(
             '[MarketDemand] Search returned no products',
             {
@@ -588,7 +910,10 @@ export default function HomeVehicleSearch({
                 searchContextRef.current.searchQuery,
 
               searchType:
-                searchContextRef.current.searchType
+                searchContextRef.current.searchType,
+
+              searchContext:
+                searchContextRef.current
             }
           )
 
@@ -609,19 +934,6 @@ export default function HomeVehicleSearch({
 
   // ====================================================
   // MARKET DEMAND: VIEWED RESULTS
-  // ====================================================
-  //
-  // IMPORTANT:
-  //
-  // The previous implementation checked:
-  //
-  // Array.isArray(results)
-  //
-  // but the component can receive different result
-  // shapes depending on the active search path.
-  //
-  // We therefore normalize the actual result collection.
-  //
   // ====================================================
 
   useEffect(() => {
@@ -688,7 +1000,11 @@ export default function HomeVehicleSearch({
             visibleDemandResults.length,
 
           products:
-            visibleDemandResults
+            visibleDemandResults,
+
+          searchContext:
+            searchContextRef.current
+
         }
       )
 
@@ -734,6 +1050,32 @@ export default function HomeVehicleSearch({
         searchQuery:
           ''
 
+      }
+
+
+      // ------------------------------------------------
+      // Clear vehicle brand autocomplete
+      // ------------------------------------------------
+
+      if (
+        typeof clearBrandSuggestions ===
+        'function'
+      ) {
+
+        clearBrandSuggestions()
+      }
+
+
+      // ------------------------------------------------
+      // Clear vehicle model autocomplete
+      // ------------------------------------------------
+
+      if (
+        typeof clearVehicleModelSuggestions ===
+        'function'
+      ) {
+
+        clearVehicleModelSuggestions()
       }
 
     }
@@ -1018,7 +1360,7 @@ export default function HomeVehicleSearch({
                     "
                   >
 
-                    حدد نوع المركبة والماركة والموديل والسنة
+                    ابدأ بكتابة الماركة أو الموديل أو السنة
 
                   </div>
 
@@ -1049,6 +1391,50 @@ export default function HomeVehicleSearch({
 
                   setForm={
                     setForm
+                  }
+
+                  // ==================================================
+                  // VEHICLE BRAND AUTOCOMPLETE
+                  // ==================================================
+
+                  brandSuggestions={
+                    brandSuggestions
+                  }
+
+                  suggestVehicleBrands={
+                    suggestVehicleBrands
+                  }
+
+                  clearBrandSuggestions={
+                    clearBrandSuggestions
+                  }
+
+                  selectVehicleBrand={
+                    selectVehicleBrand
+                  }
+
+                  brandsLoading={
+                    brandsLoading
+                  }
+
+                  // ==================================================
+                  // VEHICLE MODEL AUTOCOMPLETE
+                  // ==================================================
+
+                  modelSuggestions={
+                    modelSuggestions
+                  }
+
+                  suggestVehicleModels={
+                    suggestVehicleModels
+                  }
+
+                  clearVehicleModelSuggestions={
+                    clearVehicleModelSuggestions
+                  }
+
+                  modelsLoading={
+                    modelsLoading
                   }
 
                   onSearch={() =>
@@ -1231,7 +1617,6 @@ export default function HomeVehicleSearch({
                       }
 
                     </div>
-
                   )
                 }
 
@@ -1580,7 +1965,6 @@ export default function HomeVehicleSearch({
                 جارٍ البحث عن المنتجات المناسبة...
 
               </div>
-
             )
           }
 
@@ -1665,7 +2049,6 @@ export default function HomeVehicleSearch({
                 />
 
               </div>
-
             )
           }
 

@@ -1,57 +1,165 @@
 // ======================================================
 // EL OLA ERP
 // Vehicle Search Form
+// ======================================================
 //
-// AI-FIRST VEHICLE SEARCH
+// RESPONSIBILITY
+// ------------------------------------------------------
+// Free-text vehicle search input with vehicle brand
+// autocomplete suggestions.
+//
+// IMPORTANT
+// ------------------------------------------------------
+// This component does NOT perform the vehicle search.
+// It only manages the search input and suggestion UI.
+//
+// BRAND -> MODEL AUTOCOMPLETE
+// ------------------------------------------------------
+// When the user hovers over a vehicle brand, the models
+// belonging to that brand are loaded and displayed.
+//
 // ======================================================
 
-import React from 'react'
+import {
+  useEffect,
+  useRef,
+  useState
+} from 'react'
 
+
+// ======================================================
+// HELPERS
+// ======================================================
+
+const getDisplayName = item => {
+
+  if (
+    typeof item === 'string' ||
+    typeof item === 'number'
+  ) {
+    return String(item).trim()
+  }
+
+  if (!item || typeof item !== 'object') {
+    return ''
+  }
+
+  /*
+   * Vehicle providers do not always return the same
+   * property name for a model.
+   *
+   * Support both generic and model-specific fields.
+   */
+  return String(
+    item.name ??
+    item.modelName ??
+    item.model_name ??
+    item.model ??
+    item.vehicleModel ??
+    item.vehicleModelName ??
+    item.vehicle_model ??
+    item.vehicle_model_name ??
+    item.brand ??
+    item.make ??
+    item.label ??
+    item.title ??
+    ''
+  ).trim()
+}
+
+
+// ======================================================
+// COMPONENT
+// ======================================================
 
 export default function VehicleSearchForm({
-
   form = {},
   setForm,
+  onSearch,
 
-  onSearch
+  // ----------------------------------------------------
+  // Brand autocomplete
+  // ----------------------------------------------------
 
+  brandSuggestions = [],
+
+  suggestVehicleBrands,
+
+  clearBrandSuggestions,
+
+  selectVehicleBrand,
+
+  brandsLoading = false,
+
+  // ----------------------------------------------------
+  // Model autocomplete
+  // ----------------------------------------------------
+
+  modelSuggestions = [],
+
+  suggestVehicleModels,
+
+  clearVehicleModelSuggestions,
+
+  modelsLoading = false
 }) {
 
+  // ====================================================
+  // STATE
+  // ====================================================
+
+  const [
+    showSuggestions,
+    setShowSuggestions
+  ] = useState(false)
+
+  const [
+    hoveredBrandKey,
+    setHoveredBrandKey
+  ] = useState(null)
+
+  /*
+   * Keep the actual hovered brand object.
+   *
+   * This is important because form.brand is NOT changed
+   * merely by hovering a suggestion.
+   */
+  const [
+    hoveredBrand,
+    setHoveredBrand
+  ] = useState(null)
+
 
   // ====================================================
-  // AI QUERY
+  // REFS
   // ====================================================
 
-  const vehicleQuery =
-    form?.vehicleQuery || ''
+  const containerRef =
+    useRef(null)
+
+  const modelRequestTimerRef =
+    useRef(null)
 
 
   // ====================================================
-  // UPDATE AI QUERY
+  // CURRENT QUERY
+  // ====================================================
+
+  const query =
+    String(
+      form?.vehicleQuery ??
+      ''
+    )
+
+
+  // ====================================================
+  // UPDATE QUERY
   // ====================================================
 
   const updateQuery = value => {
 
-    if (
-      typeof setForm !== 'function'
-    ) {
-
-      return
-
-    }
-
-
     setForm({
-
       ...form,
-
-      // ------------------------------------------------
-      // AI vehicle search uses vehicleQuery.
-      //
-      // Do NOT put the complete sentence in model.
-      // The useVehicleSearch hook detects vehicleQuery
-      // and sends it through the AI vehicle-search path.
-      // ------------------------------------------------
 
       vehicleType: '',
 
@@ -62,62 +170,434 @@ export default function VehicleSearchForm({
       year: '',
 
       vehicleQuery: value
-
     })
 
-  }
+    setHoveredBrandKey(null)
 
-
-  // ====================================================
-  // SEARCH
-  // ====================================================
-
-  const submitSearch = () => {
-
-    const query =
-      String(
-        vehicleQuery ?? ''
-      ).trim()
-
-
-    if (!query) {
-
-      return
-
-    }
-
+    setHoveredBrand(null)
 
     if (
-      typeof onSearch === 'function'
+      typeof clearVehicleModelSuggestions ===
+      'function'
     ) {
 
-      onSearch()
-
+      clearVehicleModelSuggestions()
     }
-
-  }
-
-
-  // ====================================================
-  // KEYBOARD SEARCH
-  // ====================================================
-
-  const handleKeyDown = event => {
 
     if (
-      event.key !== 'Enter'
+      String(value ?? '').trim()
     ) {
 
-      return
+      setShowSuggestions(true)
 
+    } else {
+
+      setShowSuggestions(false)
+
+      if (
+        typeof clearBrandSuggestions ===
+        'function'
+      ) {
+
+        clearBrandSuggestions()
+      }
+    }
+  }
+
+
+  // ====================================================
+  // INPUT CHANGE
+  // ====================================================
+
+  const handleChange = async event => {
+
+    const value =
+      event.target.value
+
+    updateQuery(value)
+
+    const text =
+      String(value ?? '').trim()
+
+    if (
+      text.length < 1
+    ) {
+
+      setShowSuggestions(false)
+
+      return
+    }
+
+    if (
+      typeof suggestVehicleBrands ===
+      'function'
+    ) {
+
+      await suggestVehicleBrands(
+        text
+      )
+
+      setShowSuggestions(true)
+    }
+  }
+
+
+  // ====================================================
+  // SELECT BRAND
+  // ====================================================
+
+  const handleSelectBrand =
+    brand => {
+
+      const brandName =
+        getDisplayName(
+          brand
+        )
+
+      if (!brandName) {
+        return
+      }
+
+      if (
+        typeof clearVehicleModelSuggestions ===
+        'function'
+      ) {
+
+        clearVehicleModelSuggestions()
+      }
+
+      setHoveredBrandKey(null)
+
+      setHoveredBrand(null)
+
+      if (
+        typeof selectVehicleBrand ===
+        'function'
+      ) {
+
+        selectVehicleBrand(
+          brand
+        )
+
+      } else {
+
+        setForm({
+          ...form,
+
+          brand:
+            brandName,
+
+          model: '',
+
+          year: '',
+
+          vehicleQuery:
+            `${brandName} `
+        })
+      }
+
+      setShowSuggestions(false)
     }
 
 
-    event.preventDefault()
+  // ====================================================
+  // HOVER BRAND
+  // ====================================================
 
-    submitSearch()
+  const handleBrandMouseEnter =
+    async (
+      brand,
+      index
+    ) => {
 
-  }
+      const brandName =
+        getDisplayName(
+          brand
+        )
+
+      if (!brandName) {
+        return
+      }
+
+      const brandKey =
+        `${brandName}-${index}`
+
+      /*
+       * Store both the key and the actual brand object.
+       */
+      setHoveredBrandKey(
+        brandKey
+      )
+
+      setHoveredBrand(
+        brand
+      )
+
+      if (
+        modelRequestTimerRef.current
+      ) {
+
+        clearTimeout(
+          modelRequestTimerRef.current
+        )
+      }
+
+      /*
+       * Small delay prevents unnecessary API calls when
+       * the mouse moves rapidly across several brands.
+       */
+      modelRequestTimerRef.current =
+        setTimeout(
+          async () => {
+
+            if (
+              typeof suggestVehicleModels ===
+              'function'
+            ) {
+
+              await suggestVehicleModels(
+                brand
+              )
+            }
+
+          },
+          120
+        )
+    }
+
+
+  // ====================================================
+  // LEAVE BRAND
+  // ====================================================
+
+  const handleBrandMouseLeave =
+    () => {
+
+      if (
+        modelRequestTimerRef.current
+      ) {
+
+        clearTimeout(
+          modelRequestTimerRef.current
+        )
+
+        modelRequestTimerRef.current =
+          null
+      }
+
+      /*
+       * Do NOT clear hoveredBrandKey here.
+       *
+       * The model panel is positioned next to the brand
+       * row, so clearing the hover state here would cause
+       * the panel to disappear while moving the mouse
+       * toward the models.
+       */
+    }
+
+
+  // ====================================================
+  // SELECT MODEL
+  // ====================================================
+
+  const handleSelectModel =
+    model => {
+
+      const modelName =
+        getDisplayName(
+          model
+        )
+
+      if (!modelName) {
+        return
+      }
+
+      /*
+       * The hovered brand has priority because the user
+       * selected this model from that brand's panel.
+       *
+       * form.brand may still be empty at this point.
+       */
+      const brandName =
+        getDisplayName(
+          hoveredBrand
+        ) ||
+        String(
+          form?.brand ??
+          ''
+        ).trim()
+
+      setForm({
+        ...form,
+
+        brand:
+          brandName,
+
+        model:
+          modelName,
+
+        year: '',
+
+        vehicleQuery:
+          `${brandName || query.trim()} ${modelName}`.trim()
+      })
+
+      setHoveredBrandKey(null)
+
+      setHoveredBrand(null)
+
+      setShowSuggestions(false)
+
+      if (
+        typeof clearVehicleModelSuggestions ===
+        'function'
+      ) {
+
+        clearVehicleModelSuggestions()
+      }
+    }
+
+
+  // ====================================================
+  // KEYBOARD NAVIGATION
+  // ====================================================
+
+  const handleKeyDown =
+    event => {
+
+      if (
+        event.key === 'Escape'
+      ) {
+
+        setShowSuggestions(false)
+
+        setHoveredBrandKey(null)
+
+        setHoveredBrand(null)
+
+        if (
+          typeof clearBrandSuggestions ===
+          'function'
+        ) {
+
+          clearBrandSuggestions()
+        }
+
+        if (
+          typeof clearVehicleModelSuggestions ===
+          'function'
+        ) {
+
+          clearVehicleModelSuggestions()
+        }
+
+        return
+      }
+
+      if (
+        event.key === 'Enter'
+      ) {
+
+        /*
+         * Enter keeps the existing search behavior.
+         * We intentionally do not automatically select
+         * a brand because the user may be entering a
+         * complete AI query such as:
+         *
+         * Toyota Corolla 2021
+         */
+
+        setShowSuggestions(false)
+
+        setHoveredBrandKey(null)
+
+        setHoveredBrand(null)
+
+        if (
+          typeof onSearch ===
+          'function'
+        ) {
+
+          onSearch()
+        }
+      }
+    }
+
+
+  // ====================================================
+  // CLICK OUTSIDE
+  // ====================================================
+
+  useEffect(() => {
+
+    const handleDocumentClick =
+      event => {
+
+        if (
+          containerRef.current &&
+          !containerRef.current.contains(
+            event.target
+          )
+        ) {
+
+          setShowSuggestions(false)
+
+          setHoveredBrandKey(null)
+
+          setHoveredBrand(null)
+        }
+      }
+
+    document.addEventListener(
+      'mousedown',
+      handleDocumentClick
+    )
+
+    return () => {
+
+      document.removeEventListener(
+        'mousedown',
+        handleDocumentClick
+      )
+
+      if (
+        modelRequestTimerRef.current
+      ) {
+
+        clearTimeout(
+          modelRequestTimerRef.current
+        )
+
+        modelRequestTimerRef.current =
+          null
+      }
+    }
+
+  }, [])
+
+
+  // ====================================================
+  // VISIBLE BRAND SUGGESTIONS
+  // ====================================================
+
+  const visibleSuggestions =
+    Array.isArray(
+      brandSuggestions
+    )
+      ? brandSuggestions
+      : []
+
+
+  // ====================================================
+  // VISIBLE MODEL SUGGESTIONS
+  // ====================================================
+
+  const visibleModelSuggestions =
+    Array.isArray(
+      modelSuggestions
+    )
+      ? modelSuggestions
+      : []
 
 
   // ====================================================
@@ -125,282 +605,480 @@ export default function VehicleSearchForm({
   // ====================================================
 
   return (
-
     <div
-      className="
-        w-full
-        max-w-5xl
-        mx-auto
-      "
+      ref={containerRef}
+      className="relative w-full"
     >
 
       {/* ==================================================
-          AI SEARCH INTRO
+          SEARCH INPUT
       ================================================== */}
 
-      <div
-        className="
-          text-center
-          mb-6
-        "
-      >
+      <div className="relative">
 
-        <div
+        <input
+          type="text"
+
+          value={query}
+
+          onChange={handleChange}
+
+          onKeyDown={handleKeyDown}
+
+          onFocus={() => {
+
+            if (
+              query.trim()
+            ) {
+
+              setShowSuggestions(true)
+
+              if (
+                typeof suggestVehicleBrands ===
+                'function'
+              ) {
+
+                suggestVehicleBrands(
+                  query.trim()
+                )
+              }
+            }
+
+          }}
+
+          placeholder="اكتب نوع السيارة أو الماركة أو الموديل أو السنة"
+
+          autoComplete="off"
+
           className="
-            inline-flex
-            items-center
-            justify-center
-            rounded-full
-            bg-yellow-500/10
+            w-full
+            rounded-xl
             border
-            border-yellow-500/30
-            px-5
-            py-2
-            text-yellow-400
-            font-black
-            text-sm
-            mb-4
+            border-gray-300
+            bg-white
+            px-4
+            py-3
+            text-right
+            text-gray-900
+            outline-none
+            transition
+            focus:border-blue-500
+            focus:ring-2
+            focus:ring-blue-100
           "
-        >
-
-          🤖 البحث بالذكاء الاصطناعي
-
-        </div>
-
-
-        <h3
-          className="
-            text-2xl
-            md:text-3xl
-            font-black
-            text-white
-          "
-        >
-
-          اكتب بيانات مركبتك
-
-        </h3>
-
-
-        <p
-          className="
-            text-gray-400
-            mt-3
-            text-base
-            md:text-lg
-          "
-        >
-
-          اكتب نوع المركبة والماركة والموديل والسنة
-          بأي طريقة طبيعية، والذكاء الاصطناعي سيحدد المركبة المناسبة.
-
-        </p>
+        />
 
       </div>
 
 
       {/* ==================================================
-          AI INPUT
+          BRAND AUTOCOMPLETE
       ================================================== */}
 
-      <div
-        className="
-          space-y-4
-        "
-      >
-
-        <label
-          htmlFor="vehicle-ai-search"
-          className="
-            block
-            text-white
-            font-black
-            text-lg
-            text-right
-          "
-        >
-
-          بيانات المركبة
-
-        </label>
-
-
-        <input
-          id="vehicle-ai-search"
-          type="text"
-          value={vehicleQuery}
-          onChange={event =>
-            updateQuery(
-              event.target.value
-            )
-          }
-          onKeyDown={
-            handleKeyDown
-          }
-          placeholder="
-            مثال: تويوتا كورولا 2020
-          "
-          autoComplete="off"
-          dir="auto"
-          className="
-            w-full
-            p-5
-            md:p-6
-            rounded-2xl
-            bg-slate-950
-            border-2
-            border-slate-700
-            hover:border-slate-600
-            focus:border-yellow-400
-            text-white
-            text-lg
-            md:text-xl
-            font-bold
-            outline-none
-            transition
-            placeholder:text-gray-500
-          "
-        />
-
-
-        {/* ==================================================
-            EXAMPLES
-        ================================================== */}
+      {showSuggestions &&
+        query.trim() &&
+        (
+          visibleSuggestions.length > 0 ||
+          brandsLoading
+        ) && (
 
         <div
           className="
-            text-gray-400
-            text-sm
-            md:text-base
-            text-center
-            leading-8
+            absolute
+            left-0
+            right-0
+            top-full
+            z-50
+            mt-2
+            overflow-visible
+            rounded-xl
+            border
+            border-gray-200
+            bg-white
+            shadow-xl
           "
+          dir="ltr"
         >
 
-          أمثلة:
+          {/* ----------------------------------------------
+              LOADING BRANDS
+          ---------------------------------------------- */}
 
-          <span
-            className="
-              text-yellow-400
-              font-bold
-              mx-1
-            "
-          >
-            تويوتا كورولا 2020
-          </span>
+          {brandsLoading &&
+            visibleSuggestions.length === 0 && (
 
-          أو
+            <div
+              className="
+                px-4
+                py-3
+                text-sm
+                text-gray-500
+                text-right
+              "
+              dir="rtl"
+            >
+              جاري تحميل ماركات السيارات...
+            </div>
+          )}
 
-          <span
-            className="
-              text-yellow-400
-              font-bold
-              mx-1
-            "
-          >
-            BMW X5 2019
-          </span>
 
-          أو
+          {/* ----------------------------------------------
+              BRAND SUGGESTIONS
+          ---------------------------------------------- */}
 
-          <span
-            className="
-              text-yellow-400
-              font-bold
-              mx-1
-            "
-          >
-            شيفروليه أوبترا 2021
-          </span>
+          {visibleSuggestions.length > 0 && (
+
+            <div className="max-h-72 overflow-y-auto">
+
+              {visibleSuggestions.map(
+                (brand, index) => {
+
+                  const name =
+                    getDisplayName(
+                      brand
+                    )
+
+                  if (!name) {
+                    return null
+                  }
+
+                  const brandKey =
+                    `${name}-${index}`
+
+                  const isHovered =
+                    hoveredBrandKey ===
+                    brandKey
+
+                  return (
+                    <div
+                      key={brandKey}
+
+                      className="
+                        relative
+                        border-b
+                        border-gray-100
+                        last:border-b-0
+                      "
+
+                      onMouseEnter={() =>
+                        handleBrandMouseEnter(
+                          brand,
+                          index
+                        )
+                      }
+
+                      onMouseLeave={
+                        handleBrandMouseLeave
+                      }
+                    >
+
+                      {/* --------------------------------
+                          BRAND BUTTON
+                      -------------------------------- */}
+
+                      <button
+                        type="button"
+
+                        onMouseDown={event => {
+                          /*
+                           * Prevent input blur from closing
+                           * the autocomplete before selection.
+                           */
+                          event.preventDefault()
+                        }}
+
+                        onClick={() =>
+                          handleSelectBrand(
+                            brand
+                          )
+                        }
+
+                        className="
+                          flex
+                          w-full
+                          items-center
+                          justify-between
+                          px-4
+                          py-3
+                          text-left
+                          text-sm
+                          text-gray-800
+                          transition
+                          hover:bg-gray-50
+                        "
+                      >
+
+                        <span
+                          className="
+                            font-medium
+                          "
+                        >
+                          {name}
+                        </span>
+
+                        <span
+                          className="
+                            flex
+                            items-center
+                            gap-2
+                            text-xs
+                            text-gray-400
+                          "
+                        >
+                          <span>
+                            موديلات
+                          </span>
+
+                          <span>
+                            اختيار
+                          </span>
+                        </span>
+
+                      </button>
+
+
+                      {/* --------------------------------
+                          MODEL PANEL
+                      -------------------------------- */}
+
+                      {isHovered && (
+
+                        <div
+                          className="
+                            absolute
+                            left-full
+                            top-0
+                            z-[60]
+                            ml-0
+                            w-64
+                            overflow-hidden
+                            rounded-xl
+                            border
+                            border-gray-200
+                            bg-white
+                            shadow-xl
+                          "
+                          dir="ltr"
+                          onMouseEnter={() => {
+
+                            setHoveredBrandKey(
+                              brandKey
+                            )
+
+                            setHoveredBrand(
+                              brand
+                            )
+                          }}
+                        >
+
+                          {/* MODEL HEADER */}
+
+                          <div
+                            className="
+                              border-b
+                              border-gray-100
+                              bg-gray-50
+                              px-4
+                              py-3
+                            "
+                            dir="rtl"
+                          >
+
+                            <div
+                              className="
+                                text-sm
+                                font-semibold
+                                text-gray-800
+                              "
+                            >
+                              {name}
+                            </div>
+
+                            <div
+                              className="
+                                mt-1
+                                text-xs
+                                text-gray-500
+                              "
+                            >
+                              موديلات السيارة
+                            </div>
+
+                          </div>
+
+
+                          {/* MODEL LOADING */}
+
+                          {modelsLoading &&
+                            visibleModelSuggestions.length === 0 && (
+
+                            <div
+                              className="
+                                px-4
+                                py-4
+                                text-center
+                                text-sm
+                                text-gray-500
+                              "
+                              dir="rtl"
+                            >
+                              جاري تحميل الموديلات...
+                            </div>
+                          )}
+
+
+                          {/* MODEL LIST */}
+
+                          {!modelsLoading &&
+                            visibleModelSuggestions.length > 0 && (
+
+                            <div
+                              className="
+                                max-h-72
+                                overflow-y-auto
+                              "
+                              dir="ltr"
+                            >
+
+                              {visibleModelSuggestions.map(
+                                (
+                                  model,
+                                  modelIndex
+                                ) => {
+
+                                  const modelName =
+                                    getDisplayName(
+                                      model
+                                    )
+
+                                  if (!modelName) {
+                                    return null
+                                  }
+
+                                  return (
+                                    <button
+                                      key={
+                                        `${modelName}-${modelIndex}`
+                                      }
+
+                                      type="button"
+
+                                      onMouseDown={event => {
+                                        event.preventDefault()
+                                      }}
+
+                                      onClick={() =>
+                                        handleSelectModel(
+                                          model
+                                        )
+                                      }
+
+                                      className="
+                                        flex
+                                        w-full
+                                        items-center
+                                        px-4
+                                        py-3
+                                        text-left
+                                        text-sm
+                                        text-gray-700
+                                        transition
+                                        hover:bg-blue-50
+                                        hover:text-blue-700
+                                      "
+                                    >
+
+                                      <span>
+                                        {modelName}
+                                      </span>
+
+                                    </button>
+                                  )
+                                }
+                              )}
+
+                            </div>
+                          )}
+
+
+                          {/* NO MODELS */}
+
+                          {!modelsLoading &&
+                            visibleModelSuggestions.length === 0 && (
+
+                            <div
+                              className="
+                                px-4
+                                py-4
+                                text-center
+                                text-sm
+                                text-gray-400
+                              "
+                              dir="rtl"
+                            >
+                              لا توجد موديلات متاحة لهذه الماركة
+                            </div>
+                          )}
+
+                        </div>
+                      )}
+
+                    </div>
+                  )
+                }
+              )}
+
+            </div>
+          )}
 
         </div>
+      )}
 
 
-        {/* ==================================================
-            SEARCH BUTTON
-        ================================================== */}
+      {/* ==================================================
+          SEARCH BUTTON
+      ================================================== */}
+
+      <div className="mt-3 flex justify-end">
 
         <button
           type="button"
-          onClick={
-            submitSearch
-          }
-          disabled={
-            !String(
-              vehicleQuery ?? ''
-            ).trim()
-          }
+
+          onClick={() => {
+
+            setShowSuggestions(false)
+
+            setHoveredBrandKey(null)
+
+            setHoveredBrand(null)
+
+            if (
+              typeof onSearch ===
+              'function'
+            ) {
+
+              onSearch()
+            }
+          }}
+
           className="
-            w-full
-            rounded-2xl
-            bg-yellow-500
-            hover:bg-yellow-400
-            disabled:bg-slate-700
-            disabled:text-gray-500
-            disabled:cursor-not-allowed
-            text-black
-            py-5
-            md:py-6
-            font-black
-            text-xl
+            rounded-xl
+            bg-blue-600
+            px-6
+            py-3
+            font-medium
+            text-white
             transition
-            shadow-lg
+            hover:bg-blue-700
+            disabled:cursor-not-allowed
+            disabled:opacity-50
           "
         >
-
-          🤖 ابحث عن مركبتي بالذكاء الاصطناعي
-
+          بحث
         </button>
-
-
-        {/* ==================================================
-            AI EXPLANATION
-        ================================================== */}
-
-        <div
-          className="
-            rounded-2xl
-            bg-slate-800/60
-            border
-            border-slate-700
-            p-4
-            text-center
-          "
-        >
-
-          <div
-            className="
-              text-yellow-400
-              font-black
-              mb-1
-            "
-          >
-
-            لا تحتاج إلى اختيار الماركة أو الموديل يدويًا
-
-          </div>
-
-
-          <div
-            className="
-              text-gray-400
-              text-sm
-              leading-7
-            "
-          >
-
-            اكتب معلومات المركبة فقط، وسيقوم النظام
-            بتحليلها وتحديد المركبة ثم البحث عن
-            الإطارات والبطاريات والزيوت المتوافقة معها.
-
-          </div>
-
-        </div>
 
       </div>
 
     </div>
-
   )
-
 }

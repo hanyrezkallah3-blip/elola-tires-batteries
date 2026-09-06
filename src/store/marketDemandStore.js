@@ -3,3211 +3,2250 @@
 // Market Demand Store
 // ======================================================
 //
-// RESPONSIBILITY
+// PURPOSE
 // ------------------------------------------------------
-// Records and analyzes real consumer demand.
+// Central store for real customer market-demand behavior.
+//
+// EVENT FLOW
+// ------------------------------------------------------
+// requested
+// viewed
+// added_to_cart
+// checkout_started
+// purchased
+// feedback
 //
 // IMPORTANT
 // ------------------------------------------------------
-// Market Demand is separate from:
-// - Product Master
-// - Inventory
-// - Vehicle compatibility
+// Analytics are calculated from demandEvents.
+// Existing events are NEVER cleared by analytics logic.
 //
-// Compatibility is determined elsewhere.
-// This store only records what the customer requested,
-// viewed, added, purchased, abandoned, or reported.
-//
-// PRODUCT ATTRIBUTION
+// IMPORTANT ANALYTICS RULE
 // ------------------------------------------------------
-// Every product event is normalized from:
-// - product
-// - products[]
-// - order.items
+// Analytics are product-based, not event-count based.
 //
-// This prevents "منتج غير محدد" when callers provide
-// a products array.
-//
-// VEHICLE CONTEXT
-// ------------------------------------------------------
-// Vehicle context is stored with every event.
-//
-// Priority:
-// 1. Explicit event searchContext.
-// 2. Product searchContext.
-// 3. Product vehicleSearchContext.
-// 4. Order searchContext.
-// 5. Order vehicleSearchContext.
-// 6. Order vehicle fields.
-// 7. Previous event from the same product/session.
-//
-// IMPORTANT FIX
-// ------------------------------------------------------
-// Vehicle context sources are MERGED field-by-field.
-// Empty values from a lower-priority source are never
-// allowed to overwrite valid vehicle information.
-//
-// Existing persisted demand events are preserved.
-//
+// A single REQUESTED event may contain many products.
+// A VIEWED event normally contains one product.
+// Therefore:
+//   requested = sum of requested products
+//   viewed = sum of viewed products
+//   addedToCart = number of product add events
+//   purchased = number of purchased product events
 // ======================================================
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+// ======================================================
+// CONSTANTS
+// ======================================================
+
+export const MARKET_DEMAND_REASONS = [
+  {
+    value: 'price',
+    label: 'السعر أعلى مما توقعت'
+  },
+  {
+    value: 'unavailable',
+    label: 'المنتج غير متوفر'
+  },
+  {
+    value: 'not_suitable',
+    label: 'المواصفات لا تناسبني'
+  },
+  {
+    value: 'brand',
+    label: 'أريد ماركة أخرى'
+  },
+  {
+    value: 'alternative',
+    label: 'وجدت منتجًا بديلًا'
+  },
+  {
+    value: 'later',
+    label: 'سأشتري لاحقًا'
+  },
+  {
+    value: 'other',
+    label: 'سبب آخر'
+  }
+]
+
+export const MARKET_DEMAND_EVENT_TYPES = {
+  REQUESTED: 'requested',
+  VIEWED: 'viewed',
+  ADDED_TO_CART: 'added_to_cart',
+  CHECKOUT_STARTED: 'checkout_started',
+  PURCHASED: 'purchased',
+  FEEDBACK: 'feedback'
+}
+
+const DEMAND_VERSION = 3
 
 // ======================================================
-// NORMALIZE TEXT
+// HELPERS
 // ======================================================
 
-const normalizeText = value => {
+const generateId = () =>
+  `${Date.now()}-${Math.random().toString(36).slice(2)}`
 
-  return String(
-    value ?? ''
-  )
+const toArray = value => {
+  if (Array.isArray(value)) {
+    return value.filter(Boolean)
+  }
+
+  if (value) {
+    return [value]
+  }
+
+  return []
+}
+
+const normalizeText = value =>
+  String(value ?? '')
     .trim()
     .toLowerCase()
-}
 
+const normalizeSearchValue = value =>
+  normalizeText(value)
+    .replace(/\s+/g, ' ')
 
-// ======================================================
-// FIRST NON-EMPTY VALUE
-// ======================================================
-
-const firstValue = (...values) => {
-
-  for (
-    const value of values
-  ) {
-
-    if (
-      value !== undefined &&
-      value !== null &&
-      String(value).trim() !== ''
-    ) {
-
-      return value
-    }
-  }
-
-  return ''
-}
-
-
-// ======================================================
-// NORMALIZE PRODUCT
-// ======================================================
-
-const normalizeProduct = product => {
-
-  if (!product) {
-    return null
-  }
-
+const getProductId = product => {
   const id =
-    product.id ??
-    product.productId ??
-    product.sku ??
-    product.code ??
-    null
-
-  const name =
-    product.name ??
-    product.productName ??
-    product.title ??
-    product.description ??
+    product?.productId ??
+    product?.id ??
+    product?.sku ??
+    product?.barcode ??
     ''
 
-  const brand =
-    product.brand ??
-    product.brandName ??
-    ''
-
-  const category =
-    product.category ??
-    product.type ??
-    product.productType ??
-    ''
-
-  const price =
-    product.offerPrice ??
-    product.salePrice ??
-    product.price ??
-    0
-
-  const quantity =
-    product.quantity ??
-    product.availableQuantity ??
-    product.stock ??
-    0
-
-  const available =
-    typeof product.isAvailable === 'boolean'
-      ? product.isAvailable
-      : typeof product.available === 'boolean'
-        ? product.available
-        : Number(quantity) > 0
-
-  return {
-    ...product,
-
-    id,
-
-    productId:
-      product.productId ??
-      product.id ??
-      id,
-
-    name:
-      name || 'منتج',
-
-    productName:
-      product.productName ??
-      name ??
-      'منتج',
-
-    brand,
-
-    category,
-
-    price,
-
-    quantity,
-
-    available,
-
-    isAvailable:
-      typeof product.isAvailable === 'boolean'
-        ? product.isAvailable
-        : available
-  }
+  return String(id).trim()
 }
 
+const getProductName = product =>
+  product?.name ||
+  product?.productName ||
+  product?.title ||
+  product?.tire?.size ||
+  product?.tireSize ||
+  product?.battery?.capacity ||
+  product?.oil?.viscosity ||
+  'منتج'
 
-// ======================================================
-// PRODUCT KEY
-// ======================================================
+const getProductSku = product =>
+  product?.sku ||
+  product?.SKU ||
+  product?.code ||
+  ''
 
 const getProductKey = product => {
+  const id = getProductId(product)
 
-  if (!product) {
-    return ''
+  if (id) {
+    return `id:${normalizeText(id)}`
   }
 
-  const id =
-    product.id ??
-    product.productId ??
-    product.sku ??
-    product.code
+  const name = getProductName(product)
 
-  if (
-    id !== null &&
-    id !== undefined &&
-    String(id).trim() !== ''
-  ) {
-    return String(id)
-  }
-
-  const name =
-    product.name ??
-    product.productName ??
-    product.title ??
-    ''
-
-  return normalizeText(
-    name
-  )
+  return `name:${normalizeText(name)}`
 }
 
+const getProductDisplayName = product =>
+  product?.productName ||
+  product?.name ||
+  product?.title ||
+  product?.tire?.size ||
+  product?.tireSize ||
+  'منتج'
 
-// ======================================================
-// PRODUCT COLLECTION
-// ======================================================
-//
-// IMPORTANT FIX
-// ------------------------------------------------------
-// Some callers provide the same product in both:
-//
-//   products: [product]
-//   product: product
-//
-// Previously both references were added, which caused
-// duplicate events such as:
-//
-//   viewed → 2
-//
-// for a single product.
-//
-// We now add the explicit `product` only when it is not
-// already represented inside `products[]`.
-//
-// This is intentionally limited to the duplicate
-// product/product-array case and does NOT deduplicate
-// legitimate repeated order items.
-//
-// ======================================================
+const getQuantity = product => {
+  const quantity = Number(
+    product?.availableQuantity ??
+    product?.availability?.quantity ??
+    product?.quantity ??
+    product?.stock ??
+    0
+  )
 
-const collectProducts = ({
-  product,
-  products,
-  order
-} = {}) => {
+  return Number.isFinite(quantity)
+    ? Math.max(0, quantity)
+    : 0
+}
 
-  const output = []
-
-  if (
-    Array.isArray(products)
-  ) {
-
-    output.push(
-      ...products
-    )
-  }
-
-  if (
-    product
-  ) {
-
-    const productKey =
-      getProductKey(
-        product
-      )
-
-    const alreadyIncluded =
-      productKey &&
-      output.some(
-        item =>
-          getProductKey(
-            item
-          ) === productKey
-      )
-
-    if (
-      !alreadyIncluded
-    ) {
-
-      output.push(
-        product
-      )
+const resolveAvailability = product => {
+  if (!product) {
+    return {
+      available: false,
+      quantity: 0
     }
   }
 
-  if (
-    output.length === 0 &&
-    Array.isArray(order?.items)
-  ) {
+  const quantity = getQuantity(product)
 
-    output.push(
-      ...order.items
-    )
+  const available =
+    product?.available === true ||
+    product?.isAvailable === true ||
+    product?.availability?.available === true ||
+    quantity > 0
+
+  return {
+    available,
+    quantity
   }
-
-  return output
-    .filter(Boolean)
-    .map(
-      normalizeProduct
-    )
-    .filter(Boolean)
 }
 
+// ======================================================
+// EVENT PRODUCT EXTRACTION
+// ======================================================
+
+const getEventProducts = event => {
+  const products = toArray(
+    event?.products
+  )
+
+  if (products.length > 0) {
+    return products
+  }
+
+  return toArray(
+    event?.product
+  )
+}
 
 // ======================================================
 // SEARCH CONTEXT
 // ======================================================
 
-const normalizeSearchContext = (
-  searchContext = {}
-) => {
+const normalizeSearchContext = context => {
+  const source = context || {}
 
-  const context =
-    searchContext || {}
+  const vehicleType =
+    source.vehicleType ||
+    source.type ||
+    ''
+
+  const make =
+    source.make ||
+    source.brand ||
+    ''
+
+  const model =
+    source.model ||
+    ''
+
+  const year =
+    source.year ||
+    ''
+
+  const tireSize =
+    source.tireSize ||
+    source.size ||
+    ''
+
+  const capacity =
+    source.capacity ||
+    source.ampereHour ||
+    source.ah ||
+    ''
+
+  const viscosity =
+    source.viscosity ||
+    source.grade ||
+    ''
+
+  const searchType =
+    source.searchType ||
+    source.type ||
+    ''
+
+  const searchQuery =
+    source.searchQuery ??
+    source.query ??
+    ''
 
   return {
     searchType:
-      context.searchType ??
-      '',
+      String(searchType || '').trim(),
 
     searchQuery:
-      context.searchQuery ??
-      context.query ??
-      '',
+      String(searchQuery || '').trim(),
 
     vehicleType:
-      context.vehicleType ??
-      context.type ??
-      '',
+      String(vehicleType || '').trim(),
 
     make:
-      context.make ??
-      '',
+      String(make || '').trim(),
 
     model:
-      context.model ??
-      context.modelFromSearch ??
-      '',
-
-    modelFromSearch:
-      context.modelFromSearch ??
-      context.model ??
-      '',
+      String(model || '').trim(),
 
     year:
-      context.year ??
-      '',
+      String(year || '').trim(),
 
     tireSize:
-      context.tireSize ??
-      '',
+      String(tireSize || '').trim(),
 
     capacity:
-      context.capacity ??
-      '',
+      String(capacity || '').trim(),
 
     viscosity:
-      context.viscosity ??
-      '',
+      String(viscosity || '').trim(),
 
-    ...context
+    ...source
   }
 }
 
-
-// ======================================================
-// MERGE SEARCH CONTEXTS
-// ======================================================
-//
-// IMPORTANT
-// ------------------------------------------------------
-// Merges contexts field-by-field.
-// A blank value from one source cannot erase a valid
-// value from another source.
-//
-// Priority is from LEFT to RIGHT.
-// The RIGHTMOST non-empty value wins.
-//
-// ======================================================
-
-const mergeSearchContexts = (
-  ...contexts
-) => {
-
-  const normalizedContexts =
-    contexts
-      .filter(Boolean)
-      .map(
-        normalizeSearchContext
-      )
-
-
+const mergeSearchContexts = (...contexts) => {
   const merged = {}
 
+  contexts.forEach(context => {
+    if (!context) {
+      return
+    }
 
-  for (
-    const context
-    of normalizedContexts
-  ) {
-
-    Object.entries(
-      context
-    )
-      .forEach(
-        ([key, value]) => {
-
-          if (
-            value === undefined ||
-            value === null
-          ) {
-            return
-          }
-
-          if (
-            typeof value === 'string' &&
-            value.trim() === ''
-          ) {
-            return
-          }
-
-          if (
-            Array.isArray(value) &&
-            value.length === 0
-          ) {
-            return
-          }
-
+    Object.entries(context).forEach(
+      ([key, value]) => {
+        if (
+          value !== undefined &&
+          value !== null &&
+          String(value).trim() !== ''
+        ) {
           merged[key] = value
         }
-      )
-  }
-
+      }
+    )
+  })
 
   return normalizeSearchContext(
     merged
   )
 }
 
-
-// ======================================================
-// VEHICLE CONTEXT CHECK
-// ======================================================
-
 const hasVehicleContext = context => {
-
   if (!context) {
     return false
   }
 
   return Boolean(
-    String(
-      context.vehicleType ??
-      ''
-    ).trim() ||
-
-    String(
-      context.make ??
-      ''
-    ).trim() ||
-
-    String(
-      context.modelFromSearch ??
-      context.model ??
-      ''
-    ).trim() ||
-
-    String(
-      context.year ??
-      ''
-    ).trim()
+    context.vehicleType ||
+    context.make ||
+    context.model ||
+    context.year
   )
 }
 
-
-// ======================================================
-// VEHICLE CONTEXT
-// ======================================================
-
-const buildVehicleContext = context => {
-
-  const normalized =
+const buildVehicleContext = event => {
+  const context =
     normalizeSearchContext(
-      context
+      event?.searchContext || {}
     )
 
   return {
-
     vehicleType:
-      normalized.vehicleType ??
+      event?.vehicleType ||
+      context.vehicleType ||
+      event?.type ||
       '',
 
     make:
-      normalized.make ??
+      event?.make ||
+      context.make ||
       '',
 
     model:
-      firstValue(
-        normalized.modelFromSearch,
-        normalized.model
-      ),
-
-    modelFromSearch:
-      firstValue(
-        normalized.modelFromSearch,
-        normalized.model
-      ),
+      event?.model ||
+      context.model ||
+      '',
 
     year:
-      normalized.year ??
+      event?.year ||
+      context.year ||
       ''
   }
 }
 
-
 // ======================================================
-// AVAILABILITY
+// EVENT PRODUCT COLLECTION
 // ======================================================
 
-const resolveAvailability = (
-  product,
-  explicitAvailability
-) => {
+const collectProducts = data => {
+  const products = []
 
-  if (
-    typeof explicitAvailability === 'boolean'
-  ) {
-    return explicitAvailability
-  }
+  const addProduct = product => {
+    if (!product) {
+      return
+    }
 
-  if (
-    typeof explicitAvailability === 'string'
-  ) {
+    const key =
+      getProductKey(product)
 
-    const value =
-      normalizeText(
-        explicitAvailability
+    if (
+      products.some(
+        existing =>
+          getProductKey(existing) ===
+          key
       )
-
-    if (
-      [
-        'available',
-        'متوفر',
-        'true',
-        'yes'
-      ].includes(value)
     ) {
-      return true
+      return
     }
 
-    if (
-      [
-        'unavailable',
-        'غير متوفر',
-        'false',
-        'no'
-      ].includes(value)
-    ) {
-      return false
-    }
+    products.push(product)
   }
 
-  if (!product) {
-    return false
-  }
+  toArray(data?.products)
+    .forEach(addProduct)
 
-  if (
-    typeof product.isAvailable === 'boolean'
-  ) {
-    return product.isAvailable
-  }
+  toArray(data?.product)
+    .forEach(addProduct)
 
-  if (
-    typeof product.available === 'boolean'
-  ) {
-    return product.available
-  }
-
-  if (
-    product.availableQuantity !== undefined
-  ) {
-    return Number(
-      product.availableQuantity
-    ) > 0
-  }
-
-  if (
-    product.quantity !== undefined
-  ) {
-    return Number(
-      product.quantity
-    ) > 0
-  }
-
-  if (
-    product.stock !== undefined
-  ) {
-    return Number(
-      product.stock
-    ) > 0
-  }
-
-  return false
+  return products
 }
 
-
 // ======================================================
-// EVENT TYPES
-// ======================================================
-
-export const MARKET_DEMAND_EVENTS = {
-
-  REQUESTED:
-    'requested',
-
-  VIEWED:
-    'viewed',
-
-  ADDED_TO_CART:
-    'added_to_cart',
-
-  CHECKOUT_STARTED:
-    'checkout_started',
-
-  PURCHASED:
-    'purchased',
-
-  NOT_ADDED_TO_CART:
-    'not_added_to_cart',
-
-  CART_ABANDONED:
-    'cart_abandoned',
-
-  PURCHASE_ABANDONED:
-    'purchase_abandoned',
-
-  FEEDBACK:
-    'feedback'
-}
-
-
-// ======================================================
-// REASONS
-// ======================================================
-
-export const MARKET_DEMAND_REASONS = {
-
-  PRICE:
-    'price',
-
-  ALTERNATIVE:
-    'alternative',
-
-  NOT_NEEDED:
-    'not_needed',
-
-  UNAVAILABLE:
-    'unavailable',
-
-  SHIPPING:
-    'shipping',
-
-  PAYMENT:
-    'payment',
-
-  TRUST:
-    'trust',
-
-  WAITING:
-    'waiting',
-
-  OTHER:
-    'other'
-}
-
-
-// ======================================================
-// REASON LABELS
-// ======================================================
-
-export const MARKET_DEMAND_REASON_LABELS = {
-
-  price:
-    'السعر',
-
-  alternative:
-    'وجد بديلًا',
-
-  not_needed:
-    'لم يعد يحتاج المنتج',
-
-  unavailable:
-    'المنتج غير متوفر',
-
-  shipping:
-    'الشحن',
-
-  payment:
-    'الدفع',
-
-  trust:
-    'الثقة',
-
-  waiting:
-    'الانتظار',
-
-  other:
-    'سبب آخر'
-}
-
-
-// ======================================================
-// EVENT ID
-// ======================================================
-
-const createEventId = () => {
-
-  return (
-    Date.now().toString(36) +
-    Math.random()
-      .toString(36)
-      .slice(2)
-  )
-}
-
-
-// ======================================================
-// VEHICLE CONTEXT RESOLUTION
-// ======================================================
-//
-// Priority:
-// 1. Explicit context
-// 2. Product context
-// 3. Order context
-// 4. Previous event for same product/session
-//
-// IMPORTANT
-// ------------------------------------------------------
-// Contexts are merged without allowing empty fields
-// to overwrite valid values.
-//
+// EVENT CONTEXT RESOLUTION
 // ======================================================
 
 const resolveEventContext = ({
+  event,
   product,
-  searchContext,
-  order,
-  existingEvents = [],
-  sessionId
-} = {}) => {
-
-  const explicitContext =
+  events
+}) => {
+  const explicit =
     normalizeSearchContext(
-      searchContext
+      event?.searchContext || {}
     )
 
+  if (
+    explicit.searchQuery ||
+    explicit.searchType ||
+    hasVehicleContext(explicit)
+  ) {
+    return explicit
+  }
 
-  const productSearchContext =
+  const productContext =
     normalizeSearchContext(
       product?.searchContext || {}
     )
 
-
-  const productVehicleContext =
-    normalizeSearchContext(
-      product?.vehicleSearchContext || {}
-    )
-
-
-  const productContext =
-    mergeSearchContexts(
-      productSearchContext,
-      productVehicleContext
-    )
-
-
-  const orderSearchContext =
-    normalizeSearchContext(
-      order?.searchContext || {}
-    )
-
-
-  const orderVehicleSearchContext =
-    normalizeSearchContext(
-      order?.vehicleSearchContext || {}
-    )
-
-
-  const orderVehicleFields =
-    normalizeSearchContext({
-
-      vehicleType:
-        order?.vehicleType ??
-        order?.vehicle?.type ??
-        '',
-
-      make:
-        order?.make ??
-        order?.vehicle?.make ??
-        '',
-
-      model:
-        order?.model ??
-        order?.vehicle?.model ??
-        '',
-
-      year:
-        order?.year ??
-        order?.vehicle?.year ??
-        '',
-
-      searchType:
-        order?.searchType ??
-        '',
-
-      searchQuery:
-        order?.searchQuery ??
-        ''
-    })
-
-
-  // ----------------------------------------------------
-  // EXPLICIT CONTEXT
-  // ----------------------------------------------------
+  const eventVehicleContext =
+    buildVehicleContext(event)
 
   if (
-    hasVehicleContext(
-      explicitContext
-    )
+    Object.keys(productContext)
+      .length > 0
   ) {
-
-    return {
-      context:
-        mergeSearchContexts(
-          productContext,
-          explicitContext
-        ),
-
-      source:
-        'explicit'
-    }
-  }
-
-
-  // ----------------------------------------------------
-  // PRODUCT CONTEXT
-  // ----------------------------------------------------
-
-  if (
-    hasVehicleContext(
-      productContext
+    return mergeSearchContexts(
+      productContext,
+      eventVehicleContext
     )
-  ) {
-
-    return {
-      context:
-        productContext,
-
-      source:
-        'product'
-    }
   }
-
-
-  // ----------------------------------------------------
-  // ORDER CONTEXT
-  // ----------------------------------------------------
 
   const orderContext =
-    mergeSearchContexts(
-      orderSearchContext,
-      orderVehicleSearchContext,
-      orderVehicleFields
+    normalizeSearchContext(
+      event?.order?.searchContext ||
+      {}
     )
-
 
   if (
-    hasVehicleContext(
-      orderContext
-    )
+    Object.keys(orderContext)
+      .length > 0
   ) {
-
-    return {
-      context:
-        orderContext,
-
-      source:
-        'order'
-    }
+    return mergeSearchContexts(
+      orderContext,
+      eventVehicleContext
+    )
   }
 
-
-  // ----------------------------------------------------
-  // PREVIOUS EVENT
-  // SAME PRODUCT + SAME SESSION
-  // ----------------------------------------------------
+  const productKey =
+    getProductKey(product)
 
   if (
-    sessionId
+    Array.isArray(events) &&
+    productKey
   ) {
-
-    const productKey =
-      getProductKey(
-        product
-      )
-
-    if (
-      productKey
+    for (
+      let index =
+        events.length - 1;
+      index >= 0;
+      index -= 1
     ) {
+      const previous =
+        events[index]
 
-      for (
-        let index =
-          existingEvents.length - 1;
-        index >= 0;
-        index -= 1
+      if (
+        previous?.type !==
+          MARKET_DEMAND_EVENT_TYPES.REQUESTED &&
+        previous?.type !==
+          MARKET_DEMAND_EVENT_TYPES.VIEWED
       ) {
+        continue
+      }
 
-        const previous =
-          existingEvents[index]
+      const previousProducts =
+        getEventProducts(previous)
 
+      const matchingProduct =
+        previousProducts.find(
+          previousProduct =>
+            getProductKey(
+              previousProduct
+            ) === productKey
+        )
 
-        if (
-          String(
-            previous.sessionId ??
-            ''
-          ) !==
-          String(
-            sessionId
-          )
-        ) {
-          continue
-        }
-
-
-        const previousKey =
-          previous.productId
-            ? String(
-                previous.productId
-              )
-            : normalizeText(
-                previous.productName
-              )
-
-
-        if (
-          previousKey !==
-          productKey
-        ) {
-          continue
-        }
-
-
-        const previousContext =
-          normalizeSearchContext(
-            previous.searchContext
-          )
-
-
-        if (
-          hasVehicleContext(
-            previousContext
-          )
-        ) {
-
-          return {
-
-            context:
-              previousContext,
-
-            source:
-              'previous-session-event'
-          }
-        }
+      if (matchingProduct) {
+        return mergeSearchContexts(
+          previous?.searchContext,
+          matchingProduct?.searchContext
+        )
       }
     }
   }
 
+  return {}
+}
 
-  // ----------------------------------------------------
-  // NO VEHICLE CONTEXT
-  // ----------------------------------------------------
+// ======================================================
+// PRODUCT NORMALIZATION
+// ======================================================
+
+const normalizeProduct = ({
+  product,
+  event,
+  events
+}) => {
+  const availability =
+    resolveAvailability(product)
+
+  const searchContext =
+    resolveEventContext({
+      event,
+      product,
+      events
+    })
 
   return {
+    ...product,
 
-    context:
-      explicitContext,
+    id:
+      product?.id ??
+      product?.productId ??
+      getProductKey(product),
 
-    source:
-      'none'
+    productId:
+      product?.productId ??
+      product?.id ??
+      null,
+
+    name:
+      getProductDisplayName(product),
+
+    productName:
+      getProductDisplayName(product),
+
+    sku:
+      getProductSku(product),
+
+    productKey:
+      getProductKey(product),
+
+    available:
+      availability.available,
+
+    availableQuantity:
+      availability.quantity,
+
+    availability,
+
+    searchContext
   }
 }
 
-
 // ======================================================
-// EVENT FACTORY
+// EVENT CREATION
 // ======================================================
 
 const createDemandEvent = ({
   type,
-  product,
-  availability,
-  searchContext,
-  searchContextSource,
-  sessionId,
-  customerId,
-  orderId,
-  quantity,
-  reason,
-  metadata
+  data,
+  events
 }) => {
+  const products =
+    collectProducts(data)
 
-  const normalizedProduct =
-    normalizeProduct(
-      product
-    )
+  const primaryProduct =
+    products[0] || null
 
+  const rawContext =
+    data?.searchContext ||
+    primaryProduct?.searchContext ||
+    {}
 
-  const context =
+  const searchContext =
     normalizeSearchContext(
-      searchContext
+      rawContext
     )
 
+  const searchType =
+    String(
+      data?.searchType ??
+      searchContext.searchType ??
+      ''
+    ).trim()
+
+  const searchQuery =
+    String(
+      data?.query ??
+      data?.searchQuery ??
+      searchContext.searchQuery ??
+      ''
+    ).trim()
+
+  const normalizedProducts =
+    products.map(product =>
+      normalizeProduct({
+        product,
+        event: {
+          ...data,
+          searchContext,
+          searchType,
+          searchQuery,
+          type
+        },
+        events
+      })
+    )
+
+  const primary =
+    normalizedProducts[0] ||
+    null
 
   const vehicleContext =
-    buildVehicleContext(
-      context
-    )
-
+    buildVehicleContext({
+      ...data,
+      searchContext,
+      type
+    })
 
   return {
-
     id:
-      createEventId(),
+      data?.id ||
+      generateId(),
 
     type,
 
-    timestamp:
+    createdAt:
+      data?.createdAt ||
       new Date().toISOString(),
 
-    product:
-      normalizedProduct,
+    updatedAt:
+      new Date().toISOString(),
 
-    productId:
-      normalizedProduct?.id ??
-      normalizedProduct?.productId ??
+    sessionId:
+      data?.sessionId ||
+      data?.metadata?.sessionId ||
       null,
 
-    productName:
-      normalizedProduct?.name ??
-      normalizedProduct?.productName ??
+    userId:
+      data?.userId ||
+      data?.metadata?.userId ||
+      null,
+
+    searchType,
+
+    searchQuery,
+
+    query:
+      searchQuery,
+
+    searchContext,
+
+    vehicleType:
+      data?.vehicleType ||
+      vehicleContext.vehicleType ||
+      '',
+
+    make:
+      data?.make ||
+      vehicleContext.make ||
+      '',
+
+    model:
+      data?.model ||
+      vehicleContext.model ||
+      '',
+
+    modelFromSearch:
+      data?.modelFromSearch ||
+      vehicleContext.model ||
+      '',
+
+    year:
+      data?.year ||
+      vehicleContext.year ||
       '',
 
     availability:
-      resolveAvailability(
-        normalizedProduct,
-        availability
-      ),
+      data?.availability ||
+      primary?.availability ||
+      null,
 
-    quantity:
-      Number(quantity) > 0
-        ? Number(quantity)
-        : 1,
+    products:
+      normalizedProducts,
+
+    product:
+      primary,
 
     reason:
-      reason ??
+      data?.reason ||
       null,
 
-    searchContext:
-      context,
+    note:
+      data?.note ||
+      '',
 
-    searchType:
-      context.searchType,
-
-    searchQuery:
-      context.searchQuery,
-
-    vehicleType:
-      vehicleContext.vehicleType,
-
-    make:
-      vehicleContext.make,
-
-    model:
-      vehicleContext.model,
-
-    modelFromSearch:
-      vehicleContext.modelFromSearch,
-
-    year:
-      vehicleContext.year,
-
-    tireSize:
-      context.tireSize,
-
-    capacity:
-      context.capacity,
-
-    viscosity:
-      context.viscosity,
-
-    sessionId:
-      sessionId ??
-      null,
-
-    customerId:
-      customerId ??
+    feedback:
+      data?.feedback ||
       null,
 
     orderId:
-      orderId ??
+      data?.orderId ||
+      data?.order?.id ||
       null,
 
-    metadata: {
-
-      ...(metadata || {}),
-
-      vehicleContextSource:
-        searchContextSource ??
-        'none',
-
-      hasVehicleContext:
-        hasVehicleContext(
-          context
-        )
-    }
+    metadata:
+      data?.metadata ||
+      {}
   }
 }
 
+// ======================================================
+// DATE FILTER
+// ======================================================
+
+const filterEventsByRange = (
+  events,
+  range
+) => {
+  const list =
+    Array.isArray(events)
+      ? events
+      : []
+
+  if (
+    !range ||
+    range === 'all'
+  ) {
+    return list
+  }
+
+  const days =
+    Number(range)
+
+  if (
+    !Number.isFinite(days) ||
+    days <= 0
+  ) {
+    return list
+  }
+
+  const cutoff =
+    Date.now() -
+    days *
+      24 *
+      60 *
+      60 *
+      1000
+
+  return list.filter(event => {
+    const timestamp =
+      new Date(
+        event?.createdAt ||
+        event?.updatedAt ||
+        0
+      ).getTime()
+
+    return (
+      Number.isFinite(timestamp) &&
+      timestamp >= cutoff
+    )
+  })
+}
+
+// ======================================================
+// PRODUCT ANALYTICS
+// ======================================================
+
+const buildProductAnalytics = events => {
+  const productMap = new Map()
+
+  const ensureProduct = (
+    product,
+    event
+  ) => {
+    const normalized =
+      normalizeProduct({
+        product,
+        event,
+        events
+      })
+
+    const key =
+      normalized.productKey
+
+    if (!productMap.has(key)) {
+      productMap.set(key, {
+        productKey: key,
+
+        productId:
+          normalized.productId,
+
+        productName:
+          normalized.productName,
+
+        name:
+          normalized.name,
+
+        sku:
+          normalized.sku,
+
+        requested: 0,
+
+        viewed: 0,
+
+        addedToCart: 0,
+
+        checkoutStarted: 0,
+
+        purchased: 0,
+
+        notPurchased: 0,
+
+        availableRequests: 0,
+
+        unavailableRequests: 0,
+
+        feedbackCount: 0,
+
+        reasons: {},
+
+        vehicleContexts: []
+      })
+    }
+
+    return productMap.get(key)
+  }
+
+  events.forEach(event => {
+    const eventProducts =
+      getEventProducts(event)
+
+    eventProducts.forEach(
+      product => {
+        const item =
+          ensureProduct(
+            product,
+            event
+          )
+
+        switch (event?.type) {
+          case MARKET_DEMAND_EVENT_TYPES.REQUESTED:
+            item.requested += 1
+            break
+
+          case MARKET_DEMAND_EVENT_TYPES.VIEWED:
+            item.viewed += 1
+            break
+
+          case MARKET_DEMAND_EVENT_TYPES.ADDED_TO_CART:
+            item.addedToCart += 1
+            break
+
+          case MARKET_DEMAND_EVENT_TYPES.CHECKOUT_STARTED:
+            item.checkoutStarted += 1
+            break
+
+          case MARKET_DEMAND_EVENT_TYPES.PURCHASED:
+            item.purchased += 1
+            break
+
+          case MARKET_DEMAND_EVENT_TYPES.FEEDBACK:
+            item.feedbackCount += 1
+            break
+
+          default:
+            break
+        }
+
+        const availability =
+          resolveAvailability(product)
+
+        if (
+          availability.available
+        ) {
+          item.availableRequests += 1
+        } else {
+          item.unavailableRequests += 1
+        }
+
+        const context =
+          resolveEventContext({
+            event,
+            product,
+            events
+          })
+
+        if (
+          hasVehicleContext(
+            context
+          )
+        ) {
+          const vehicleKey = [
+            context.vehicleType,
+            context.make,
+            context.model,
+            context.year
+          ]
+            .map(normalizeSearchValue)
+            .join('|')
+
+          if (
+            !item.vehicleContexts.some(
+              existing =>
+                existing.key ===
+                vehicleKey
+            )
+          ) {
+            item.vehicleContexts.push({
+              key: vehicleKey,
+
+              vehicleType:
+                context.vehicleType ||
+                '',
+
+              make:
+                context.make ||
+                '',
+
+              model:
+                context.model ||
+                '',
+
+              year:
+                context.year ||
+                '',
+
+              searchQuery:
+                context.searchQuery ||
+                ''
+            })
+          }
+        }
+
+        if (
+          event?.type ===
+            MARKET_DEMAND_EVENT_TYPES.FEEDBACK &&
+          event?.reason
+        ) {
+          item.reasons[
+            event.reason
+          ] =
+            (
+              item.reasons[
+                event.reason
+              ] || 0
+            ) + 1
+        }
+      }
+    )
+  })
+
+  return Array.from(
+    productMap.values()
+  )
+    .map(item => {
+      item.notPurchased =
+        Math.max(
+          0,
+          item.requested -
+            item.purchased
+        )
+
+      item.cartConversion =
+        item.requested > 0
+          ? Number(
+              (
+                item.addedToCart *
+                100 /
+                item.requested
+              ).toFixed(2)
+            )
+          : 0
+
+      item.purchaseConversion =
+        item.requested > 0
+          ? Number(
+              (
+                item.purchased *
+                100 /
+                item.requested
+              ).toFixed(2)
+            )
+          : 0
+
+      item.purchaseFromCart =
+        item.addedToCart > 0
+          ? Number(
+              (
+                item.purchased *
+                100 /
+                item.addedToCart
+              ).toFixed(2)
+            )
+          : 0
+
+      item.availabilityLossRate =
+        item.requested > 0
+          ? Number(
+              (
+                item.unavailableRequests *
+                100 /
+                item.requested
+              ).toFixed(2)
+            )
+          : 0
+
+      item.topReason =
+        Object.entries(
+          item.reasons
+        )
+          .sort(
+            (a, b) =>
+              b[1] -
+              a[1]
+          )[0]?.[0] ||
+        null
+
+      return item
+    })
+    .sort(
+      (a, b) =>
+        b.requested -
+        a.requested
+    )
+}
+
+// ======================================================
+// REASON ANALYTICS
+// ======================================================
+
+const buildReasonAnalytics = events => {
+  const reasonMap = new Map()
+
+  events.forEach(event => {
+    if (
+      event?.type !==
+      MARKET_DEMAND_EVENT_TYPES.FEEDBACK
+    ) {
+      return
+    }
+
+    const reason =
+      event?.reason ||
+      event?.feedback?.reason
+
+    if (!reason) {
+      return
+    }
+
+    if (!reasonMap.has(reason)) {
+      reasonMap.set(reason, {
+        reason,
+
+        label:
+          MARKET_DEMAND_REASONS.find(
+            item =>
+              item.value ===
+              reason
+          )?.label ||
+          reason,
+
+        count: 0,
+
+        products: []
+      })
+    }
+
+    const row =
+      reasonMap.get(reason)
+
+    row.count += 1
+
+    const products =
+      collectProducts(event)
+
+    products.forEach(product => {
+      const normalized =
+        normalizeProduct({
+          product,
+          event,
+          events
+        })
+
+      const productId =
+        normalized.productId ||
+        normalized.productKey
+
+      const existing =
+        row.products.find(
+          item =>
+            String(
+              item.productId
+            ) ===
+            String(productId)
+        )
+
+      if (existing) {
+        existing.count += 1
+        return
+      }
+
+      row.products.push({
+        productId,
+
+        productName:
+          normalized.productName,
+
+        name:
+          normalized.name,
+
+        sku:
+          normalized.sku,
+
+        count: 1
+      })
+    })
+  })
+
+  return Array.from(
+    reasonMap.values()
+  )
+    .map(row => ({
+      ...row,
+
+      products:
+        row.products.sort(
+          (a, b) =>
+            b.count -
+            a.count
+        )
+    }))
+    .sort(
+      (a, b) =>
+        b.count -
+        a.count
+    )
+}
+
+// ======================================================
+// VEHICLE ANALYTICS
+// ======================================================
+
+const buildVehicleAnalytics = events => {
+  const vehicleMap = new Map()
+
+  events.forEach(event => {
+    const context =
+      mergeSearchContexts(
+        event?.searchContext,
+        buildVehicleContext(event)
+      )
+
+    const hasVehicle =
+      hasVehicleContext(
+        context
+      )
+
+    if (!hasVehicle) {
+      return
+    }
+
+    const vehicleKey = [
+      context.vehicleType,
+      context.make,
+      context.model,
+      context.year
+    ]
+      .map(normalizeSearchValue)
+      .join('|')
+
+    if (!vehicleMap.has(vehicleKey)) {
+      vehicleMap.set(vehicleKey, {
+        key: vehicleKey,
+
+        vehicle:
+          [
+            context.make,
+            context.model,
+            context.year
+          ]
+            .filter(Boolean)
+            .join(' ') ||
+          'مركبة',
+
+        vehicleType:
+          context.vehicleType ||
+          'car',
+
+        make:
+          context.make ||
+          '',
+
+        model:
+          context.model ||
+          '',
+
+        year:
+          context.year ||
+          '',
+
+        requested: 0,
+
+        viewed: 0,
+
+        addedToCart: 0,
+
+        checkoutStarted: 0,
+
+        purchased: 0
+      })
+    }
+
+    const row =
+      vehicleMap.get(
+        vehicleKey
+      )
+
+    const eventProducts =
+      getEventProducts(event)
+
+    const productCount =
+      eventProducts.length
+
+    switch (event?.type) {
+      case MARKET_DEMAND_EVENT_TYPES.REQUESTED:
+        row.requested +=
+          productCount
+        break
+
+      case MARKET_DEMAND_EVENT_TYPES.VIEWED:
+        row.viewed +=
+          productCount
+        break
+
+      case MARKET_DEMAND_EVENT_TYPES.ADDED_TO_CART:
+        row.addedToCart +=
+          Math.max(
+            1,
+            productCount
+          )
+        break
+
+      case MARKET_DEMAND_EVENT_TYPES.CHECKOUT_STARTED:
+        row.checkoutStarted +=
+          Math.max(
+            1,
+            productCount
+          )
+        break
+
+      case MARKET_DEMAND_EVENT_TYPES.PURCHASED:
+        row.purchased +=
+          Math.max(
+            1,
+            productCount
+          )
+        break
+
+      default:
+        break
+    }
+  })
+
+  return Array.from(
+    vehicleMap.values()
+  )
+    .map(row => ({
+      ...row,
+
+      notPurchased:
+        Math.max(
+          0,
+          row.requested -
+            row.purchased
+        )
+    }))
+    .sort(
+      (a, b) =>
+        b.requested -
+        a.requested
+    )
+}
+
+// ======================================================
+// MAIN ANALYTICS BUILDER
+// ======================================================
+
+const buildAnalytics = events => {
+  const safeEvents =
+    Array.isArray(events)
+      ? events
+      : []
+
+  const requestedEvents =
+    safeEvents.filter(
+      event =>
+        event?.type ===
+        MARKET_DEMAND_EVENT_TYPES.REQUESTED
+    )
+
+  const viewedEvents =
+    safeEvents.filter(
+      event =>
+        event?.type ===
+        MARKET_DEMAND_EVENT_TYPES.VIEWED
+    )
+
+  const addedEvents =
+    safeEvents.filter(
+      event =>
+        event?.type ===
+        MARKET_DEMAND_EVENT_TYPES.ADDED_TO_CART
+    )
+
+  const checkoutEvents =
+    safeEvents.filter(
+      event =>
+        event?.type ===
+        MARKET_DEMAND_EVENT_TYPES.CHECKOUT_STARTED
+    )
+
+  const purchasedEvents =
+    safeEvents.filter(
+      event =>
+        event?.type ===
+        MARKET_DEMAND_EVENT_TYPES.PURCHASED
+    )
+
+  const feedbackEvents =
+    safeEvents.filter(
+      event =>
+        event?.type ===
+        MARKET_DEMAND_EVENT_TYPES.FEEDBACK
+    )
+
+  // ----------------------------------------------------
+  // PRODUCT ANALYTICS
+  // ----------------------------------------------------
+
+  const products =
+    buildProductAnalytics(
+      safeEvents
+    )
+
+  // ----------------------------------------------------
+  // PRODUCT-BASED FUNNEL
+  // ----------------------------------------------------
+  //
+  // REQUESTED:
+  // Sum unique products inside requested events.
+  //
+  // VIEWED:
+  // Sum products inside viewed events.
+  //
+  // ADDED TO CART:
+  // One event normally represents one product.
+  //
+  // PURCHASED:
+  // One event normally represents one purchased product.
+  // ----------------------------------------------------
+
+  const requested =
+    requestedEvents.reduce(
+      (total, event) =>
+        total +
+        getEventProducts(event).length,
+      0
+    )
+
+  const viewed =
+    viewedEvents.reduce(
+      (total, event) =>
+        total +
+        getEventProducts(event).length,
+      0
+    )
+
+  const addedToCart =
+    addedEvents.reduce(
+      (total, event) =>
+        total +
+        Math.max(
+          1,
+          getEventProducts(event)
+            .length
+        ),
+      0
+    )
+
+  const checkoutStarted =
+    checkoutEvents.reduce(
+      (total, event) =>
+        total +
+        Math.max(
+          1,
+          getEventProducts(event)
+            .length
+        ),
+      0
+    )
+
+  const purchased =
+    purchasedEvents.reduce(
+      (total, event) =>
+        total +
+        Math.max(
+          1,
+          getEventProducts(event)
+            .length
+        ),
+      0
+    )
+
+  // ----------------------------------------------------
+  // NOT PURCHASED
+  // ----------------------------------------------------
+  //
+  // We use visible products as the funnel opportunity:
+  //
+  // viewed - purchased
+  //
+  // This is different from product-level
+  // notPurchased, which is:
+  //
+  // requested - purchased
+  // ----------------------------------------------------
+
+  const notPurchased =
+    Math.max(
+      0,
+      viewed -
+        purchased
+    )
+
+  // ----------------------------------------------------
+  // AVAILABILITY
+  // ----------------------------------------------------
+
+  let unavailable = 0
+
+  requestedEvents.forEach(
+    event => {
+      const products =
+        getEventProducts(event)
+
+      if (
+        products.length === 0
+      ) {
+        if (
+          event?.availability &&
+          event.availability.available ===
+            false
+        ) {
+          unavailable += 1
+        }
+
+        return
+      }
+
+      products.forEach(product => {
+        const availability =
+          resolveAvailability(
+            product
+          )
+
+        if (
+          !availability.available
+        ) {
+          unavailable += 1
+        }
+      })
+    }
+  )
+
+  // ----------------------------------------------------
+  // REASONS
+  // ----------------------------------------------------
+
+  const reasonRows =
+    buildReasonAnalytics(
+      safeEvents
+    )
+
+  // ----------------------------------------------------
+  // VEHICLES
+  // ----------------------------------------------------
+
+  const vehicleAnalytics =
+    buildVehicleAnalytics(
+      safeEvents
+    )
+
+  // ----------------------------------------------------
+  // SUPPLY OPPORTUNITIES
+  // ----------------------------------------------------
+
+  const supplyOpportunities =
+    products
+      .filter(
+        item =>
+          item.requested >
+          item.purchased
+      )
+      .map(item => ({
+        ...item,
+
+        opportunityScore:
+          item.notPurchased +
+          item.unavailableRequests *
+            2
+      }))
+      .sort(
+        (a, b) =>
+          b.opportunityScore -
+          a.opportunityScore
+      )
+
+  // ----------------------------------------------------
+  // TOP REQUESTED
+  // ----------------------------------------------------
+
+  const topRequestedProducts =
+    [...products]
+      .sort(
+        (a, b) =>
+          b.requested -
+          a.requested
+      )
+      .slice(0, 20)
+
+  // ----------------------------------------------------
+  // TOP PURCHASED
+  // ----------------------------------------------------
+
+  const topPurchasedProducts =
+    [...products]
+      .sort(
+        (a, b) =>
+          b.purchased -
+          a.purchased ||
+          b.requested -
+          a.requested
+      )
+      .slice(0, 20)
+
+  // ----------------------------------------------------
+  // TOP NOT PURCHASED
+  // ----------------------------------------------------
+
+  const topNotPurchasedProducts =
+    products
+      .filter(
+        item =>
+          item.notPurchased >
+          0
+      )
+      .sort(
+        (a, b) =>
+          b.notPurchased -
+            a.notPurchased ||
+          b.requested -
+            a.requested
+      )
+      .slice(0, 20)
+
+  // ----------------------------------------------------
+  // CONVERSIONS
+  // ----------------------------------------------------
+
+  const addToCartRate =
+    viewed > 0
+      ? Number(
+          (
+            addedToCart *
+            100 /
+            viewed
+          ).toFixed(2)
+        )
+      : 0
+
+  const purchaseConversion =
+    viewed > 0
+      ? Number(
+          (
+            purchased *
+            100 /
+            viewed
+          ).toFixed(2)
+        )
+      : 0
+
+  const purchaseFromViewed =
+    viewed > 0
+      ? Number(
+          (
+            purchased *
+            100 /
+            viewed
+          ).toFixed(2)
+        )
+      : 0
+
+  const availabilityLossRate =
+    requested > 0
+      ? Number(
+          (
+            unavailable *
+            100 /
+            requested
+          ).toFixed(2)
+        )
+      : 0
+
+  return {
+    // --------------------------------------------------
+    // RAW EVENT TOTALS
+    // --------------------------------------------------
+
+    totalRequests:
+      requested,
+
+    totalViewed:
+      viewed,
+
+    totalAddedToCart:
+      addedToCart,
+
+    totalCheckoutStarted:
+      checkoutStarted,
+
+    totalPurchased:
+      purchased,
+
+    totalFeedback:
+      feedbackEvents.length,
+
+    totalEvents:
+      safeEvents.length,
+
+    // --------------------------------------------------
+    // DASHBOARD ALIASES
+    // --------------------------------------------------
+
+    requested,
+
+    viewed,
+
+    addedToCart,
+
+    checkoutStarted,
+
+    purchased,
+
+    notPurchased,
+
+    unavailable,
+
+    feedbackCount:
+      feedbackEvents.length,
+
+    // --------------------------------------------------
+    // CONVERSION
+    // --------------------------------------------------
+
+    addToCartRate,
+
+    purchaseConversion,
+
+    purchaseFromViewed,
+
+    availabilityLossRate,
+
+    // --------------------------------------------------
+    // COLLECTIONS
+    // --------------------------------------------------
+
+    products,
+
+    topRequestedProducts,
+
+    topPurchasedProducts,
+
+    topNotPurchasedProducts,
+
+    supplyOpportunities,
+
+    reasonRows,
+
+    vehicleAnalytics
+  }
+}
 
 // ======================================================
 // STORE
 // ======================================================
 
-const useMarketDemandStore = create(
+export const useMarketDemandStore =
+  create(
+    persist(
+      (set, get) => ({
+        // ------------------------------------------------
+        // STATE
+        // ------------------------------------------------
 
-  persist(
+        demandVersion:
+          DEMAND_VERSION,
 
-    (set, get) => ({
+        demandEvents: [],
 
-      // ==================================================
-      // STATE
-      // ==================================================
+        // ------------------------------------------------
+        // INTERNAL EVENT APPENDER
+        // ------------------------------------------------
 
-      demandEvents: [],
+        addDemandEvent: data => {
+          const currentEvents =
+            get().demandEvents || []
 
-      demandVersion: 3,
+          const event =
+            createDemandEvent({
+              ...data,
+              events:
+                currentEvents
+            })
 
-
-      // ==================================================
-      // COMPATIBILITY ALIAS
-      // ==================================================
-
-      get events() {
-
-        return get()
-          .demandEvents
-      },
-
-
-      // ==================================================
-      // INTERNAL MULTI-PRODUCT EVENT RECORDER
-      // ==================================================
-
-      recordProductsEvent: ({
-        type,
-        product,
-        products,
-        order,
-        availability,
-        searchContext,
-        sessionId,
-        customerId,
-        orderId,
-        quantity,
-        reason,
-        metadata
-      } = {}) => {
-
-        const items =
-          collectProducts({
-            product,
-            products,
-            order
+          set({
+            demandEvents: [
+              ...currentEvents,
+              event
+            ]
           })
 
+          return event
+        },
 
-        if (
-          items.length === 0
-        ) {
+        // ------------------------------------------------
+        // REQUEST
+        // ------------------------------------------------
 
-          console.warn(
-            '[MarketDemand] No real product supplied:',
-            type
+        recordRequest: data => {
+          const event =
+            get().addDemandEvent({
+              type:
+                MARKET_DEMAND_EVENT_TYPES.REQUESTED,
+
+              data
+            })
+
+          console.log(
+            '[MarketDemand] Request recorded:',
+            event?.products?.length ||
+              1
           )
 
-          return []
-        }
+          return event
+        },
 
+        // ------------------------------------------------
+        // VIEWED
+        // ------------------------------------------------
 
-        const existingEvents =
-          get().demandEvents
+        recordViewed: data => {
+          const event =
+            get().addDemandEvent({
+              type:
+                MARKET_DEMAND_EVENT_TYPES.VIEWED,
 
+              data
+            })
 
-        const events =
-          items.map(
-            item => {
+          console.log(
+            '[MarketDemand] Viewed recorded:',
+            event?.products?.length ||
+              1
+          )
 
-              const resolved =
-                resolveEventContext({
+          return event
+        },
 
-                  product:
-                    item,
+        // ------------------------------------------------
+        // ADD TO CART
+        // ------------------------------------------------
+
+        recordAddedToCart:
+          data => {
+            const event =
+              get().addDemandEvent({
+                type:
+                  MARKET_DEMAND_EVENT_TYPES.ADDED_TO_CART,
+
+                data
+              })
+
+            console.log(
+              '[MarketDemand] Added to cart recorded:',
+              event
+            )
+
+            return event
+          },
+
+        // ------------------------------------------------
+        // CHECKOUT
+        // ------------------------------------------------
+
+        recordCheckoutStarted:
+          data => {
+            const event =
+              get().addDemandEvent({
+                type:
+                  MARKET_DEMAND_EVENT_TYPES.CHECKOUT_STARTED,
+
+                data
+              })
+
+            console.log(
+              '[MarketDemand] Checkout started recorded:',
+              event
+            )
+
+            return event
+          },
+
+        // ------------------------------------------------
+        // PURCHASE
+        // ------------------------------------------------
+
+        recordPurchase:
+          data => {
+            const event =
+              get().addDemandEvent({
+                type:
+                  MARKET_DEMAND_EVENT_TYPES.PURCHASED,
+
+                data
+              })
+
+            console.log(
+              '[MarketDemand] Purchase recorded:',
+              event
+            )
+
+            return event
+          },
+
+        // ------------------------------------------------
+        // FEEDBACK
+        // ------------------------------------------------
+
+        recordFeedback:
+          ({
+            product,
+            products,
+            reason,
+            note = '',
+            searchContext,
+            searchType,
+            searchQuery,
+            query,
+            metadata = {},
+            ...rest
+          } = {}) => {
+            const event =
+              get().addDemandEvent({
+                type:
+                  MARKET_DEMAND_EVENT_TYPES.FEEDBACK,
+
+                data: {
+                  product,
+                  products,
+
+                  reason,
+
+                  note,
 
                   searchContext,
 
-                  order,
+                  searchType,
 
-                  existingEvents,
+                  searchQuery,
 
-                  sessionId
-                })
+                  query,
 
+                  metadata,
 
-              const itemContext =
-                resolved.context
+                  feedback: {
+                    reason,
+                    note
+                  },
 
-
-              return createDemandEvent({
-
-                type,
-
-                product:
-                  item,
-
-                availability:
-                  availability ??
-                  item.isAvailable ??
-                  item.available,
-
-                searchContext:
-                  itemContext,
-
-                searchContextSource:
-                  resolved.source,
-
-                sessionId,
-
-                customerId,
-
-                orderId:
-                  orderId ??
-                  order?.id ??
-                  order?.orderId ??
-                  null,
-
-                quantity:
-                  item.quantity ??
-                  quantity ??
-                  1,
-
-                reason,
-
-                metadata: {
-
-                  ...(metadata || {}),
-
-                  productSource:
-                    'real-product'
+                  ...rest
                 }
               })
-            }
-          )
-
-
-        set(
-          state => ({
-
-            demandEvents: [
-
-              ...state.demandEvents,
-
-              ...events
-            ]
-          })
-        )
-
-
-        // ==================================================
-        // DEBUG — ACTUAL STORED EVENT CONTEXT
-        // ==================================================
-        //
-        // This does NOT modify event logic.
-        // It only exposes the exact data that was stored.
-        //
-        // ==================================================
-
-        events.forEach(
-          event => {
 
             console.log(
-              '[MarketDemand][DEBUG] EVENT STORED',
-              {
-                type:
-                  event.type,
-
-                productId:
-                  event.productId,
-
-                productName:
-                  event.productName,
-
-                searchType:
-                  event.searchType,
-
-                searchQuery:
-                  event.searchQuery,
-
-                vehicleType:
-                  event.vehicleType,
-
-                make:
-                  event.make,
-
-                model:
-                  event.model,
-
-                modelFromSearch:
-                  event.modelFromSearch,
-
-                year:
-                  event.year,
-
-                tireSize:
-                  event.tireSize,
-
-                capacity:
-                  event.capacity,
-
-                viscosity:
-                  event.viscosity,
-
-                hasVehicleContext:
-                  event.metadata?.hasVehicleContext,
-
-                vehicleContextSource:
-                  event.metadata?.vehicleContextSource,
-
-                sessionId:
-                  event.sessionId,
-
-                orderId:
-                  event.orderId,
-
-                eventId:
-                  event.id
-              }
-            )
-          }
-        )
-
-
-        return events
-      },
-
-
-      // ==================================================
-      // GENERIC EVENT
-      // ==================================================
-
-      recordEvent: ({
-        type,
-        product,
-        products,
-        order,
-        availability,
-        searchContext,
-        sessionId,
-        customerId,
-        orderId,
-        quantity = 1,
-        reason,
-        metadata
-      } = {}) => {
-
-        return get()
-          .recordProductsEvent({
-
-            type,
-
-            product,
-
-            products,
-
-            order,
-
-            availability,
-
-            searchContext,
-
-            sessionId,
-
-            customerId,
-
-            orderId,
-
-            quantity,
-
-            reason,
-
-            metadata
-          })
-      },
-
-
-      // ==================================================
-      // REQUEST
-      // ==================================================
-
-      recordRequest: ({
-        product,
-        products = [],
-        availability,
-        searchContext,
-        sessionId,
-        customerId,
-        quantity = 1,
-        metadata,
-        query,
-        searchType
-      } = {}) => {
-
-        const context =
-          normalizeSearchContext({
-
-            ...(searchContext || {}),
-
-            searchQuery:
-              searchContext?.searchQuery ??
-              query ??
-              '',
-
-            searchType:
-              searchContext?.searchType ??
-              searchType ??
-              ''
-          })
-
-
-        const events =
-          get()
-            .recordProductsEvent({
-
-              type:
-                MARKET_DEMAND_EVENTS.REQUESTED,
-
-              product,
-
-              products,
-
-              availability,
-
-              searchContext:
-                context,
-
-              sessionId,
-
-              customerId,
-
-              quantity,
-
-              metadata
-            })
-
-
-        console.log(
-          '[MarketDemand] Request recorded:',
-          events.length
-        )
-
-
-        return events
-      },
-
-
-      // ==================================================
-      // VIEWED
-      // ==================================================
-
-      recordViewed: ({
-        product,
-        products = [],
-        searchContext,
-        sessionId,
-        customerId,
-        metadata
-      } = {}) => {
-
-        const events =
-          get()
-            .recordProductsEvent({
-
-              type:
-                MARKET_DEMAND_EVENTS.VIEWED,
-
-              product,
-
-              products,
-
-              searchContext,
-
-              sessionId,
-
-              customerId,
-
-              metadata
-            })
-
-
-        console.log(
-          '[MarketDemand] Viewed recorded:',
-          events.length
-        )
-
-
-        return events
-      },
-
-
-      // ==================================================
-      // ADDED TO CART
-      // ==================================================
-
-      recordAddedToCart: ({
-        product,
-        products = [],
-        searchContext,
-        sessionId,
-        customerId,
-        quantity = 1,
-        metadata
-      } = {}) => {
-
-        const events =
-          get()
-            .recordProductsEvent({
-
-              type:
-                MARKET_DEMAND_EVENTS.ADDED_TO_CART,
-
-              product,
-
-              products,
-
-              searchContext,
-
-              sessionId,
-
-              customerId,
-
-              quantity,
-
-              metadata
-            })
-
-
-        console.log(
-          '[MarketDemand] Added to cart:',
-          events.length
-        )
-
-
-        return events
-      },
-
-
-      // ==================================================
-      // CHECKOUT STARTED
-      // ==================================================
-
-      recordCheckoutStarted: ({
-        product,
-        products = [],
-        searchContext,
-        sessionId,
-        customerId,
-        metadata
-      } = {}) => {
-
-        const events =
-          get()
-            .recordProductsEvent({
-
-              type:
-                MARKET_DEMAND_EVENTS.CHECKOUT_STARTED,
-
-              product,
-
-              products,
-
-              searchContext,
-
-              sessionId,
-
-              customerId,
-
-              metadata
-            })
-
-
-        console.log(
-          '[MarketDemand] Checkout started:',
-          events.length
-        )
-
-
-        return events
-      },
-
-
-      // ==================================================
-      // PURCHASE
-      // ==================================================
-
-      recordPurchase: ({
-        product,
-        products = [],
-        order,
-        searchContext,
-        sessionId,
-        customerId,
-        orderId,
-        quantity,
-        metadata
-      } = {}) => {
-
-        const orderItems =
-          Array.isArray(
-            products
-          ) &&
-          products.length > 0
-
-            ? products
-
-            : Array.isArray(
-                order?.items
-              )
-
-              ? order.items
-
-              : []
-
-
-        const orderContext =
-          mergeSearchContexts(
-
-            order?.searchContext,
-
-            order?.vehicleSearchContext,
-
-            {
-              vehicleType:
-                order?.vehicleType ??
-                order?.vehicle?.type ??
-                '',
-
-              make:
-                order?.make ??
-                order?.vehicle?.make ??
-                '',
-
-              model:
-                order?.model ??
-                order?.vehicle?.model ??
-                '',
-
-              modelFromSearch:
-                order?.modelFromSearch ??
-                order?.model ??
-                order?.vehicle?.model ??
-                '',
-
-              year:
-                order?.year ??
-                order?.vehicle?.year ??
-                '',
-
-              searchType:
-                order?.searchType ??
-                '',
-
-              searchQuery:
-                order?.searchQuery ??
-                ''
-            },
-
-            searchContext
-          )
-
-
-        const events =
-          get()
-            .recordProductsEvent({
-
-              type:
-                MARKET_DEMAND_EVENTS.PURCHASED,
-
-              product,
-
-              products:
-                orderItems,
-
-              order,
-
-              searchContext:
-                orderContext,
-
-              sessionId,
-
-              customerId,
-
-              orderId:
-                orderId ??
-                order?.id ??
-                order?.orderId ??
-                null,
-
-              quantity,
-
-              metadata: {
-
-                ...(metadata || {}),
-
-                source:
-                  metadata?.source ??
-                  'order'
-              }
-            })
-
-
-        console.log(
-          '[MarketDemand] Purchase recorded:',
-          events.length
-        )
-
-
-        return events
-      },
-
-
-      // ==================================================
-      // NOT ADDED TO CART
-      // ==================================================
-
-      recordNotAddedToCart: ({
-        product,
-        products = [],
-        searchContext,
-        sessionId,
-        customerId,
-        reason,
-        metadata
-      } = {}) => {
-
-        return get()
-          .recordProductsEvent({
-
-            type:
-              MARKET_DEMAND_EVENTS.NOT_ADDED_TO_CART,
-
-            product,
-
-            products,
-
-            searchContext,
-
-            sessionId,
-
-            customerId,
-
-            reason,
-
-            metadata
-          })
-      },
-
-
-      // ==================================================
-      // CART ABANDONED
-      // ==================================================
-
-      recordCartAbandoned: ({
-        product,
-        products = [],
-        searchContext,
-        sessionId,
-        customerId,
-        reason,
-        metadata
-      } = {}) => {
-
-        return get()
-          .recordProductsEvent({
-
-            type:
-              MARKET_DEMAND_EVENTS.CART_ABANDONED,
-
-            product,
-
-            products,
-
-            searchContext,
-
-            sessionId,
-
-            customerId,
-
-            reason,
-
-            metadata
-          })
-      },
-
-
-      // ==================================================
-      // PURCHASE ABANDONED
-      // ==================================================
-
-      recordPurchaseAbandoned: ({
-        product,
-        products = [],
-        searchContext,
-        sessionId,
-        customerId,
-        reason,
-        metadata
-      } = {}) => {
-
-        return get()
-          .recordProductsEvent({
-
-            type:
-              MARKET_DEMAND_EVENTS.PURCHASE_ABANDONED,
-
-            product,
-
-            products,
-
-            searchContext,
-
-            sessionId,
-
-            customerId,
-
-            reason,
-
-            metadata
-          })
-      },
-
-
-      // ==================================================
-      // CUSTOMER FEEDBACK
-      // ==================================================
-
-      recordFeedback: ({
-        product,
-        products = [],
-        searchContext,
-        sessionId,
-        customerId,
-        reason,
-        metadata
-      } = {}) => {
-
-        if (
-          !reason
-        ) {
-          return []
-        }
-
-
-        return get()
-          .recordProductsEvent({
-
-            type:
-              MARKET_DEMAND_EVENTS.FEEDBACK,
-
-            product,
-
-            products,
-
-            searchContext,
-
-            sessionId,
-
-            customerId,
-
-            reason,
-
-            metadata
-          })
-      },
-
-
-      // ==================================================
-      // PRODUCT EVENTS
-      // ==================================================
-
-      getProductEvents: productId => {
-
-        const wanted =
-          String(
-            productId ?? ''
-          )
-
-
-        return get()
-          .demandEvents
-          .filter(
-            event =>
-              String(
-                event.productId ?? ''
-              ) === wanted
-          )
-      },
-
-
-      // ==================================================
-      // PRODUCT ANALYTICS
-      // ==================================================
-
-      getProductAnalytics: () => {
-
-        const groups = {}
-
-
-        for (
-          const event
-          of get().demandEvents
-        ) {
-
-          const key =
-            event.productId
-              ? String(
-                  event.productId
-                )
-              : normalizeText(
-                  event.productName
-                )
-
-
-          if (!key) {
-            continue
-          }
-
-
-          if (!groups[key]) {
-
-            groups[key] = {
-
-              productId:
-                event.productId ??
-                null,
-
-              productName:
-                event.productName ||
-                'منتج',
-
-              requested:
-                0,
-
-              viewed:
-                0,
-
-              addedToCart:
-                0,
-
-              checkoutStarted:
-                0,
-
-              purchased:
-                0,
-
-              notAddedToCart:
-                0,
-
-              cartAbandoned:
-                0,
-
-              purchaseAbandoned:
-                0,
-
-              unavailableRequests:
-                0,
-
-              availableRequests:
-                0,
-
-              totalQuantityPurchased:
-                0,
-
-              revenue:
-                0,
-
-              reasons: {},
-
-              vehicleContexts: {}
-            }
-          }
-
-
-          const item =
-            groups[key]
-
-
-          switch (
-            event.type
-          ) {
-
-            case MARKET_DEMAND_EVENTS.REQUESTED:
-
-              item.requested += 1
-
-              if (
-                event.availability
-              ) {
-
-                item.availableRequests += 1
-
-              } else {
-
-                item.unavailableRequests += 1
-              }
-
-              break
-
-
-            case MARKET_DEMAND_EVENTS.VIEWED:
-
-              item.viewed += 1
-
-              break
-
-
-            case MARKET_DEMAND_EVENTS.ADDED_TO_CART:
-
-              item.addedToCart += 1
-
-              break
-
-
-            case MARKET_DEMAND_EVENTS.CHECKOUT_STARTED:
-
-              item.checkoutStarted += 1
-
-              break
-
-
-            case MARKET_DEMAND_EVENTS.PURCHASED:
-
-              item.purchased += 1
-
-              item.totalQuantityPurchased +=
-                Number(
-                  event.quantity || 1
-                )
-
-              item.revenue +=
-                Number(
-                  event.product?.price || 0
-                ) *
-                Number(
-                  event.quantity || 1
-                )
-
-              break
-
-
-            case MARKET_DEMAND_EVENTS.NOT_ADDED_TO_CART:
-
-              item.notAddedToCart += 1
-
-              break
-
-
-            case MARKET_DEMAND_EVENTS.CART_ABANDONED:
-
-              item.cartAbandoned += 1
-
-              break
-
-
-            case MARKET_DEMAND_EVENTS.PURCHASE_ABANDONED:
-
-              item.purchaseAbandoned += 1
-
-              break
-
-
-            case MARKET_DEMAND_EVENTS.FEEDBACK:
-
-              break
-
-
-            default:
-
-              break
-          }
-
-
-          if (
-            event.reason
-          ) {
-
-            item.reasons[
-              event.reason
-            ] =
-              (
-                item.reasons[
-                  event.reason
-                ] || 0
-              ) + 1
-          }
-
-
-          const context =
-            event.searchContext ||
-            {}
-
-
-          const vehicleKey =
-            [
-              context.vehicleType,
-              context.make,
-              context.modelFromSearch ||
-                context.model,
-              context.year
-            ]
-              .map(
-                value =>
-                  String(
-                    value ?? ''
-                  ).trim()
-              )
-              .filter(Boolean)
-              .join(' ')
-
-
-          if (
-            vehicleKey
-          ) {
-
-            item.vehicleContexts[
-              vehicleKey
-            ] =
-              (
-                item.vehicleContexts[
-                  vehicleKey
-                ] || 0
-              ) + 1
-          }
-        }
-
-
-        return Object.values(
-          groups
-        )
-          .map(
-            item => ({
-
-              ...item,
-
-              purchaseConversionRate:
-                item.requested > 0
-                  ? (
-                      item.purchased /
-                      item.requested
-                    ) * 100
-                  : 0,
-
-              addToCartRate:
-                item.requested > 0
-                  ? (
-                      item.addedToCart /
-                      item.requested
-                    ) * 100
-                  : 0,
-
-              viewRate:
-                item.requested > 0
-                  ? (
-                      item.viewed /
-                      item.requested
-                    ) * 100
-                  : 0
-            })
-          )
-      },
-
-
-      // ==================================================
-      // SUMMARY
-      // ==================================================
-
-      getSummary: () => {
-
-        const events =
-          get().demandEvents
-
-
-        let totalRequests = 0
-        let totalViews = 0
-        let totalAddedToCart = 0
-        let totalCheckoutStarted = 0
-        let totalPurchased = 0
-        let totalNotPurchased = 0
-        let totalUnavailableRequests = 0
-        let totalAvailableRequests = 0
-        let totalRevenue = 0
-
-
-        for (
-          const event
-          of events
-        ) {
-
-          switch (
-            event.type
-          ) {
-
-            case MARKET_DEMAND_EVENTS.REQUESTED:
-
-              totalRequests += 1
-
-              if (
-                event.availability
-              ) {
-
-                totalAvailableRequests += 1
-
-              } else {
-
-                totalUnavailableRequests += 1
-              }
-
-              break
-
-
-            case MARKET_DEMAND_EVENTS.VIEWED:
-
-              totalViews += 1
-
-              break
-
-
-            case MARKET_DEMAND_EVENTS.ADDED_TO_CART:
-
-              totalAddedToCart += 1
-
-              break
-
-
-            case MARKET_DEMAND_EVENTS.CHECKOUT_STARTED:
-
-              totalCheckoutStarted += 1
-
-              break
-
-
-            case MARKET_DEMAND_EVENTS.PURCHASED:
-
-              totalPurchased += 1
-
-              totalRevenue +=
-                Number(
-                  event.product?.price || 0
-                ) *
-                Number(
-                  event.quantity || 1
-                )
-
-              break
-
-
-            default:
-
-              break
-          }
-        }
-
-
-        totalNotPurchased =
-          Math.max(
-            0,
-            totalRequests -
-            totalPurchased
-          )
-
-
-        const totalProducts =
-          get()
-            .getProductAnalytics()
-            .length
-
-
-        const purchaseConversionRate =
-          totalRequests > 0
-            ? (
-                totalPurchased /
-                totalRequests
-              ) * 100
-            : 0
-
-
-        const addToCartRate =
-          totalRequests > 0
-            ? (
-                totalAddedToCart /
-                totalRequests
-              ) * 100
-            : 0
-
-
-        return {
-
-          totalProducts,
-
-          totalRequests,
-
-          totalRequested:
-            totalRequests,
-
-          totalViews,
-
-          totalViewed:
-            totalViews,
-
-          totalAddedToCart,
-
-          totalCheckoutStarted,
-
-          totalPurchased,
-
-          totalNotPurchased,
-
-          totalUnavailableRequests,
-
-          totalUnavailable:
-            totalUnavailableRequests,
-
-          totalAvailableRequests,
-
-          totalRevenue,
-
-          purchaseConversionRate,
-
-          conversionRate:
-            purchaseConversionRate,
-
-          addToCartRate,
-
-          cartConversionRate:
-            addToCartRate
-        }
-      },
-
-
-      // ==================================================
-      // TOP REQUESTED
-      // ==================================================
-
-      getTopRequestedProducts: (
-        limit = 10
-      ) => {
-
-        return get()
-          .getProductAnalytics()
-          .sort(
-            (a, b) =>
-              b.requested -
-              a.requested
-          )
-          .slice(
-            0,
-            limit
-          )
-      },
-
-
-      // ==================================================
-      // TOP PURCHASED
-      // ==================================================
-
-      getTopPurchasedProducts: (
-        limit = 10
-      ) => {
-
-        return get()
-          .getProductAnalytics()
-          .sort(
-            (a, b) =>
-              b.purchased -
-              a.purchased
-          )
-          .slice(
-            0,
-            limit
-          )
-      },
-
-
-      // ==================================================
-      // SUPPLY OPPORTUNITIES
-      // ==================================================
-
-      getSupplyOpportunities: (
-        limit = 10
-      ) => {
-
-        return get()
-          .getProductAnalytics()
-          .filter(
-            item =>
-              item.requested > 0 &&
-              (
-                item.unavailableRequests > 0 ||
-                item.purchased === 0
-              )
-          )
-          .map(
-            item => ({
-
-              ...item,
-
-              demandScore:
-                item.requested +
-                (
-                  item.unavailableRequests *
-                  2
-                ) +
-                (
-                  item.purchased *
-                  3
-                ),
-
-              supplyRisk:
-                item.unavailableRequests >
-                0
-                  ? 'high'
-                  : 'medium'
-            })
-          )
-          .sort(
-            (a, b) =>
-              b.demandScore -
-              a.demandScore
-          )
-          .slice(
-            0,
-            limit
-          )
-      },
-
-
-      // ==================================================
-      // TOP NOT PURCHASED
-      // ==================================================
-
-      getTopNotPurchasedProducts: (
-        limit = 10
-      ) => {
-
-        return get()
-          .getProductAnalytics()
-          .map(
-            item => ({
-
-              ...item,
-
-              notPurchased:
-                Math.max(
-                  0,
-                  item.requested -
-                  item.purchased
-                )
-            })
-          )
-          .filter(
-            item =>
-              item.notPurchased > 0
-          )
-          .sort(
-            (a, b) =>
-              b.notPurchased -
-              a.notPurchased
-          )
-          .slice(
-            0,
-            limit
-          )
-      },
-
-
-      // ==================================================
-      // REASON ANALYTICS
-      // ==================================================
-
-      getReasonAnalytics: () => {
-
-        const reasons = {}
-
-
-        for (
-          const event
-          of get().demandEvents
-        ) {
-
-          if (
-            !event.reason
-          ) {
-            continue
-          }
-
-
-          reasons[
-            event.reason
-          ] =
-            (
-              reasons[
-                event.reason
-              ] || 0
-            ) + 1
-        }
-
-
-        return Object.entries(
-          reasons
-        )
-          .map(
-            ([reason, count]) => ({
-
-              reason,
-
-              label:
-                MARKET_DEMAND_REASON_LABELS[
-                  reason
-                ] ||
-                reason,
-
-              count
-            })
-          )
-          .sort(
-            (a, b) =>
-              b.count -
-              a.count
-          )
-      },
-
-
-      // ==================================================
-      // VEHICLE ANALYTICS
-      // ==================================================
-
-      getVehicleAnalytics: () => {
-
-        const vehicles = {}
-
-
-        for (
-          const event
-          of get().demandEvents
-        ) {
-
-          const context =
-            normalizeSearchContext(
-
-              mergeSearchContexts(
-
-                event.searchContext,
-
-                {
-                  vehicleType:
-                    event.vehicleType,
-
-                  make:
-                    event.make,
-
-                  model:
-                    event.modelFromSearch ??
-                    event.model,
-
-                  modelFromSearch:
-                    event.modelFromSearch ??
-                    event.model,
-
-                  year:
-                    event.year
-                }
-              )
+              '[MarketDemand] Feedback recorded:',
+              event?.products?.length ||
+                1
             )
 
-
-          const vehicleType =
-            String(
-              context.vehicleType ??
-              ''
-            ).trim()
-
-
-          const make =
-            String(
-              context.make ??
-              ''
-            ).trim()
-
-
-          const model =
-            String(
-              context.modelFromSearch ??
-              context.model ??
-              ''
-            ).trim()
-
-
-          const year =
-            String(
-              context.year ??
-              ''
-            ).trim()
-
-
-          const vehicleKey =
-            [
-              vehicleType,
-              make,
-              model,
-              year
-            ]
-              .filter(Boolean)
-              .join(' ')
-
-
-          if (
-            !vehicleKey
-          ) {
-            continue
-          }
-
-
-          if (
-            !vehicles[
-              vehicleKey
-            ]
-          ) {
-
-            vehicles[
-              vehicleKey
-            ] = {
-
-              vehicle:
-                vehicleKey,
-
-              vehicleType,
-
-              make,
-
-              model,
-
-              year,
-
-              requested:
-                0,
-
-              viewed:
-                0,
-
-              addedToCart:
-                0,
-
-              checkoutStarted:
-                0,
-
-              purchased:
-                0,
-
-              unavailable:
-                0,
-
-              notAddedToCart:
-                0,
-
-              cartAbandoned:
-                0,
-
-              purchaseAbandoned:
-                0,
-
-              products: {},
-
-              productCount:
-                0
-            }
-          }
-
-
-          const item =
-            vehicles[
-              vehicleKey
-            ]
-
-
-          switch (
-            event.type
-          ) {
-
-            case MARKET_DEMAND_EVENTS.REQUESTED:
-
-              item.requested += 1
-
-              if (
-                !event.availability
-              ) {
-
-                item.unavailable += 1
-              }
-
-              break
-
-
-            case MARKET_DEMAND_EVENTS.VIEWED:
-
-              item.viewed += 1
-
-              break
-
-
-            case MARKET_DEMAND_EVENTS.ADDED_TO_CART:
-
-              item.addedToCart += 1
-
-              break
-
-
-            case MARKET_DEMAND_EVENTS.CHECKOUT_STARTED:
-
-              item.checkoutStarted += 1
-
-              break
-
-
-            case MARKET_DEMAND_EVENTS.PURCHASED:
-
-              item.purchased += 1
-
-              break
-
-
-            case MARKET_DEMAND_EVENTS.NOT_ADDED_TO_CART:
-
-              item.notAddedToCart += 1
-
-              break
-
-
-            case MARKET_DEMAND_EVENTS.CART_ABANDONED:
-
-              item.cartAbandoned += 1
-
-              break
-
-
-            case MARKET_DEMAND_EVENTS.PURCHASE_ABANDONED:
-
-              item.purchaseAbandoned += 1
-
-              break
-
-
-            default:
-
-              break
-          }
-
-
-          // ----------------------------------------------
-          // PRODUCTS FOR THIS VEHICLE
-          // ----------------------------------------------
-
-          const productKey =
-            event.productId
-              ? String(
-                  event.productId
-                )
-              : normalizeText(
-                  event.productName
-                )
-
-
-          if (
-            productKey
-          ) {
-
-            if (
-              !item.products[
-                productKey
-              ]
-            ) {
-
-              item.products[
-                productKey
-              ] = {
-
-                productId:
-                  event.productId ??
-                  null,
-
-                productName:
-                  event.productName ||
-                  'منتج',
-
-                requested:
-                  0,
-
-                viewed:
-                  0,
-
-                addedToCart:
-                  0,
-
-                purchased:
-                  0
-              }
-            }
-
-
-            const product =
-              item.products[
-                productKey
-              ]
-
-
-            switch (
-              event.type
-            ) {
-
-              case MARKET_DEMAND_EVENTS.REQUESTED:
-
-                product.requested += 1
-
-                break
-
-
-              case MARKET_DEMAND_EVENTS.VIEWED:
-
-                product.viewed += 1
-
-                break
-
-
-              case MARKET_DEMAND_EVENTS.ADDED_TO_CART:
-
-                product.addedToCart += 1
-
-                break
-
-
-              case MARKET_DEMAND_EVENTS.PURCHASED:
-
-                product.purchased += 1
-
-                break
-
-
-              default:
-
-                break
-            }
-          }
-        }
-
-
-        return Object.values(
-          vehicles
-        )
-          .map(
-            item => {
-
-              const products =
-                Object.values(
-                  item.products
-                )
-                  .map(
-                    product => ({
-
-                      ...product,
-
-                      purchaseConversionRate:
-                        product.requested > 0
-                          ? (
-                              product.purchased /
-                              product.requested
-                            ) * 100
-                          : 0
-                    })
-                  )
-                  .sort(
-                    (a, b) =>
-                      b.requested -
-                      a.requested
-                  )
-
-
-              return {
-
-                ...item,
-
-                products,
-
-                productCount:
-                  products.length,
-
-                purchaseConversionRate:
-                  item.requested > 0
-                    ? (
-                        item.purchased /
-                        item.requested
-                      ) * 100
-                    : 0,
-
-                addToCartRate:
-                  item.requested > 0
-                    ? (
-                        item.addedToCart /
-                        item.requested
-                      ) * 100
-                    : 0
-              }
-            }
-          )
-          .sort(
-            (a, b) =>
-              b.requested -
-              a.requested
-          )
-      },
-
-
-      // ==================================================
-      // DATE RANGE
-      // ==================================================
-
-      getAnalyticsByDateRange: (
-        startDate,
-        endDate
-      ) => {
-
-        const start =
-          startDate
-            ? new Date(
-                startDate
-              )
-            : null
-
-
-        const end =
-          endDate
-            ? new Date(
-                endDate
-              )
-            : null
-
-
-        const filtered =
-          get()
-            .demandEvents
-            .filter(
-              event => {
-
-                const date =
-                  new Date(
-                    event.timestamp
-                  )
-
-
-                if (
-                  start &&
-                  date < start
-                ) {
-                  return false
-                }
-
-
-                if (
-                  end &&
-                  date > end
-                ) {
-                  return false
-                }
-
-
-                return true
-              }
-            )
-
-
-        const analytics =
-          get()
-            .getProductAnalytics()
-
-
-        return {
-
-          events:
-            filtered,
-
-          totalEvents:
-            filtered.length,
-
-          products:
-            Object.values(
-              filtered.reduce(
-                (
-                  groups,
-                  event
-                ) => {
-
-                  const key =
-                    event.productId
-                      ? String(
-                          event.productId
-                        )
-                      : normalizeText(
-                          event.productName
-                        )
-
-
-                  if (
-                    !key
-                  ) {
-                    return groups
-                  }
-
-
-                  if (
-                    !groups[key]
-                  ) {
-
-                    groups[key] = {
-
-                      productId:
-                        event.productId ??
-                        null,
-
-                      productName:
-                        event.productName ||
-                        'منتج',
-
-                      requested:
-                        0,
-
-                      viewed:
-                        0,
-
-                      addedToCart:
-                        0,
-
-                      purchased:
-                        0
-                    }
-                  }
-
-
-                  switch (
-                    event.type
-                  ) {
-
-                    case MARKET_DEMAND_EVENTS.REQUESTED:
-
-                      groups[key]
-                        .requested += 1
-
-                      break
-
-
-                    case MARKET_DEMAND_EVENTS.VIEWED:
-
-                      groups[key]
-                        .viewed += 1
-
-                      break
-
-
-                    case MARKET_DEMAND_EVENTS.ADDED_TO_CART:
-
-                      groups[key]
-                        .addedToCart += 1
-
-                      break
-
-
-                    case MARKET_DEMAND_EVENTS.PURCHASED:
-
-                      groups[key]
-                        .purchased += 1
-
-                      break
-
-
-                    default:
-
-                      break
-                  }
-
-
-                  return groups
-                },
-                {}
-              )
-            ),
-
-          summary: {
-
-            requested:
-              filtered.filter(
-                e =>
-                  e.type ===
-                  MARKET_DEMAND_EVENTS.REQUESTED
-              ).length,
-
-            viewed:
-              filtered.filter(
-                e =>
-                  e.type ===
-                  MARKET_DEMAND_EVENTS.VIEWED
-              ).length,
-
-            addedToCart:
-              filtered.filter(
-                e =>
-                  e.type ===
-                  MARKET_DEMAND_EVENTS.ADDED_TO_CART
-              ).length,
-
-            purchased:
-              filtered.filter(
-                e =>
-                  e.type ===
-                  MARKET_DEMAND_EVENTS.PURCHASED
-              ).length
+            return event
           },
 
-          analytics
-        }
-      },
+        // ------------------------------------------------
+        // GENERIC SEARCH RESULTS
+        // ------------------------------------------------
 
+        recordSearchResults:
+          ({
+            results = [],
+            searchType = '',
+            searchQuery = '',
+            query = '',
+            searchContext = {},
+            metadata = {}
+          } = {}) => {
+            if (
+              !Array.isArray(
+                results
+              ) ||
+              results.length === 0
+            ) {
+              return []
+            }
 
-      // ==================================================
-      // CLEAR
-      // ==================================================
+            return results.map(
+              product =>
+                get().recordViewed({
+                  product,
 
-      clearDemandData: () => {
+                  searchType,
 
-        set({
-          demandEvents: []
-        })
-      },
+                  searchQuery:
+                    searchQuery ||
+                    query,
 
+                  query:
+                    searchQuery ||
+                    query,
 
-      // ==================================================
-      // EXPORT
-      // ==================================================
+                  searchContext,
 
-      exportDemandData: () => {
+                  metadata
+                })
+            )
+          },
 
-        return JSON.stringify(
-          get().demandEvents,
-          null,
-          2
-        )
+        // ------------------------------------------------
+        // OLD API COMPATIBILITY
+        // ------------------------------------------------
+
+        markAddedToCart:
+          product =>
+            get().recordAddedToCart({
+              product
+            }),
+
+        markPurchased:
+          product =>
+            get().recordPurchase({
+              product
+            }),
+
+        // ------------------------------------------------
+        // ANALYTICS
+        // ------------------------------------------------
+
+        getAnalytics: () =>
+          buildAnalytics(
+            get().demandEvents
+          ),
+
+        getSummary: () => {
+          const analytics =
+            buildAnalytics(
+              get().demandEvents
+            )
+
+          return {
+            totalOrders:
+              analytics.totalRequests,
+
+            totalRequested:
+              analytics.totalRequests,
+
+            totalViewed:
+              analytics.totalViewed,
+
+            totalAddedToCart:
+              analytics.totalAddedToCart,
+
+            totalPurchased:
+              analytics.totalPurchased,
+
+            notPurchased:
+              analytics.notPurchased,
+
+            unavailable:
+              analytics.unavailable,
+
+            totalEvents:
+              analytics.totalEvents,
+
+            purchaseConversion:
+              analytics.purchaseConversion,
+
+            addToCartRate:
+              analytics.addToCartRate,
+
+            availabilityLossRate:
+              analytics.availabilityLossRate
+          }
+        },
+
+        // ------------------------------------------------
+        // PRODUCT ANALYTICS
+        // ------------------------------------------------
+
+        getProductAnalytics:
+          () =>
+            buildProductAnalytics(
+              get().demandEvents
+            ),
+
+        // ------------------------------------------------
+        // TOP REQUESTED
+        // ------------------------------------------------
+
+        getTopRequestedProducts:
+          limit => {
+            const products =
+              buildProductAnalytics(
+                get().demandEvents
+              )
+
+            return products
+              .sort(
+                (a, b) =>
+                  b.requested -
+                  a.requested
+              )
+              .slice(
+                0,
+                Number(limit) || 20
+              )
+          },
+
+        // ------------------------------------------------
+        // TOP PURCHASED
+        // ------------------------------------------------
+
+        getTopPurchasedProducts:
+          limit => {
+            const products =
+              buildProductAnalytics(
+                get().demandEvents
+              )
+
+            return products
+              .sort(
+                (a, b) =>
+                  b.purchased -
+                    a.purchased ||
+                  b.requested -
+                    a.requested
+              )
+              .slice(
+                0,
+                Number(limit) || 20
+              )
+          },
+
+        // ------------------------------------------------
+        // TOP NOT PURCHASED
+        // ------------------------------------------------
+
+        getTopNotPurchasedProducts:
+          limit => {
+            const products =
+              buildProductAnalytics(
+                get().demandEvents
+              )
+
+            return products
+              .filter(
+                item =>
+                  item.notPurchased >
+                  0
+              )
+              .sort(
+                (a, b) =>
+                  b.notPurchased -
+                    a.notPurchased ||
+                  b.requested -
+                    a.requested
+              )
+              .slice(
+                0,
+                Number(limit) || 20
+              )
+          },
+
+        // ------------------------------------------------
+        // SUPPLY OPPORTUNITIES
+        // ------------------------------------------------
+
+        getSupplyOpportunities:
+          limit => {
+            const products =
+              buildProductAnalytics(
+                get().demandEvents
+              )
+
+            return products
+              .filter(
+                item =>
+                  item.requested >
+                  item.purchased
+              )
+              .map(item => ({
+                ...item,
+
+                opportunityScore:
+                  item.notPurchased +
+                  item.unavailableRequests *
+                    2
+              }))
+              .sort(
+                (a, b) =>
+                  b.opportunityScore -
+                  a.opportunityScore
+              )
+              .slice(
+                0,
+                Number(limit) || 20
+              )
+          },
+
+        // ------------------------------------------------
+        // REASONS
+        // ------------------------------------------------
+
+        getReasonAnalytics:
+          () =>
+            buildReasonAnalytics(
+              get().demandEvents
+            ),
+
+        // ------------------------------------------------
+        // VEHICLES
+        // ------------------------------------------------
+
+        getVehicleAnalytics:
+          () =>
+            buildVehicleAnalytics(
+              get().demandEvents
+            ),
+
+        // ------------------------------------------------
+        // DATE RANGE
+        // ------------------------------------------------
+
+        getDateRangeAnalytics:
+          range => {
+            const events =
+              filterEventsByRange(
+                get().demandEvents,
+                range
+              )
+
+            return buildAnalytics(
+              events
+            )
+          },
+
+        // ------------------------------------------------
+        // CLEAR
+        // ------------------------------------------------
+        //
+        // Explicit administrative action only.
+        // Analytics fixes NEVER call this.
+        // ------------------------------------------------
+
+        clearDemandEvents:
+          () => {
+            set({
+              demandEvents: []
+            })
+          },
+
+        clearRequests:
+          () => {
+            set({
+              demandEvents: []
+            })
+          }
+      }),
+
+      {
+        name:
+          'elola-market-demand-v1',
+
+        partialize:
+          state => ({
+            demandEvents:
+              state.demandEvents,
+
+            demandVersion:
+              state.demandVersion
+          }),
+
+        onRehydrateStorage:
+          () =>
+          state => {
+            if (!state) {
+              return
+            }
+
+            if (
+              !Array.isArray(
+                state.demandEvents
+              )
+            ) {
+              state.demandEvents = []
+            }
+
+            if (
+              !state.demandVersion
+            ) {
+              state.demandVersion =
+                DEMAND_VERSION
+            }
+          }
       }
-    }),
-
-    {
-      name:
-        'elola-market-demand-v1',
-
-      partialize:
-        state => ({
-
-          demandEvents:
-            state.demandEvents,
-
-          demandVersion:
-            state.demandVersion
-        })
-    }
+    )
   )
-)
-
 
 // ======================================================
-// EXPORT
+// DEFAULT EXPORT
 // ======================================================
 
 export default useMarketDemandStore

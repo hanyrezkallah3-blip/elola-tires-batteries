@@ -27,6 +27,393 @@ import useMarketDemandStore
 
 
 
+// ======================================================
+// EVENT TYPES
+// ======================================================
+
+const EVENT_TYPES = {
+
+  REQUESTED:
+    'requested',
+
+  VIEWED:
+    'viewed',
+
+  ADDED_TO_CART:
+    'added_to_cart',
+
+  CHECKOUT_STARTED:
+    'checkout_started',
+
+  PURCHASED:
+    'purchased',
+
+  FEEDBACK:
+    'feedback'
+
+}
+
+
+
+// ======================================================
+// SAFE ARRAY
+// ======================================================
+
+function toArray(
+  value
+) {
+
+  if (
+    Array.isArray(value)
+  ) {
+
+    return value
+
+  }
+
+
+  return []
+
+}
+
+
+
+// ======================================================
+// PRODUCT COUNT
+// ======================================================
+//
+// A REQUESTED or VIEWED event can contain multiple products.
+// Therefore one event does not necessarily equal one product.
+//
+// ======================================================
+
+function getEventProductCount(
+  event
+) {
+
+  const products =
+    toArray(
+      event?.products
+    )
+
+
+  if (
+    products.length > 0
+  ) {
+
+    return products.length
+
+  }
+
+
+  // ----------------------------------------------------
+  // Some historical events may store a single product.
+  // ----------------------------------------------------
+
+  if (
+    event?.product
+  ) {
+
+    return 1
+
+  }
+
+
+  return 0
+
+}
+
+
+
+// ======================================================
+// MARKET DEMAND SUMMARY FROM RAW EVENTS
+// ======================================================
+
+function buildSummaryFromEvents(
+  events
+) {
+
+  const safeEvents =
+    toArray(
+      events
+    )
+
+
+  const requestedEvents =
+    safeEvents.filter(
+      event =>
+        event?.type ===
+        EVENT_TYPES.REQUESTED
+    )
+
+
+  const viewedEvents =
+    safeEvents.filter(
+      event =>
+        event?.type ===
+        EVENT_TYPES.VIEWED
+    )
+
+
+  const addedEvents =
+    safeEvents.filter(
+      event =>
+        event?.type ===
+        EVENT_TYPES.ADDED_TO_CART
+    )
+
+
+  const purchasedEvents =
+    safeEvents.filter(
+      event =>
+        event?.type ===
+        EVENT_TYPES.PURCHASED
+    )
+
+
+  // ----------------------------------------------------
+  // REQUESTED
+  // ----------------------------------------------------
+
+  const totalRequests =
+    requestedEvents.reduce(
+      (
+        total,
+        event
+      ) =>
+        total +
+        getEventProductCount(
+          event
+        ),
+      0
+    )
+
+
+  // ----------------------------------------------------
+  // VIEWED
+  // ----------------------------------------------------
+
+  const totalViews =
+    viewedEvents.reduce(
+      (
+        total,
+        event
+      ) =>
+        total +
+        getEventProductCount(
+          event
+        ),
+      0
+    )
+
+
+  // ----------------------------------------------------
+  // ADDED TO CART
+  // ----------------------------------------------------
+  //
+  // Each added_to_cart event represents one product action.
+  //
+  // If historical data contains products[] we count them.
+  //
+  // ----------------------------------------------------
+
+  const totalAddedToCart =
+    addedEvents.reduce(
+      (
+        total,
+        event
+      ) => {
+
+        const count =
+          getEventProductCount(
+            event
+          )
+
+        return total +
+          Math.max(
+            1,
+            count
+          )
+
+      },
+      0
+    )
+
+
+  // ----------------------------------------------------
+  // PURCHASED
+  // ----------------------------------------------------
+
+  const totalPurchased =
+    purchasedEvents.reduce(
+      (
+        total,
+        event
+      ) => {
+
+        const count =
+          getEventProductCount(
+            event
+          )
+
+        return total +
+          Math.max(
+            1,
+            count
+          )
+
+      },
+      0
+    )
+
+
+  // ----------------------------------------------------
+  // UNAVAILABLE
+  // ----------------------------------------------------
+  //
+  // Requested products that were explicitly unavailable.
+  //
+  // ----------------------------------------------------
+
+  const totalUnavailableRequests =
+    requestedEvents.reduce(
+      (
+        total,
+        event
+      ) => {
+
+        const products =
+          toArray(
+            event?.products
+          )
+
+
+        if (
+          products.length === 0
+        ) {
+
+          return total
+
+        }
+
+
+        return total +
+          products.filter(
+            product =>
+              product?.available === false ||
+              product?.isAvailable === false ||
+              product?.inStock === false ||
+              product?.stockAvailable === false ||
+              product?.availability === 'unavailable' ||
+              product?.availabilityStatus === 'unavailable' ||
+              product?.status === 'unavailable'
+          ).length
+
+      },
+      0
+    )
+
+
+  // ----------------------------------------------------
+  // NOT PURCHASED
+  // ----------------------------------------------------
+  //
+  // Historical dashboard semantics:
+  //
+  // viewed products that did not become purchases.
+  //
+  // This preserves the existing dashboard meaning:
+  //
+  // 8 viewed - 2 purchased = 6
+  //
+  // However, if viewed is lower than purchased, never
+  // return a negative number.
+  //
+  // ----------------------------------------------------
+
+  const notPurchased =
+    Math.max(
+      0,
+      totalViews -
+      totalPurchased
+    )
+
+
+  // ----------------------------------------------------
+  // RATES
+  // ----------------------------------------------------
+
+  const purchaseConversion =
+    totalRequests > 0
+
+      ? (
+          totalPurchased /
+          totalRequests
+        ) * 100
+
+      : 0
+
+
+  const addToCartRate =
+    totalRequests > 0
+
+      ? (
+          totalAddedToCart /
+          totalRequests
+        ) * 100
+
+      : 0
+
+
+  return {
+
+    totalRequests,
+
+    requested:
+      totalRequests,
+
+    totalViews,
+
+    viewed:
+      totalViews,
+
+    totalAddedToCart,
+
+    addedToCart:
+      totalAddedToCart,
+
+    totalPurchased,
+
+    purchased:
+      totalPurchased,
+
+    totalUnavailableRequests,
+
+    unavailable:
+      totalUnavailableRequests,
+
+    notPurchased,
+
+    totalNotPurchased:
+      notPurchased,
+
+    purchaseConversion,
+
+    conversionRate:
+      purchaseConversion,
+
+    addToCartRate
+
+  }
+
+}
+
+
+
+// ======================================================
+// MAIN COMPONENT
+// ======================================================
+
 export default function DemandAnalytics() {
 
   // ====================================================
@@ -37,13 +424,6 @@ export default function DemandAnalytics() {
     useMarketDemandStore(
       state =>
         state.demandEvents || []
-    )
-
-
-  const getSummary =
-    useMarketDemandStore(
-      state =>
-        state.getSummary
     )
 
 
@@ -93,6 +473,14 @@ export default function DemandAnalytics() {
   // ====================================================
   // SUMMARY
   // ====================================================
+  //
+  // IMPORTANT:
+  // Do NOT depend on store getSummary field aliases here.
+  //
+  // The dashboard derives its global funnel directly from
+  // the actual persisted Market Demand events.
+  //
+  // ====================================================
 
   const summary =
     useMemo(
@@ -100,8 +488,8 @@ export default function DemandAnalytics() {
 
         try {
 
-          return (
-            getSummary?.() || {}
+          return buildSummaryFromEvents(
+            demandEvents
           )
 
         } catch (error) {
@@ -111,14 +499,45 @@ export default function DemandAnalytics() {
             error
           )
 
-          return {}
+          return {
+
+            totalRequests: 0,
+
+            requested: 0,
+
+            totalViews: 0,
+
+            viewed: 0,
+
+            totalAddedToCart: 0,
+
+            addedToCart: 0,
+
+            totalPurchased: 0,
+
+            purchased: 0,
+
+            totalUnavailableRequests: 0,
+
+            unavailable: 0,
+
+            notPurchased: 0,
+
+            totalNotPurchased: 0,
+
+            purchaseConversion: 0,
+
+            conversionRate: 0,
+
+            addToCartRate: 0
+
+          }
 
         }
 
       },
       [
-        demandEvents,
-        getSummary
+        demandEvents
       ]
     )
 
@@ -309,9 +728,139 @@ export default function DemandAnalytics() {
 
         try {
 
-          return (
+          const analytics =
             getVehicleAnalytics?.() ||
             []
+
+
+          if (
+            !Array.isArray(
+              analytics
+            )
+          ) {
+
+            return []
+
+          }
+
+
+          return analytics.map(
+            item => {
+
+              if (
+                !item
+              ) {
+
+                return item
+
+              }
+
+
+              const vehicleType =
+                firstNonEmpty(
+
+                  item.vehicleType,
+
+                  item.vehicle_type,
+
+                  item.type,
+
+                  item.vehicle?.vehicleType,
+
+                  item.vehicle?.vehicle_type,
+
+                  item.vehicle?.type,
+
+                  item.searchContext?.vehicleType,
+
+                  item.searchContext?.vehicle_type,
+
+                  item.searchContext?.type
+
+                )
+
+
+              const make =
+                firstNonEmpty(
+
+                  item.make,
+
+                  item.brand,
+
+                  item.manufacturer,
+
+                  item.vehicle?.make,
+
+                  item.vehicle?.brand,
+
+                  item.vehicle?.manufacturer,
+
+                  item.searchContext?.make,
+
+                  item.searchContext?.brand,
+
+                  item.searchContext?.manufacturer
+
+                )
+
+
+              const model =
+                firstNonEmpty(
+
+                  item.model,
+
+                  item.modelFromSearch,
+
+                  item.vehicle?.model,
+
+                  item.vehicle?.modelName,
+
+                  item.searchContext?.model,
+
+                  item.searchContext?.modelFromSearch
+
+                )
+
+
+              const year =
+                firstNonEmpty(
+
+                  item.year,
+
+                  item.modelYear,
+
+                  item.model_year,
+
+                  item.vehicle?.year,
+
+                  item.vehicle?.modelYear,
+
+                  item.vehicle?.model_year,
+
+                  item.searchContext?.year,
+
+                  item.searchContext?.modelYear,
+
+                  item.searchContext?.model_year
+
+                )
+
+
+              return {
+
+                ...item,
+
+                vehicleType,
+
+                make,
+
+                model,
+
+                year
+
+              }
+
+            }
           )
 
         } catch (error) {
@@ -337,14 +886,11 @@ export default function DemandAnalytics() {
   // ====================================================
   // NORMALIZED SUMMARY
   // ====================================================
-  //
-  // These names now match marketDemandStore exactly.
-  //
-  // ====================================================
 
   const requestedCount =
     Number(
       summary?.totalRequests ??
+      summary?.requested ??
       0
     )
 
@@ -352,6 +898,7 @@ export default function DemandAnalytics() {
   const viewedCount =
     Number(
       summary?.totalViews ??
+      summary?.viewed ??
       0
     )
 
@@ -359,6 +906,7 @@ export default function DemandAnalytics() {
   const addedCount =
     Number(
       summary?.totalAddedToCart ??
+      summary?.addedToCart ??
       0
     )
 
@@ -366,6 +914,7 @@ export default function DemandAnalytics() {
   const purchasedCount =
     Number(
       summary?.totalPurchased ??
+      summary?.purchased ??
       0
     )
 
@@ -373,6 +922,7 @@ export default function DemandAnalytics() {
   const unavailableCount =
     Number(
       summary?.totalUnavailableRequests ??
+      summary?.unavailable ??
       0
     )
 
@@ -380,6 +930,7 @@ export default function DemandAnalytics() {
   const notPurchasedCount =
     Number(
       summary?.totalNotPurchased ??
+      summary?.notPurchased ??
       0
     )
 
@@ -396,7 +947,6 @@ export default function DemandAnalytics() {
           requestedCount
         ) * 100
       : 0
-
 
 
   const cartRate =
@@ -477,62 +1027,30 @@ export default function DemandAnalytics() {
 
 
         <StatCard
-
           title="إجمالي الطلبات"
-
-          value={
-            requestedCount
-          }
-
+          value={requestedCount}
           subtitle="عدد المنتجات التي طلبها العملاء"
-
         />
 
 
         <StatCard
-
           title="تمت المشاهدة"
-
-          value={
-            viewedCount
-          }
-
+          value={viewedCount}
           subtitle="منتجات ظهرت للعملاء"
-
         />
 
 
         <StatCard
-
           title="تمت الإضافة للسلة"
-
-          value={
-            addedCount
-          }
-
-          subtitle={
-            `${formatPercent(
-              cartRate
-            )} معدل الإضافة`
-          }
-
+          value={addedCount}
+          subtitle={`${formatPercent(cartRate)} معدل الإضافة`}
         />
 
 
         <StatCard
-
           title="تم الشراء"
-
-          value={
-            purchasedCount
-          }
-
-          subtitle={
-            `${formatPercent(
-              conversionRate
-            )} معدل التحويل`
-          }
-
+          value={purchasedCount}
+          subtitle={`${formatPercent(conversionRate)} معدل التحويل`}
         />
 
       </div>
@@ -552,56 +1070,30 @@ export default function DemandAnalytics() {
 
 
         <StatCard
-
           title="غير متوفر"
-
-          value={
-            unavailableCount
-          }
-
+          value={unavailableCount}
           subtitle="طلب على منتج غير متوفر"
-
         />
 
 
         <StatCard
-
           title="لم يتم الشراء"
-
-          value={
-            notPurchasedCount
-          }
-
+          value={notPurchasedCount}
           subtitle="طلبات لم تتحول إلى شراء"
-
         />
 
 
         <StatCard
-
           title="معدل الشراء"
-
-          value={
-            formatPercent(
-              conversionRate
-            )
-          }
-
+          value={formatPercent(conversionRate)}
           subtitle="Purchase Conversion"
-
         />
 
 
         <StatCard
-
           title="إجمالي الأحداث"
-
-          value={
-            totalEvents
-          }
-
+          value={totalEvents}
           subtitle="كل أحداث Market Demand المسجلة"
-
         />
 
       </div>
@@ -613,11 +1105,8 @@ export default function DemandAnalytics() {
       ================================================== */}
 
       <AnalyticsSection
-
         title="🔥 أكثر المنتجات طلبًا"
-
         emptyMessage="لا توجد طلبات مسجلة حتى الآن."
-
       >
 
         {
@@ -625,7 +1114,6 @@ export default function DemandAnalytics() {
             (item, index) => (
 
               <ProductRow
-
                 key={
                   item.productId ||
                   item.sku ||
@@ -650,7 +1138,6 @@ export default function DemandAnalytics() {
                 }
 
                 label="طلب"
-
               />
 
             )
@@ -666,11 +1153,8 @@ export default function DemandAnalytics() {
       ================================================== */}
 
       <AnalyticsSection
-
         title="🛒 أكثر المنتجات شراءً"
-
         emptyMessage="لا توجد عمليات شراء مسجلة حتى الآن."
-
       >
 
         {
@@ -678,7 +1162,6 @@ export default function DemandAnalytics() {
             (item, index) => (
 
               <ProductRow
-
                 key={
                   item.productId ||
                   item.sku ||
@@ -703,7 +1186,6 @@ export default function DemandAnalytics() {
                 }
 
                 label="شراء"
-
               />
 
             )
@@ -719,11 +1201,8 @@ export default function DemandAnalytics() {
       ================================================== */}
 
       <AnalyticsSection
-
         title="⚠️ فرص التوريد"
-
         emptyMessage="لا توجد فرص توريد مكتشفة حتى الآن."
-
       >
 
         {
@@ -731,7 +1210,6 @@ export default function DemandAnalytics() {
             (item, index) => (
 
               <div
-
                 key={
                   item.productId ||
                   item.sku ||
@@ -746,7 +1224,6 @@ export default function DemandAnalytics() {
                   border
                   border-slate-700
                 "
-
               >
 
                 <div className="
@@ -755,7 +1232,6 @@ export default function DemandAnalytics() {
                   justify-between
                   gap-4
                 ">
-
 
                   <div>
 
@@ -784,7 +1260,6 @@ export default function DemandAnalytics() {
                     </div>
 
                   </div>
-
 
 
                   <div className="
@@ -818,7 +1293,6 @@ export default function DemandAnalytics() {
 
                   </div>
 
-
                 </div>
 
               </div>
@@ -836,11 +1310,8 @@ export default function DemandAnalytics() {
       ================================================== */}
 
       <AnalyticsSection
-
         title="❌ منتجات طُلبت ولم تُشترَ"
-
         emptyMessage="لا توجد بيانات كافية عن عدم الشراء."
-
       >
 
         {
@@ -848,7 +1319,6 @@ export default function DemandAnalytics() {
             (item, index) => (
 
               <ProductRow
-
                 key={
                   item.productId ||
                   item.sku ||
@@ -873,7 +1343,6 @@ export default function DemandAnalytics() {
                 }
 
                 label="لم يُشترَ"
-
               />
 
             )
@@ -889,11 +1358,8 @@ export default function DemandAnalytics() {
       ================================================== */}
 
       <AnalyticsSection
-
         title="💬 أسباب عدم الشراء"
-
         emptyMessage="لم يسجل العملاء أسبابًا لعدم الشراء حتى الآن."
-
       >
 
         {
@@ -902,56 +1368,260 @@ export default function DemandAnalytics() {
           )
 
             ? reasons.map(
-                (item, index) => (
+                (item, index) => {
 
-                  <div
+                  const reasonProducts =
+                    Array.isArray(
+                      item?.products
+                    )
+                      ? item.products
+                      : []
 
-                    key={
-                      item.reason ||
-                      index
-                    }
 
-                    className="
-                      flex
-                      items-center
-                      justify-between
-                      bg-slate-800
-                      p-4
-                      rounded-xl
-                      mb-3
-                    "
+                  return (
 
-                  >
+                    <div
+                      key={
+                        item.reason ||
+                        index
+                      }
 
-                    <div className="font-bold">
+                      className="
+                        bg-slate-800
+                        p-5
+                        rounded-2xl
+                        mb-3
+                        border
+                        border-slate-700
+                      "
+                    >
+
+                      <div className="
+                        flex
+                        items-center
+                        justify-between
+                        gap-4
+                      ">
+
+                        <div className="
+                          font-bold
+                          text-lg
+                        ">
+
+                          {
+                            item.label ||
+                            formatReason(
+                              item.reason
+                            )
+                          }
+
+                        </div>
+
+
+                        <div className="
+                          font-black
+                          text-yellow-400
+                          text-xl
+                        ">
+
+                          {
+                            Number(
+                              item.count ??
+                              0
+                            )
+                          }
+
+                        </div>
+
+                      </div>
+
 
                       {
-                        item.label ||
-                        formatReason(
-                          item.reason
+                        reasonProducts.length > 0 && (
+
+                          <div className="
+                            mt-4
+                            pt-4
+                            border-t
+                            border-slate-700
+                          ">
+
+                            <div className="
+                              text-xs
+                              text-gray-500
+                              mb-3
+                            ">
+
+                              المنتجات المرتبطة بهذا السبب
+
+                            </div>
+
+
+                            <div className="
+                              space-y-2
+                            ">
+
+                              {
+                                reasonProducts.map(
+                                  (
+                                    product,
+                                    productIndex
+                                  ) => (
+
+                                    <div
+                                      key={
+                                        product.productId ||
+                                        product.id ||
+                                        product.sku ||
+                                        `reason-product-${index}-${productIndex}`
+                                      }
+
+                                      className="
+                                        flex
+                                        items-center
+                                        justify-between
+                                        gap-4
+                                        bg-slate-900
+                                        rounded-xl
+                                        px-4
+                                        py-3
+                                      "
+                                    >
+
+                                      <div className="
+                                        flex
+                                        items-center
+                                        gap-3
+                                      ">
+
+                                        <div className="
+                                          w-8
+                                          h-8
+                                          rounded-lg
+                                          bg-slate-700
+                                          flex
+                                          items-center
+                                          justify-center
+                                          text-xs
+                                          font-black
+                                        ">
+
+                                          {
+                                            productIndex + 1
+                                          }
+
+                                        </div>
+
+
+                                        <div>
+
+                                          <div className="
+                                            font-bold
+                                            text-white
+                                          ">
+
+                                            {
+                                              getProductDisplayName(
+                                                product
+                                              )
+                                            }
+
+                                          </div>
+
+
+                                          {
+                                            (
+                                              product.productId ||
+                                              product.sku
+                                            ) && (
+
+                                              <div className="
+                                                text-xs
+                                                text-gray-500
+                                                mt-1
+                                              ">
+
+                                                {
+                                                  product.productId ||
+                                                  product.sku
+                                                }
+
+                                              </div>
+
+                                            )
+                                          }
+
+                                        </div>
+
+                                      </div>
+
+
+                                      <div className="
+                                        text-right
+                                      ">
+
+                                        <div className="
+                                          text-yellow-400
+                                          font-black
+                                        ">
+
+                                          {
+                                            Number(
+                                              product.count ??
+                                              product.total ??
+                                              0
+                                            )
+                                          }
+
+                                        </div>
+
+
+                                        <div className="
+                                          text-xs
+                                          text-gray-500
+                                        ">
+
+                                          حالة رفض
+
+                                        </div>
+
+                                      </div>
+
+                                    </div>
+
+                                  )
+                                )
+                              }
+
+                            </div>
+
+                          </div>
+
+                        )
+                      }
+
+
+                      {
+                        reasonProducts.length === 0 && (
+
+                          <div className="
+                            mt-3
+                            text-xs
+                            text-gray-500
+                          ">
+
+                            لا توجد بيانات منتج مرتبطة بهذا السبب.
+
+                          </div>
+
                         )
                       }
 
                     </div>
 
+                  )
 
-                    <div className="
-                      font-black
-                      text-yellow-400
-                    ">
-
-                      {
-                        Number(
-                          item.count ??
-                          0
-                        )
-                      }
-
-                    </div>
-
-                  </div>
-
-                )
+                }
               )
 
             : Object.entries(
@@ -966,53 +1636,56 @@ export default function DemandAnalytics() {
                 ) => (
 
                   <div
-
                     key={
                       reason ||
                       index
                     }
 
                     className="
-                      flex
-                      items-center
-                      justify-between
                       bg-slate-800
                       p-4
                       rounded-xl
                       mb-3
                     "
-
                   >
 
-                    <div className="font-bold">
-
-                      {
-                        formatReason(
-                          reason
-                        )
-                      }
-
-                    </div>
-
-
                     <div className="
-                      font-black
-                      text-yellow-400
+                      flex
+                      items-center
+                      justify-between
                     ">
 
-                      {
-                        typeof value === 'object'
+                      <div className="font-bold">
 
-                          ? Number(
-                              value?.count ??
-                              value?.total ??
-                              0
-                            )
+                        {
+                          formatReason(
+                            reason
+                          )
+                        }
 
-                          : Number(
-                              value || 0
-                            )
-                      }
+                      </div>
+
+
+                      <div className="
+                        font-black
+                        text-yellow-400
+                      ">
+
+                        {
+                          typeof value === 'object'
+
+                            ? Number(
+                                value?.count ??
+                                value?.total ??
+                                0
+                              )
+
+                            : Number(
+                                value || 0
+                              )
+                        }
+
+                      </div>
 
                     </div>
 
@@ -1031,11 +1704,8 @@ export default function DemandAnalytics() {
       ================================================== */}
 
       <AnalyticsSection
-
         title="🚗 الطلب حسب المركبة"
-
         emptyMessage="لا توجد بيانات مركبات مرتبطة بالطلبات حتى الآن."
-
       >
 
         {
@@ -1043,15 +1713,13 @@ export default function DemandAnalytics() {
             (item, index) => (
 
               <VehicleRow
-
                 key={
-                  `${item.vehicleType || ''}-${item.make || ''}-${item.model || ''}-${item.year || ''}-${index}`
+                  `${item.vehicleType || 'unknown'}-${item.make || ''}-${item.model || ''}-${item.year || ''}-${index}`
                 }
 
                 item={
                   item
                 }
-
               />
 
             )
@@ -1111,13 +1779,9 @@ export default function DemandAnalytics() {
 // ======================================================
 
 function StatCard({
-
   title,
-
   value,
-
   subtitle
-
 }) {
 
   return (
@@ -1129,7 +1793,6 @@ function StatCard({
       border
       border-slate-700
     ">
-
 
       <div className="
         text-gray-400
@@ -1156,7 +1819,6 @@ function StatCard({
 
 
       {
-
         subtitle && (
 
           <div className="
@@ -1172,9 +1834,7 @@ function StatCard({
           </div>
 
         )
-
       }
-
 
     </div>
 
@@ -1189,13 +1849,9 @@ function StatCard({
 // ======================================================
 
 function AnalyticsSection({
-
   title,
-
   emptyMessage,
-
   children
-
 }) {
 
   const hasChildren =
@@ -1221,7 +1877,6 @@ function AnalyticsSection({
       border-slate-800
     ">
 
-
       <h2 className="
         text-2xl
         font-black
@@ -1236,7 +1891,6 @@ function AnalyticsSection({
 
 
       {
-
         hasChildren
 
           ? children
@@ -1258,9 +1912,7 @@ function AnalyticsSection({
             </div>
 
           )
-
       }
-
 
     </div>
 
@@ -1275,15 +1927,10 @@ function AnalyticsSection({
 // ======================================================
 
 function ProductRow({
-
   rank,
-
   name,
-
   value,
-
   label
-
 }) {
 
   return (
@@ -1299,13 +1946,11 @@ function ProductRow({
       mb-3
     ">
 
-
       <div className="
         flex
         items-center
         gap-4
       ">
-
 
         <div className="
           w-9
@@ -1333,14 +1978,12 @@ function ProductRow({
 
         </div>
 
-
       </div>
 
 
       <div className="
         text-right
       ">
-
 
         <div className="
           text-xl
@@ -1366,9 +2009,7 @@ function ProductRow({
 
         </div>
 
-
       </div>
-
 
     </div>
 
@@ -1383,29 +2024,97 @@ function ProductRow({
 // ======================================================
 
 function VehicleRow({
-
   item
-
 }) {
 
   const vehicleType =
-    item?.vehicleType ||
-    ''
+    firstNonEmpty(
+
+      item?.vehicleType,
+
+      item?.vehicle_type,
+
+      item?.type,
+
+      item?.vehicle?.vehicleType,
+
+      item?.vehicle?.vehicle_type,
+
+      item?.vehicle?.type,
+
+      item?.searchContext?.vehicleType,
+
+      item?.searchContext?.vehicle_type,
+
+      item?.searchContext?.type
+
+    )
 
 
   const make =
-    item?.make ||
-    ''
+    firstNonEmpty(
+
+      item?.make,
+
+      item?.brand,
+
+      item?.manufacturer,
+
+      item?.vehicle?.make,
+
+      item?.vehicle?.brand,
+
+      item?.vehicle?.manufacturer,
+
+      item?.searchContext?.make,
+
+      item?.searchContext?.brand,
+
+      item?.searchContext?.manufacturer
+
+    )
 
 
   const model =
-    item?.model ||
-    ''
+    firstNonEmpty(
+
+      item?.model,
+
+      item?.modelFromSearch,
+
+      item?.vehicle?.model,
+
+      item?.vehicle?.modelName,
+
+      item?.searchContext?.model,
+
+      item?.searchContext?.modelFromSearch
+
+    )
 
 
   const year =
-    item?.year ||
-    ''
+    firstNonEmpty(
+
+      item?.year,
+
+      item?.modelYear,
+
+      item?.model_year,
+
+      item?.vehicle?.year,
+
+      item?.vehicle?.modelYear,
+
+      item?.vehicle?.model_year,
+
+      item?.searchContext?.year,
+
+      item?.searchContext?.modelYear,
+
+      item?.searchContext?.model_year
+
+    )
 
 
   const vehicleName = [
@@ -1419,160 +2128,330 @@ function VehicleRow({
   ]
     .filter(Boolean)
     .join(' ') ||
+
     'مركبة غير محددة'
 
+
+  const displayedVehicleType =
+    vehicleType ||
+    'غير محدد'
+
+
+  const requests =
+    Number(
+
+      item?.requested ??
+      item?.requests ??
+      item?.requestCount ??
+      0
+
+    )
+
+
+  const unavailableRequests =
+    Number(
+
+      item?.unavailable ??
+      item?.unavailableRequests ??
+      item?.unavailableRequestsCount ??
+      0
+
+    )
+
+
+  const purchased =
+    Number(
+
+      item?.purchased ??
+      item?.purchases ??
+      item?.purchaseCount ??
+      0
+
+    )
 
 
   return (
 
     <div className="
       bg-slate-800
-      rounded-xl
-      p-4
+      rounded-2xl
+      p-5
       mb-3
-      flex
-      items-center
-      justify-between
-      gap-4
+      border
+      border-slate-700
     ">
 
+      <div className="
+        grid
+        md:grid-cols-[1.2fr_1.2fr_1.2fr_0.8fr]
+        gap-4
+        items-center
+      ">
 
-      <div>
 
-        <div className="font-bold">
+        <div>
 
-          {
-            vehicleName
-          }
+          <div className="
+            text-xs
+            text-gray-500
+            mb-1
+          ">
+
+            المركبة
+
+          </div>
+
+
+          <div className="
+            font-black
+            text-lg
+          ">
+
+            {
+              vehicleName
+            }
+
+          </div>
 
         </div>
 
 
-        {
 
-          vehicleType && (
+        <div>
 
-            <div className="
-              text-xs
-              text-gray-500
-              mt-1
-            ">
+          <div className="
+            text-xs
+            text-gray-500
+            mb-1
+          ">
 
-              نوع المركبة:
+            نوع المركبة
 
-              {' '}
-
-              {
-                vehicleType
-              }
-
-            </div>
-
-          )
-
-        }
+          </div>
 
 
-      </div>
+          <div className="
+            inline-flex
+            items-center
+            rounded-xl
+            px-3
+            py-2
+            bg-yellow-400
+            text-black
+            font-black
+            text-base
+          ">
+
+            {
+              displayedVehicleType
+            }
+
+          </div>
+
+        </div>
 
 
-      <div className="
-        text-right
-      ">
+
+        <div>
+
+          <div className="
+            text-xs
+            text-gray-500
+            mb-1
+          ">
+
+            الماركة / الموديل / السنة
+
+          </div>
+
+
+          <div className="
+            text-sm
+            text-gray-300
+          ">
+
+            {
+              [
+                make,
+                model,
+                year
+              ]
+                .filter(Boolean)
+                .join(' / ') ||
+
+              'غير محدد'
+            }
+
+          </div>
+
+        </div>
+
 
 
         <div className="
-          text-yellow-400
-          font-black
-          text-xl
+          text-right
         ">
 
+          <div className="
+            text-xs
+            text-gray-500
+            mb-1
+          ">
+
+            الطلبات
+
+          </div>
+
+
+          <div className="
+            text-yellow-400
+            font-black
+            text-2xl
+          ">
+
+            {
+              requests
+            }
+
+          </div>
+
+
+          <div className="
+            text-xs
+            text-gray-500
+          ">
+
+            طلب
+
+          </div>
+
+
           {
-            Number(
-              item?.requests ??
-              0
+            unavailableRequests > 0 && (
+
+              <div className="
+                text-xs
+                text-red-400
+                mt-2
+              ">
+
+                غير متوفر:
+
+                {' '}
+
+                {
+                  unavailableRequests
+                }
+
+              </div>
+
+            )
+          }
+
+
+          {
+            purchased > 0 && (
+
+              <div className="
+                text-xs
+                text-green-400
+                mt-1
+              ">
+
+                شراء:
+
+                {' '}
+
+                {
+                  purchased
+                }
+
+              </div>
+
             )
           }
 
         </div>
 
 
-        <div className="
-          text-xs
-          text-gray-500
-        ">
-
-          طلب
-
-        </div>
-
-
-        {
-
-          Number(
-            item?.unavailableRequests ??
-            0
-          ) > 0 && (
-
-            <div className="
-              text-xs
-              text-red-400
-              mt-1
-            ">
-
-              غير متوفر:
-
-              {' '}
-
-              {
-                Number(
-                  item.unavailableRequests
-                )
-              }
-
-            </div>
-
-          )
-
-        }
-
-
-        {
-
-          Number(
-            item?.purchased ??
-            0
-          ) > 0 && (
-
-            <div className="
-              text-xs
-              text-green-400
-              mt-1
-            ">
-
-              شراء:
-
-              {' '}
-
-              {
-                Number(
-                  item.purchased
-                )
-              }
-
-            </div>
-
-          )
-
-        }
-
-
       </div>
-
 
     </div>
 
   )
+
+}
+
+
+
+// ======================================================
+// FIRST NON EMPTY
+// ======================================================
+
+function firstNonEmpty(
+  ...values
+) {
+
+  for (
+    const value of values
+  ) {
+
+    if (
+      value === null ||
+      value === undefined
+    ) {
+
+      continue
+
+    }
+
+
+    if (
+      typeof value === 'number'
+    ) {
+
+      if (
+        Number.isFinite(
+          value
+        )
+      ) {
+
+        return value
+
+      }
+
+      continue
+
+    }
+
+
+    if (
+      typeof value === 'object'
+    ) {
+
+      continue
+
+    }
+
+
+    const normalized =
+      String(
+        value
+      ).trim()
+
+
+    if (
+      normalized
+    ) {
+
+      return normalized
+
+    }
+
+  }
+
+
+  return ''
 
 }
 
@@ -1604,7 +2483,6 @@ function getProductDisplayName(
     ).trim()
 
 
-
   if (
     name &&
     name !== 'منتج غير محدد'
@@ -1615,13 +2493,11 @@ function getProductDisplayName(
   }
 
 
-
   const size =
     String(
       item.size ??
       ''
     ).trim()
-
 
 
   if (
@@ -1633,13 +2509,11 @@ function getProductDisplayName(
   }
 
 
-
   const sku =
     String(
       item.sku ??
       ''
     ).trim()
-
 
 
   if (
@@ -1651,13 +2525,11 @@ function getProductDisplayName(
   }
 
 
-
   const productId =
     String(
       item.productId ??
       ''
     ).trim()
-
 
 
   if (
@@ -1667,7 +2539,6 @@ function getProductDisplayName(
     return productId
 
   }
-
 
 
   return 'منتج غير محدد'
