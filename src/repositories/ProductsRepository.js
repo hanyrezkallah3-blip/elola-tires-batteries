@@ -7,6 +7,7 @@ import BaseRepository
 // ======================================================
 
 const normalizeText = value =>
+
   String(value ?? '')
     .trim()
     .toLowerCase()
@@ -34,7 +35,9 @@ const normalizeProductType = value => {
       'زيوت'
     ].includes(type)
   ) {
+
     return 'oil'
+
   }
 
   if (
@@ -47,7 +50,9 @@ const normalizeProductType = value => {
       'اطارات'
     ].includes(type)
   ) {
+
     return 'tire'
+
   }
 
   if (
@@ -58,10 +63,13 @@ const normalizeProductType = value => {
       'بطاريات'
     ].includes(type)
   ) {
+
     return 'battery'
+
   }
 
   return type
+
 }
 
 
@@ -70,6 +78,7 @@ const normalizeProductType = value => {
 // ======================================================
 
 const normalizeViscosity = value =>
+
   String(value ?? '')
     .trim()
     .toLowerCase()
@@ -81,16 +90,19 @@ const normalizeViscosity = value =>
 // PARSE TIRE SIZE
 //
 // Supports:
+//
 // 205/55/16
 // 205*55*16
 // 205/55R16
 // 205 55 16
 // 205-55-16
+//
 // ======================================================
 
 const parseTireSize = value => {
 
   const text =
+
     String(value ?? '')
       .trim()
       .toUpperCase()
@@ -101,14 +113,20 @@ const parseTireSize = value => {
       .replace(/\\/g, '/')
       .replace(/\s+/g, '')
 
+
   const match =
+
     text.match(
       /(\d{3})\/(\d{2})\/(\d{2}(?:\.\d+)?)/
     )
 
+
   if (!match) {
+
     return null
+
   }
+
 
   return {
 
@@ -136,16 +154,24 @@ const parseTireSize = value => {
 const extractTireData = product => {
 
   const tire =
+
     product?.tire ||
+
     product?.tireData ||
+
     product?.tireSpecification ||
+
     product?.tireSpecifications ||
+
     product?.specifications?.tire ||
+
     product?.typeData?.tire ||
+
     {}
 
 
   let width =
+
     tire?.width ??
     tire?.sectionWidth ??
     product?.width ??
@@ -153,6 +179,7 @@ const extractTireData = product => {
 
 
   let profile =
+
     tire?.profile ??
     tire?.height ??
     tire?.aspectRatio ??
@@ -161,6 +188,7 @@ const extractTireData = product => {
 
 
   let rim =
+
     tire?.rim ??
     tire?.rimSize ??
     tire?.wheelDiameter ??
@@ -182,6 +210,7 @@ const extractTireData = product => {
     product?.productName,
     product?.shortName,
     product?.title,
+
     product?.sku,
     product?.code,
     product?.barcode,
@@ -202,7 +231,9 @@ const extractTireData = product => {
       parseTireSize(candidate)
 
     if (parsed) {
+
       break
+
     }
 
   }
@@ -255,7 +286,9 @@ const extractTireData = product => {
     !validProfile &&
     !validRim
   ) {
+
     return null
+
   }
 
 
@@ -277,12 +310,16 @@ const extractTireData = product => {
         : null,
 
     size:
+
       parsed?.size ||
+
       (
         validWidth &&
         validProfile &&
         validRim
+
           ? `${normalizedWidth}/${normalizedProfile}/${normalizedRim}`
+
           : ''
       )
 
@@ -298,12 +335,19 @@ const extractTireData = product => {
 const extractBatteryData = product => {
 
   const battery =
+
     product?.battery ||
+
     product?.batteryData ||
+
     product?.batterySpecification ||
+
     product?.batterySpecifications ||
+
     product?.specifications?.battery ||
+
     product?.typeData?.battery ||
+
     {}
 
 
@@ -331,11 +375,15 @@ const extractBatteryData = product => {
   return {
 
     capacity:
+
       candidates.find(
+
         value =>
+
           value !== undefined &&
           value !== null &&
           String(value).trim() !== ''
+
       ) ?? ''
 
   }
@@ -350,24 +398,40 @@ const extractBatteryData = product => {
 const extractOilData = product => {
 
   const oil =
+
     product?.oil ||
+
     product?.oilData ||
+
     product?.oilSpecification ||
+
     product?.oilSpecifications ||
+
     product?.specifications?.oil ||
+
     product?.typeData?.oil ||
+
     {}
 
 
   const viscosity =
+
     oil?.viscosity ??
+
     oil?.grade ??
+
     product?.viscosity ??
+
     product?.grade ??
+
     product?.oilGrade ??
+
     product?.model ??
+
     product?.productName ??
+
     product?.name ??
+
     ''
 
 
@@ -388,33 +452,49 @@ const extractOilData = product => {
 const normalizeProductForCompatibility = product => {
 
   if (!product) {
+
     return null
+
   }
 
 
   const type =
+
     normalizeProductType(
+
       product?.type ||
+
       product?.category ||
+
       product?.productType
+
     )
 
 
   const tire =
+
     type === 'tire'
+
       ? extractTireData(product)
+
       : null
 
 
   const battery =
+
     type === 'battery'
+
       ? extractBatteryData(product)
+
       : null
 
 
   const oil =
+
     type === 'oil'
+
       ? extractOilData(product)
+
       : null
 
 
@@ -425,12 +505,11 @@ const normalizeProductForCompatibility = product => {
     type,
 
     tire,
-
     battery,
-
     oil,
 
-    compatibilityCatalogReady: true
+    compatibilityCatalogReady:
+      true
 
   }
 
@@ -454,6 +533,18 @@ class ProductsRepository
 
   // ==================================================
   // GET ALL PRODUCTS
+  // ==================================================
+  //
+  // IMPORTANT
+  // --------------------------------------------------
+  // Returns the complete product catalog from the
+  // products repository.
+  //
+  // Technical compatibility information is added to
+  // every product without removing the original fields.
+  //
+  // Warehouse availability is NOT used here.
+  //
   // ==================================================
 
   async getAll() {
@@ -484,23 +575,71 @@ class ProductsRepository
 
 
     const data =
+
       Array.isArray(result?.data)
+
         ? result.data
+
         : []
+
+
+    const normalizedData =
+
+      data
+
+        .map(
+          normalizeProductForCompatibility
+        )
+
+        .filter(Boolean)
+
+
+    console.log(
+      '[ProductsRepository] COMPLETE PRODUCT CATALOG:',
+      {
+        rawCount:
+          data.length,
+
+        normalizedCount:
+          normalizedData.length,
+
+        tireCount:
+          normalizedData.filter(
+            product =>
+              product?.type === 'tire'
+          ).length,
+
+        batteryCount:
+          normalizedData.filter(
+            product =>
+              product?.type === 'battery'
+          ).length,
+
+        oilCount:
+          normalizedData.filter(
+            product =>
+              product?.type === 'oil'
+          ).length
+      }
+    )
 
 
     return {
 
       success: true,
 
-      data,
+      data:
+        normalizedData,
 
       message:
         result?.message || '',
 
       errors:
+
         Array.isArray(result?.errors)
+
           ? result.errors
+
           : []
 
     }
@@ -511,11 +650,10 @@ class ProductsRepository
   // ==================================================
   // GET ALL PRODUCTS DATA ONLY
   //
-  // This is the technical product catalog.
+  // Technical product catalog.
   //
-  // IMPORTANT:
-  // This function does NOT use warehouse availability
-  // as a compatibility condition.
+  // No warehouse availability condition.
+  //
   // ==================================================
 
   async getAllData() {
@@ -533,60 +671,9 @@ class ProductsRepository
     }
 
 
-    const products =
-      Array.isArray(result?.data)
-        ? result.data
-        : []
-
-
-    const normalizedProducts =
-      products
-        .map(
-          normalizeProductForCompatibility
-        )
-        .filter(Boolean)
-
-
-    console.log(
-      '[ProductsRepository] TECHNICAL PRODUCT CATALOG:',
-      {
-        rawCount:
-          products.length,
-
-        normalizedCount:
-          normalizedProducts.length,
-
-        products:
-          normalizedProducts.map(
-            product => ({
-
-              id:
-                product?.id,
-
-              name:
-                product?.name ||
-                product?.productName,
-
-              type:
-                product?.type,
-
-              tire:
-                product?.tire,
-
-              battery:
-                product?.battery,
-
-              oil:
-                product?.oil
-
-            })
-          )
-
-      }
-    )
-
-
-    return normalizedProducts
+    return Array.isArray(result?.data)
+      ? result.data
+      : []
 
   }
 
@@ -634,20 +721,22 @@ class ProductsRepository
 
 
     const products =
+
       Array.isArray(
         result?.data
       )
+
         ? result.data
+
         : []
 
 
     const requested =
-      normalizeText(
-        capacity
-      )
+      normalizeText(capacity)
 
 
     return products.filter(
+
       product => {
 
         if (
@@ -655,14 +744,14 @@ class ProductsRepository
             product?.type
           ) !== 'battery'
         ) {
+
           return false
+
         }
 
 
         const battery =
-          extractBatteryData(
-            product
-          )
+          extractBatteryData(product)
 
 
         const candidates = [
@@ -670,23 +759,15 @@ class ProductsRepository
           battery?.capacity,
 
           product?.battery?.capacity,
-
           product?.battery?.ampereHour,
-
           product?.battery?.ah,
-
           product?.battery?.amp,
-
           product?.battery?.ampHours,
 
           product?.capacity,
-
           product?.ampereHour,
-
           product?.ah,
-
           product?.amp,
-
           product?.ampHours,
 
           product?.model
@@ -695,13 +776,16 @@ class ProductsRepository
 
 
         return candidates.some(
+
           value =>
-            normalizeText(
-              value
-            ) === requested
+
+            normalizeText(value)
+            === requested
+
         )
 
       }
+
     )
 
   }
@@ -739,14 +823,18 @@ class ProductsRepository
 
 
     const products =
+
       Array.isArray(
         result?.data
       )
+
         ? result.data
+
         : []
 
 
     return products.filter(
+
       product => {
 
         if (
@@ -754,14 +842,14 @@ class ProductsRepository
             product?.type
           ) !== 'tire'
         ) {
+
           return false
+
         }
 
 
         const tire =
-          extractTireData(
-            product
-          )
+          extractTireData(product)
 
 
         return (
@@ -788,6 +876,7 @@ class ProductsRepository
         )
 
       }
+
     )
 
   }
@@ -823,32 +912,39 @@ class ProductsRepository
 
 
     const products =
+
       Array.isArray(
         result?.data
       )
+
         ? result.data
+
         : []
 
 
     const requested =
-      normalizeViscosity(
-        viscosity
-      )
+      normalizeViscosity(viscosity)
 
 
     if (
       !requested
     ) {
+
       return []
+
     }
 
 
     const oils =
+
       products.filter(
+
         product =>
+
           normalizeProductType(
             product?.type
           ) === 'oil'
+
       )
 
 
@@ -859,13 +955,13 @@ class ProductsRepository
 
 
     const matched =
+
       oils.filter(
+
         product => {
 
           const oil =
-            extractOilData(
-              product
-            )
+            extractOilData(product)
 
 
           const candidates = [
@@ -873,37 +969,34 @@ class ProductsRepository
             oil?.viscosity,
 
             product?.oil?.viscosity,
-
             product?.oil?.grade,
 
             product?.viscosity,
-
             product?.grade,
-
             product?.oilGrade,
 
             product?.model,
-
             product?.productName,
-
             product?.name
 
           ]
 
 
           const match =
+
             candidates.some(
+
               value =>
-                normalizeViscosity(
-                  value
-                ) === requested
+
+                normalizeViscosity(value)
+                === requested
+
             )
 
 
           console.log(
             'OIL CHECK:',
             {
-
               id:
                 product?.id,
 
@@ -926,6 +1019,7 @@ class ProductsRepository
           return match
 
         }
+
       )
 
 
@@ -941,5 +1035,9 @@ class ProductsRepository
 
 }
 
+
+// ======================================================
+// EXPORT
+// ======================================================
 
 export default new ProductsRepository()

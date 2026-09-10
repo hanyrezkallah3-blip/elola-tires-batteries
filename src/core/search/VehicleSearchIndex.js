@@ -22,21 +22,17 @@ class VehicleSearchIndex {
 
     this.loaded = false
 
+    // --------------------------------------------------
+    // Prevent duplicate asynchronous builds
+    // --------------------------------------------------
+
+    this.buildPromise = null
+
   }
 
 
   // ====================================================
   // NORMALIZE VEHICLE COLLECTION
-  // ====================================================
-  //
-  // VehicleProvider.getAll() may return:
-  //
-  // 1. Array
-  // 2. Object containing vehicles
-  // 3. Object keyed by vehicle id
-  //
-  // The search index must always work with an Array.
-  //
   // ====================================================
 
   normalizeVehicles(
@@ -308,6 +304,31 @@ class VehicleSearchIndex {
 
 
   // ====================================================
+  // REMOVE YEAR FROM QUERY
+  // ====================================================
+
+  removeYear(
+    query = ''
+  ) {
+
+    return VehicleFuzzySearch
+      .normalize(
+        query
+      )
+      .replace(
+        /(19|20)\d{2}/g,
+        ' '
+      )
+      .replace(
+        /\s+/g,
+        ' '
+      )
+      .trim()
+
+  }
+
+
+  // ====================================================
   // YEAR MATCH
   // ====================================================
 
@@ -412,142 +433,179 @@ class VehicleSearchIndex {
   // ====================================================
   // BUILD
   // ====================================================
+  //
+  // IMPORTANT:
+  // VehicleProvider.getAll() is asynchronous.
+  //
+  // The previous implementation treated the returned
+  // Promise as a vehicle collection, causing the index
+  // to become empty.
+  //
+  // ====================================================
 
-  build() {
+  async build() {
 
     if (
       this.loaded
     ) {
 
-      return
+      return this.index
 
     }
 
 
-    let source
+    if (
+      this.buildPromise
+    ) {
 
-
-    try {
-
-      source =
-        VehicleProvider.getAll()
-
-    }
-    catch (error) {
-
-      console.warn(
-        '[VehicleSearchIndex] VehicleProvider.getAll failed:',
-        error
-      )
-
-      source = []
+      return this.buildPromise
 
     }
 
 
-    const vehicles =
-      this.normalizeVehicles(
-        source
-      )
+    this.buildPromise =
+      (async () => {
+
+        let source = []
 
 
-    console.log(
-      '[VehicleSearchIndex] BUILD',
-      {
-        sourceType:
-          Array.isArray(source)
-            ? 'array'
-            : typeof source,
+        try {
 
-        vehiclesCount:
-          vehicles.length
-      }
-    )
+          source =
+            await VehicleProvider.getAll()
+
+        }
+        catch (error) {
+
+          console.warn(
+            '[VehicleSearchIndex] VehicleProvider.getAll failed:',
+            error
+          )
+
+          source = []
+
+        }
 
 
-    this.index =
-      vehicles
-        .filter(
-          vehicle =>
-            vehicle &&
-            typeof vehicle === 'object'
+        const vehicles =
+          this.normalizeVehicles(
+            source
+          )
+
+
+        console.log(
+          '[VehicleSearchIndex] BUILD',
+          {
+            sourceType:
+              Array.isArray(source)
+                ? 'array'
+                : typeof source,
+
+            vehiclesCount:
+              vehicles.length
+          }
         )
-        .map(
-          vehicle => {
-
-            const make =
-              VehicleFuzzySearch.normalize(
-                this.getMake(
-                  vehicle
-                )
-              )
 
 
-            const model =
-              VehicleFuzzySearch.normalize(
-                this.getModel(
-                  vehicle
-                )
-              )
+        this.index =
+          vehicles
+            .filter(
+              vehicle =>
+                vehicle &&
+                typeof vehicle === 'object'
+            )
+            .map(
+              vehicle => {
+
+                const make =
+                  VehicleFuzzySearch.normalize(
+                    this.getMake(
+                      vehicle
+                    )
+                  )
 
 
-            const year =
-              this.getYear(
-                vehicle
-              )
+                const model =
+                  VehicleFuzzySearch.normalize(
+                    this.getModel(
+                      vehicle
+                    )
+                  )
 
 
-            const yearFrom =
-              this.getYearFrom(
-                vehicle
-              )
+                const year =
+                  this.getYear(
+                    vehicle
+                  )
 
 
-            const yearTo =
-              this.getYearTo(
-                vehicle
-              )
+                const yearFrom =
+                  this.getYearFrom(
+                    vehicle
+                  )
 
 
-            return {
+                const yearTo =
+                  this.getYearTo(
+                    vehicle
+                  )
 
-              vehicle,
 
-              make,
+                return {
 
-              model,
+                  vehicle,
 
-              year,
+                  make,
 
-              yearFrom,
+                  model,
 
-              yearTo,
+                  year,
 
-              full:
-                `${make} ${model}`.trim(),
+                  yearFrom,
 
-              aliases:
-                VehicleAliasDictionary.expand(
-                  make
-                )
+                  yearTo,
 
-            }
+                  full:
+                    `${make} ${model}`.trim(),
+
+                  aliases:
+                    VehicleAliasDictionary.expand(
+                      make
+                    )
+
+                }
+
+              }
+            )
+
+
+        this.loaded =
+          true
+
+
+        console.log(
+          '[VehicleSearchIndex] READY',
+          {
+            indexCount:
+              this.index.length
+          }
+        )
+
+
+        return this.index
+
+      })()
+        .finally(
+          () => {
+
+            this.buildPromise =
+              null
 
           }
         )
 
 
-    this.loaded =
-      true
-
-
-    console.log(
-      '[VehicleSearchIndex] READY',
-      {
-        indexCount:
-          this.index.length
-      }
-    )
+    return this.buildPromise
 
   }
 
@@ -561,6 +619,8 @@ class VehicleSearchIndex {
     this.loaded = false
 
     this.index = []
+
+    this.buildPromise = null
 
   }
 
@@ -628,14 +688,89 @@ class VehicleSearchIndex {
 
 
   // ====================================================
-  // SEARCH
+  // SCORE ORIGINAL VEHICLE QUERY
+  // ====================================================
+  //
+  // Gives priority to:
+  //
+  // Toyota Corolla
+  //
+  // over:
+  //
+  // Toyota
+  //
+  // when the user explicitly entered both make
+  // and model.
+  //
   // ====================================================
 
-  search(
+  scoreVehicleQuery(
+    item,
     query
   ) {
 
-    this.build()
+    const normalized =
+      VehicleFuzzySearch.normalize(
+        query
+      )
+
+
+    if (
+      !normalized
+    ) {
+
+      return 0
+
+    }
+
+
+    const makeScore =
+      VehicleFuzzySearch.score(
+        normalized,
+        item.make
+      )
+
+
+    const modelScore =
+      VehicleFuzzySearch.score(
+        normalized,
+        item.model
+      )
+
+
+    const fullScore =
+      VehicleFuzzySearch.score(
+        normalized,
+        item.full
+      )
+
+
+    return Math.max(
+      fullScore,
+      Math.min(
+        makeScore,
+        modelScore
+      ) + 20
+    )
+
+  }
+
+
+  // ====================================================
+  // SEARCH
+  // ====================================================
+  //
+  // IMPORTANT:
+  // This method is asynchronous because the vehicle
+  // database is asynchronous.
+  //
+  // ====================================================
+
+  async search(
+    query
+  ) {
+
+    await this.build()
 
 
     const normalizedQuery =
@@ -653,9 +788,27 @@ class VehicleSearchIndex {
     }
 
 
+    const requestedYear =
+      this.extractYear(
+        normalizedQuery
+      )
+
+
+    // --------------------------------------------------
+    // Search make/model without year.
+    //
+    // Year is handled separately by yearMatches().
+    // --------------------------------------------------
+
+    const vehicleQuery =
+      this.removeYear(
+        normalizedQuery
+      )
+
+
     const expanded =
       VehicleAliasDictionary.expand(
-        normalizedQuery
+        vehicleQuery
       )
 
 
@@ -668,20 +821,97 @@ class VehicleSearchIndex {
     }
 
 
-    const requestedYear =
-      this.extractYear(
-        normalizedQuery
-      )
-
-
     const results = []
 
+
+    // --------------------------------------------------
+    // First pass:
+    //
+    // Always prioritize the actual make + model query.
+    // This prevents "Toyota" alias scoring 100 and
+    // pushing Corolla behind other Toyota models.
+    // --------------------------------------------------
+
+    this.index.forEach(
+      item => {
+
+        if (
+          requestedYear &&
+          !this.yearMatches(
+            item.vehicle,
+            requestedYear
+          )
+        ) {
+
+          return
+
+        }
+
+
+        const itemScore =
+          this.scoreVehicleQuery(
+            item,
+            vehicleQuery
+          )
+
+
+        if (
+          itemScore < 30
+        ) {
+
+          return
+
+        }
+
+
+        results.push({
+
+          vehicle:
+            item.vehicle,
+
+          score:
+            itemScore
+
+        })
+
+      }
+    )
+
+
+    // --------------------------------------------------
+    // Alias fallback:
+    //
+    // Used when the original query did not provide a
+    // sufficiently strong match.
+    // --------------------------------------------------
 
     expanded.forEach(
       value => {
 
+        if (
+          value === vehicleQuery
+        ) {
+
+          return
+
+        }
+
+
         this.index.forEach(
           item => {
+
+            if (
+              requestedYear &&
+              !this.yearMatches(
+                item.vehicle,
+                requestedYear
+              )
+            ) {
+
+              return
+
+            }
+
 
             const itemScore =
               this.score(
@@ -699,26 +929,16 @@ class VehicleSearchIndex {
             }
 
 
-            if (
-              requestedYear &&
-              !this.yearMatches(
-                item.vehicle,
-                requestedYear
-              )
-            ) {
-
-              return
-
-            }
-
-
             results.push({
 
               vehicle:
                 item.vehicle,
 
               score:
-                itemScore
+                Math.min(
+                  itemScore,
+                  89
+                )
 
             })
 

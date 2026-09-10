@@ -13,13 +13,13 @@
 //
 // IMPORTANT CHANGE
 // ------------------------------------------------------
-// Brand catalog is now requested from GetAllMakes instead
-// of GetMakesForVehicleType/car.
-//
-// This prevents the autocomplete catalog from being
-// restricted to only the vehicle-type-specific makes.
-//
-// No manually maintained manufacturer list is used.
+// 1. Brand catalog comes from GetAllMakes.
+// 2. Model catalog comes from GetModelsForMake.
+// 3. Model lookup does NOT use year unless explicitly
+//    requested for a vehicle lookup.
+// 4. Make names are normalized before NHTSA requests.
+// 5. No manually maintained manufacturer list.
+// 6. Failed make variants do not generate endless calls.
 // ======================================================
 
 import VehicleMapper
@@ -68,6 +68,109 @@ const normalizeModel = value => {
 
   return normalize(value)
     .replace(/[^a-z0-9\u0600-\u06ff]+/gi, '')
+}
+
+
+// ======================================================
+// MAKE REQUEST CANDIDATES
+// ======================================================
+//
+// NHTSA accepts LIKE matching for Make names.
+//
+// We therefore try only deterministic variants of the
+// supplied name.
+//
+// Example:
+//
+// Aston-Martin
+// ↓
+// Aston Martin
+// ↓
+// AstonMartin
+//
+// No manual manufacturer mapping is used.
+// ======================================================
+
+const getMakeCandidates = make => {
+
+  const raw =
+    String(make ?? '')
+      .trim()
+
+
+  if (!raw) {
+
+    return []
+
+  }
+
+
+  const candidates = []
+
+
+  const add = value => {
+
+    const item =
+      String(value ?? '')
+        .trim()
+
+
+    if (!item) {
+
+      return
+
+    }
+
+
+    const key =
+      normalize(item)
+
+
+    if (!key) {
+
+      return
+
+    }
+
+
+    if (
+      candidates.some(
+        existing =>
+          normalize(existing) === key
+      )
+    ) {
+
+      return
+
+    }
+
+
+    candidates.push(
+      item
+    )
+
+  }
+
+
+  add(raw)
+
+  add(
+    raw.replace(
+      /[-_]+/g,
+      ' '
+    )
+  )
+
+  add(
+    raw.replace(
+      /[^a-zA-Z0-9\u0600-\u06ff]+/g,
+      ' '
+    )
+  )
+
+
+  return candidates
+
 }
 
 
@@ -216,19 +319,6 @@ export default class CarQueryProvider {
   // ====================================================
   // REQUEST MAKES
   // ====================================================
-  //
-  // IMPORTANT:
-  //
-  // Use the complete NHTSA make catalog.
-  //
-  // We intentionally do NOT use:
-  //
-  // GetMakesForVehicleType/car
-  //
-  // because that endpoint limits the catalog according
-  // to vehicle type.
-  //
-  // ====================================================
 
   static async requestMakes() {
 
@@ -267,37 +357,95 @@ export default class CarQueryProvider {
     }
 
 
-    const encodedMake =
-
-      encodeURIComponent(
-        String(make)
-          .trim()
+    const candidates =
+      getMakeCandidates(
+        make
       )
 
 
-    let url =
-
-      `${this.vpicBaseUrl}` +
-      `/GetModelsForMake/${encodedMake}` +
-      `?format=json`
-
-
     if (
-      year
+      candidates.length === 0
     ) {
 
-      url +=
-
-        `&modelyear=${encodeURIComponent(
-          year
-        )}`
+      return null
 
     }
 
 
-    return requestJson(
-      url
-    )
+    // ==================================================
+    // MODEL CATALOG
+    // ==================================================
+    //
+    // For autocomplete we intentionally use the general
+    // model catalog endpoint.
+    //
+    // A year-specific model request is only used when
+    // the caller explicitly supplies a year.
+    //
+    // ==================================================
+
+    for (
+      const candidate of candidates
+    ) {
+
+      const encodedMake =
+
+        encodeURIComponent(
+          candidate
+        )
+
+
+      let url =
+
+        `${this.vpicBaseUrl}` +
+        `/GetModelsForMake/${encodedMake}` +
+        `?format=json`
+
+
+      // ------------------------------------------------
+      // Only add year when explicitly supplied.
+      // ------------------------------------------------
+
+      if (
+        year
+      ) {
+
+        url +=
+
+          `&modelyear=${encodeURIComponent(
+            year
+          )}`
+
+      }
+
+
+      const result =
+        await requestJson(
+          url
+        )
+
+
+      const models =
+
+        Array.isArray(
+          result?.Results
+        )
+          ? result.Results
+          : []
+
+
+      if (
+        models.length > 0
+      ) {
+
+        return result
+
+      }
+
+    }
+
+
+    return null
 
   }
 
@@ -450,15 +598,6 @@ export default class CarQueryProvider {
 
   // ====================================================
   // BRANDS
-  // ====================================================
-  //
-  // IMPORTANT:
-  //
-  // vehicleType is accepted for API compatibility but
-  // does NOT restrict the manufacturer catalog.
-  //
-  // The autocomplete needs the complete make catalog.
-  //
   // ====================================================
 
   static async getBrands(

@@ -7,20 +7,8 @@
 //
 // Resolve OEM and alternative tire fitment for a vehicle.
 //
-// FLOW
-// ------------------------------------------------------
-//
-// Vehicle
-//   ↓
-// VehDBFitmentProvider
-//   ↓
-// OEM / Alternative Tire Sizes
-//   ↓
-// VehicleSpecificationProvider
-//   ↓
-// OEMCompatibilityEngine
-//   ↓
-// Product Matching
+// VehDB is also used as a clean source for model
+// autocomplete when a make is known.
 //
 // IMPORTANT
 // ------------------------------------------------------
@@ -31,11 +19,22 @@
 // - DOES NOT decide product availability
 // - DOES NOT create products
 //
-// It only resolves vehicle tire fitment.
+// It resolves vehicle fitment/catalog data only.
 //
 // VehDB is optional.
 // If VITE_VEHDB_API_KEY is missing, this provider
-// safely returns null instead of fabricating data.
+// safely returns null / [] instead of fabricating data.
+//
+// CACHE POLICY
+// ------------------------------------------------------
+//
+// 1. Successful VehDB results are persisted locally.
+// 2. Empty results are NEVER persisted.
+// 3. Identical concurrent requests share one Promise.
+// 4. Cached successful results survive page reloads.
+// 5. HTTP 429 activates a temporary cooldown.
+// 6. On HTTP 429, valid cached data is still returned.
+// 7. No undocumented VehDB endpoint is introduced.
 // ======================================================
 
 
@@ -50,23 +49,53 @@ const BASE_URL =
 // ======================================================
 // API KEY
 // ======================================================
-//
-// IMPORTANT
-// ------------------------------------------------------
-// Use direct Vite env access.
-// Do NOT use optional chaining here.
-//
-// Vite statically replaces:
-//
-// import.meta.env.VITE_VEHDB_API_KEY
-//
-// during the client build.
-// ======================================================
 
 const VEHDB_API_KEY =
   String(
     import.meta.env.VITE_VEHDB_API_KEY ?? ''
   ).trim()
+
+
+// ======================================================
+// CACHE
+// ======================================================
+//
+// Fitment data is technical vehicle data and can safely
+// remain available after page reloads.
+//
+// A 24-hour freshness window prevents unnecessary VehDB
+// traffic while still allowing the catalog to refresh.
+//
+// If VehDB responds with 429, stale cached data is still
+// allowed to be used.
+//
+
+const FITMENT_CACHE_PREFIX =
+  'elola:vehdb:fitment:v1:'
+
+const MODEL_CACHE_PREFIX =
+  'elola:vehdb:models:v1:'
+
+const FITMENT_CACHE_TTL =
+  24 * 60 * 60 * 1000
+
+const MODEL_CACHE_TTL =
+  24 * 60 * 60 * 1000
+
+const VEHDB_RATE_LIMIT_COOLDOWN =
+  60 * 1000
+
+
+// ======================================================
+// RUNTIME STATE
+// ======================================================
+
+const inFlightRequests =
+  new Map()
+
+
+let rateLimitBlockedUntil =
+  0
 
 
 // ======================================================
@@ -87,6 +116,409 @@ const normalizeText = value => {
 
 
 // ======================================================
+// CACHE KEY NORMALIZATION
+// ======================================================
+
+const normalizeCachePart = value => {
+
+  return normalizeText(value)
+    .replace(
+      /[^a-z0-9\u0600-\u06ff]+/gi,
+      '_'
+    )
+    .replace(
+      /^_+|_+$/g,
+      ''
+    )
+
+}
+
+
+// ======================================================
+// FITMENT CACHE KEY
+// ======================================================
+
+const getFitmentCacheKey = ({
+  make,
+  model,
+  year
+} = {}) => {
+
+  return (
+    FITMENT_CACHE_PREFIX +
+    [
+      normalizeCachePart(make),
+      normalizeCachePart(model),
+      normalizeCachePart(year)
+    ]
+      .join(':')
+  )
+
+}
+
+
+// ======================================================
+// MODEL CACHE KEY
+// ======================================================
+
+const getModelCacheKey = make => {
+
+  return (
+    MODEL_CACHE_PREFIX +
+    normalizeCachePart(make)
+  )
+
+}
+
+
+// ======================================================
+// SAFE LOCAL STORAGE
+// ======================================================
+
+const canUseLocalStorage = () => {
+
+  try {
+
+    return (
+      typeof window !== 'undefined' &&
+      typeof window.localStorage !== 'undefined'
+    )
+
+  }
+
+  catch {
+
+    return false
+
+  }
+
+}
+
+
+// ======================================================
+// READ PERSISTENT CACHE
+// ======================================================
+
+const readPersistentCache = (
+
+  key,
+
+  ttl
+
+) => {
+
+  if (
+    !canUseLocalStorage()
+  ) {
+
+    return null
+
+  }
+
+
+  try {
+
+    const raw =
+      window.localStorage.getItem(
+        key
+      )
+
+
+    if (
+      !raw
+    ) {
+
+      return null
+
+    }
+
+
+    const parsed =
+      JSON.parse(
+        raw
+      )
+
+
+    if (
+      !parsed ||
+      typeof parsed !== 'object'
+    ) {
+
+      return null
+
+    }
+
+
+    if (
+      parsed.value == null
+    ) {
+
+      return null
+
+    }
+
+
+    const createdAt =
+      Number(
+        parsed.createdAt
+      )
+
+
+    if (
+      !Number.isFinite(
+        createdAt
+      )
+    ) {
+
+      return null
+
+    }
+
+
+    const age =
+      Date.now() -
+      createdAt
+
+
+    if (
+      age <= ttl
+    ) {
+
+      return parsed.value
+
+    }
+
+
+    // --------------------------------------------------
+    // Expired cache is intentionally NOT deleted.
+    //
+    // It can still be used as stale fallback if VehDB
+    // responds with HTTP 429.
+    // --------------------------------------------------
+
+    return {
+      __stale: true,
+      value:
+        parsed.value
+    }
+
+  }
+
+  catch (
+    error
+  ) {
+
+    console.warn(
+      '[VehDB] Persistent cache read failed:',
+      error
+    )
+
+    return null
+
+  }
+
+}
+
+
+// ======================================================
+// READ STALE CACHE
+// ======================================================
+
+const readAnyPersistentCache = key => {
+
+  if (
+    !canUseLocalStorage()
+  ) {
+
+    return null
+
+  }
+
+
+  try {
+
+    const raw =
+      window.localStorage.getItem(
+        key
+      )
+
+
+    if (
+      !raw
+    ) {
+
+      return null
+
+    }
+
+
+    const parsed =
+      JSON.parse(
+        raw
+      )
+
+
+    if (
+      !parsed ||
+      typeof parsed !== 'object'
+    ) {
+
+      return null
+
+    }
+
+
+    return (
+      parsed.value ??
+      null
+    )
+
+  }
+
+  catch {
+
+    return null
+
+  }
+
+}
+
+
+// ======================================================
+// WRITE PERSISTENT CACHE
+// ======================================================
+//
+// Empty values are NEVER persisted.
+//
+
+const writePersistentCache = (
+
+  key,
+
+  value
+
+) => {
+
+  if (
+    value == null
+  ) {
+
+    return value
+
+  }
+
+
+  if (
+    Array.isArray(value) &&
+    value.length === 0
+  ) {
+
+    return value
+
+  }
+
+
+  if (
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    Object.keys(value).length === 0
+  ) {
+
+    return value
+
+  }
+
+
+  if (
+    !canUseLocalStorage()
+  ) {
+
+    return value
+
+  }
+
+
+  try {
+
+    window.localStorage.setItem(
+
+      key,
+
+      JSON.stringify({
+
+        createdAt:
+          Date.now(),
+
+        value
+
+      })
+
+    )
+
+  }
+
+  catch (
+    error
+  ) {
+
+    console.warn(
+      '[VehDB] Persistent cache write failed:',
+      error
+    )
+
+  }
+
+
+  return value
+
+}
+
+
+// ======================================================
+// CACHE VALUE VALIDATION
+// ======================================================
+
+const isUsableCachedValue = value => {
+
+  if (
+    value == null
+  ) {
+
+    return false
+
+  }
+
+
+  if (
+    Array.isArray(value)
+  ) {
+
+    return (
+      value.length > 0
+    )
+
+  }
+
+
+  if (
+    typeof value === 'object'
+  ) {
+
+    return (
+      Object.keys(value).length > 0
+    )
+
+  }
+
+
+  return (
+    String(value).trim() !== ''
+  )
+
+}
+
+
+// ======================================================
 // API KEY
 // ======================================================
 
@@ -98,8 +530,52 @@ const getApiKey = () => {
 
 
 // ======================================================
+// RATE LIMIT STATE
+// ======================================================
+
+const isRateLimited = () => {
+
+  return (
+    Date.now() <
+    rateLimitBlockedUntil
+  )
+
+}
+
+
+// ======================================================
+// ACTIVATE RATE LIMIT COOLDOWN
+// ======================================================
+
+const activateRateLimitCooldown = () => {
+
+  rateLimitBlockedUntil =
+    Date.now() +
+    VEHDB_RATE_LIMIT_COOLDOWN
+
+  console.warn(
+    '[VehDB] Rate limit cooldown activated:',
+    VEHDB_RATE_LIMIT_COOLDOWN,
+    'ms'
+  )
+
+}
+
+
+// ======================================================
 // SAFE REQUEST
 // ======================================================
+//
+// Returns:
+//
+//   {
+//     data,
+//     status
+//   }
+//
+// HTTP 429 is explicitly preserved so callers can
+// distinguish rate limiting from an ordinary failure.
+//
 
 const requestJson = async (
 
@@ -110,10 +586,6 @@ const requestJson = async (
   const apiKey =
     getApiKey()
 
-
-  // ====================================================
-  // DIAGNOSTIC
-  // ====================================================
 
   console.log(
     '[VehDB] API enabled:',
@@ -132,7 +604,39 @@ const requestJson = async (
       '[VehDB] VITE_VEHDB_API_KEY is missing'
     )
 
-    return null
+    return {
+
+      data:
+        null,
+
+      status:
+        0
+
+    }
+
+  }
+
+
+  if (
+    isRateLimited()
+  ) {
+
+    console.warn(
+      '[VehDB] Request skipped because rate-limit cooldown is active.'
+    )
+
+    return {
+
+      data:
+        null,
+
+      status:
+        429,
+
+      rateLimited:
+        true
+
+    }
 
   }
 
@@ -170,10 +674,6 @@ const requestJson = async (
       )
 
 
-    // ==================================================
-    // DIAGNOSTIC
-    // ==================================================
-
     console.log(
       '[VehDB] HTTP status:',
       response.status,
@@ -181,18 +681,46 @@ const requestJson = async (
     )
 
 
+    if (
+      response.status === 429
+    ) {
+
+      activateRateLimitCooldown()
+
+
+      return {
+
+        data:
+          null,
+
+        status:
+          429,
+
+        rateLimited:
+          true
+
+      }
+
+    }
+
+
     if (!response.ok) {
 
       console.warn(
-
         '[VehDB] HTTP request failed:',
-
         response.status,
         response.statusText
-
       )
 
-      return null
+      return {
+
+        data:
+          null,
+
+        status:
+          response.status
+
+      }
 
     }
 
@@ -201,31 +729,41 @@ const requestJson = async (
       await response.json()
 
 
-    // ==================================================
-    // DIAGNOSTIC
-    // ==================================================
-
     console.log(
       '[VehDB] Raw response:',
       data
     )
 
 
-    return data
+    return {
+
+      data,
+
+      status:
+        response.status
+
+    }
 
   }
 
   catch (error) {
 
     console.error(
-
       '[VehDB] Request failed:',
+      error
+    )
+
+    return {
+
+      data:
+        null,
+
+      status:
+        0,
 
       error
 
-    )
-
-    return null
+    }
 
   }
 
@@ -391,6 +929,28 @@ const getDataArray = result => {
 
 
   if (
+    Array.isArray(
+      result?.items
+    )
+  ) {
+
+    return result.items
+
+  }
+
+
+  if (
+    Array.isArray(
+      result?.records
+    )
+  ) {
+
+    return result.records
+
+  }
+
+
+  if (
     Array.isArray(result)
   ) {
 
@@ -400,6 +960,195 @@ const getDataArray = result => {
 
 
   return []
+
+}
+
+
+// ======================================================
+// MODEL NAME EXTRACTION
+// ======================================================
+
+const extractModelName = item => {
+
+  if (
+    item === null ||
+    item === undefined
+  ) {
+
+    return ''
+
+  }
+
+
+  if (
+    typeof item === 'string'
+  ) {
+
+    return item.trim()
+
+  }
+
+
+  if (
+    typeof item !== 'object'
+  ) {
+
+    return ''
+
+  }
+
+
+  const value =
+    item.model ??
+    item.model_name ??
+    item.modelName ??
+    item.vehicleModel ??
+    item.vehicle_model ??
+    item.vehicle_model_name ??
+    ''
+
+
+  return String(
+    value
+  ).trim()
+
+}
+
+
+// ======================================================
+// NORMALIZE MODEL
+// ======================================================
+
+const normalizeModel = (
+
+  item,
+
+  make
+
+) => {
+
+  const model =
+    extractModelName(
+      item
+    )
+
+
+  if (
+    !model
+  ) {
+
+    return null
+
+  }
+
+
+  return {
+
+    id:
+      `${String(make ?? '').trim()}::${model}`,
+
+    value:
+      model,
+
+    name:
+      model,
+
+    label:
+      model,
+
+    model:
+      model,
+
+    modelName:
+      model,
+
+    make:
+      String(make ?? '').trim(),
+
+    brand:
+      String(make ?? '').trim(),
+
+    source:
+      'vehdb'
+
+  }
+
+}
+
+
+// ======================================================
+// NORMALIZE MODEL LIST
+// ======================================================
+
+const normalizeModels = (
+
+  records,
+
+  make
+
+) => {
+
+  const seen =
+    new Map()
+
+
+  ;(
+    Array.isArray(records)
+      ? records
+      : []
+  )
+    .forEach(
+      item => {
+
+        const normalized =
+          normalizeModel(
+            item,
+            make
+          )
+
+
+        if (
+          !normalized
+        ) {
+
+          return
+
+        }
+
+
+        const key =
+          normalizeText(
+            normalized.model
+          )
+
+
+        if (
+          !key
+        ) {
+
+          return
+
+        }
+
+
+        if (
+          !seen.has(key)
+        ) {
+
+          seen.set(
+            key,
+            normalized
+          )
+
+        }
+
+      }
+    )
+
+
+  return Array.from(
+    seen.values()
+  )
 
 }
 
@@ -545,6 +1294,368 @@ export default class VehDBFitmentProvider {
 
 
   // ====================================================
+  // IN-FLIGHT KEY
+  // ====================================================
+
+  static getInFlightKey(
+
+    prefix,
+
+    value
+
+  ) {
+
+    return (
+      `${prefix}:${normalizeText(value)}`
+    )
+
+  }
+
+
+  // ====================================================
+  // GET MODELS
+  // ====================================================
+  //
+  // Uses the SAME known VehDB tire-sizes endpoint that
+  // already works for vehicle fitment.
+  //
+  // No undocumented /models endpoint is introduced.
+  //
+  // Request:
+  //
+  //   /v1/tire-sizes?make=Toyota
+  //
+  // The returned fitment records are inspected for their
+  // model field and converted into autocomplete records.
+  //
+  // ====================================================
+
+  static async getModels({
+
+    make,
+    brand
+
+  } = {}) {
+
+    const requestedMake =
+      String(
+        make ??
+        brand ??
+        ''
+      ).trim()
+
+
+    console.log(
+      '[VehDB] getModels input:',
+      {
+        make:
+          requestedMake
+      }
+    )
+
+
+    if (
+      !requestedMake
+    ) {
+
+      console.warn(
+        '[VehDB] getModels skipped: make is missing'
+      )
+
+      return []
+
+    }
+
+
+    if (
+      !this.isEnabled()
+    ) {
+
+      console.warn(
+        '[VehDB] getModels disabled because API key is missing'
+      )
+
+      return []
+
+    }
+
+
+    const cacheKey =
+      getModelCacheKey(
+        requestedMake
+      )
+
+
+    const cached =
+      readPersistentCache(
+        cacheKey,
+        MODEL_CACHE_TTL
+      )
+
+
+    if (
+      cached &&
+      cached.__stale !== true &&
+      Array.isArray(cached)
+    ) {
+
+      console.log(
+        '[VehDB] Model catalog cache HIT:',
+        requestedMake,
+        cached.length
+      )
+
+      return cached
+
+    }
+
+
+    const requestKey =
+      this.getInFlightKey(
+        'models',
+        requestedMake
+      )
+
+
+    const existingRequest =
+      inFlightRequests.get(
+        requestKey
+      )
+
+
+    if (
+      existingRequest
+    ) {
+
+      console.log(
+        '[VehDB] Model request deduplicated:',
+        requestedMake
+      )
+
+      return existingRequest
+
+    }
+
+
+    const request =
+
+      (async () => {
+
+        try {
+
+          const params =
+            new URLSearchParams()
+
+
+          params.set(
+            'make',
+            requestedMake
+          )
+
+
+          const requestUrl =
+            `${BASE_URL}/tire-sizes?${params.toString()}`
+
+
+          console.log(
+            '[VehDB] Model catalog request:',
+            requestUrl
+          )
+
+
+          const response =
+            await requestJson(
+              requestUrl
+            )
+
+
+          if (
+            response?.rateLimited
+          ) {
+
+            const stale =
+              readAnyPersistentCache(
+                cacheKey
+              )
+
+
+            if (
+              Array.isArray(stale) &&
+              stale.length > 0
+            ) {
+
+              console.warn(
+                '[VehDB] Model catalog rate limited. Using stale cached catalog:',
+                requestedMake,
+                stale.length
+              )
+
+              return stale
+
+            }
+
+
+            console.warn(
+              '[VehDB] Model catalog rate limited and no cache is available:',
+              requestedMake
+            )
+
+            return []
+
+          }
+
+
+          const result =
+            response?.data
+
+
+          if (
+            !result
+          ) {
+
+            console.warn(
+              '[VehDB] getModels: no response data'
+            )
+
+            const stale =
+              readAnyPersistentCache(
+                cacheKey
+              )
+
+
+            return (
+              Array.isArray(stale)
+                ? stale
+                : []
+            )
+
+          }
+
+
+          const records =
+            getDataArray(
+              result
+            )
+
+
+          console.log(
+            '[VehDB] Model catalog records:',
+            records.length
+          )
+
+
+          if (
+            records.length === 0
+          ) {
+
+            console.warn(
+              '[VehDB] getModels: no records returned for make:',
+              requestedMake
+            )
+
+            const stale =
+              readAnyPersistentCache(
+                cacheKey
+              )
+
+
+            return (
+              Array.isArray(stale)
+                ? stale
+                : []
+            )
+
+          }
+
+
+          const models =
+            normalizeModels(
+              records,
+              requestedMake
+            )
+
+
+          console.log(
+            '[VehDB] Model catalog normalized:',
+            {
+              make:
+                requestedMake,
+
+              count:
+                models.length,
+
+              models:
+                models.slice(
+                  0,
+                  30
+                )
+            }
+          )
+
+
+          if (
+            models.length > 0
+          ) {
+
+            writePersistentCache(
+              cacheKey,
+              models
+            )
+
+          }
+
+
+          return models
+
+        }
+
+        catch (
+          error
+        ) {
+
+          console.warn(
+            '[VehDB] getModels failed:',
+            error
+          )
+
+
+          const stale =
+            readAnyPersistentCache(
+              cacheKey
+            )
+
+
+          return (
+            Array.isArray(stale)
+              ? stale
+              : []
+          )
+
+        }
+
+        finally {
+
+          inFlightRequests.delete(
+            requestKey
+          )
+
+        }
+
+      })()
+
+
+    inFlightRequests.set(
+      requestKey,
+      request
+    )
+
+
+    return request
+
+  }
+
+
+  // ====================================================
   // FIND TIRE FITMENT
   // ====================================================
 
@@ -595,236 +1706,465 @@ export default class VehDBFitmentProvider {
     }
 
 
-    const params =
-      new URLSearchParams()
+    const cacheKey =
+      getFitmentCacheKey({
+
+        make,
+
+        model,
+
+        year
+
+      })
 
 
-    params.set(
-      'make',
-      String(make).trim()
-    )
-
-
-    params.set(
-      'model',
-      String(model).trim()
-    )
+    const cached =
+      readPersistentCache(
+        cacheKey,
+        FITMENT_CACHE_TTL
+      )
 
 
     if (
-      year
+      cached &&
+      cached.__stale !== true &&
+      isUsableCachedValue(cached)
     ) {
 
-      params.set(
-        'year',
-        String(year)
+      console.log(
+        '[VehDB] Fitment cache HIT:',
+        {
+          make,
+          model,
+          year
+        }
       )
+
+
+      return cached
 
     }
 
 
-    const requestUrl =
-      `${BASE_URL}/tire-sizes?${params.toString()}`
+    const requestKey =
+      this.getInFlightKey(
 
+        'fitment',
 
-    console.log(
-      '[VehDB] Tire fitment request:',
-      requestUrl
-    )
+        [
+          make,
+          model,
+          year
+        ]
+          .map(
+            normalizeText
+          )
+          .join('|')
 
-
-    const result =
-      await requestJson(
-        requestUrl
       )
 
 
-    if (!result) {
-
-      console.warn(
-        '[VehDB] No response data'
+    const existingRequest =
+      inFlightRequests.get(
+        requestKey
       )
-
-      return null
-
-    }
-
-
-    const records =
-      getDataArray(result)
-
-
-    // ==================================================
-    // DIAGNOSTIC
-    // ==================================================
-
-    console.log(
-      '[VehDB] Records count:',
-      records.length
-    )
 
 
     if (
-      records.length === 0
+      existingRequest
     ) {
 
-      console.warn(
-        '[VehDB] Response contains no fitment records'
+      console.log(
+        '[VehDB] Fitment request deduplicated:',
+        {
+          make,
+          model,
+          year
+        }
       )
 
-      return null
+      return existingRequest
 
     }
 
 
-    const fitments =
-      records
+    const request =
 
-        .map(
-          item =>
-            normalizeFitmentRecord(
+      (async () => {
 
-              item,
+        try {
 
+          const params =
+            new URLSearchParams()
+
+
+          params.set(
+            'make',
+            String(make).trim()
+          )
+
+
+          params.set(
+            'model',
+            String(model).trim()
+          )
+
+
+          if (
+            year
+          ) {
+
+            params.set(
+              'year',
+              String(year)
+            )
+
+          }
+
+
+          const requestUrl =
+            `${BASE_URL}/tire-sizes?${params.toString()}`
+
+
+          console.log(
+            '[VehDB] Tire fitment request:',
+            requestUrl
+          )
+
+
+          const response =
+            await requestJson(
+              requestUrl
+            )
+
+
+          // ------------------------------------------------
+          // HTTP 429
+          // ------------------------------------------------
+
+          if (
+            response?.rateLimited
+          ) {
+
+            const stale =
+              readAnyPersistentCache(
+                cacheKey
+              )
+
+
+            if (
+              isUsableCachedValue(stale)
+            ) {
+
+              console.warn(
+                '[VehDB] Fitment rate limited. Using cached VehDB result:',
+                {
+                  make,
+                  model,
+                  year
+                }
+              )
+
+              return stale
+
+            }
+
+
+            console.warn(
+              '[VehDB] Fitment rate limited and no cached result is available:',
               {
                 make,
                 model,
                 year
               }
+            )
+
+            return null
+
+          }
+
+
+          const result =
+            response?.data
+
+
+          if (
+            !result
+          ) {
+
+            console.warn(
+              '[VehDB] No response data'
+            )
+
+
+            const stale =
+              readAnyPersistentCache(
+                cacheKey
+              )
+
+
+            return (
+              isUsableCachedValue(stale)
+                ? stale
+                : null
+            )
+
+          }
+
+
+          const records =
+            getDataArray(
+              result
+            )
+
+
+          console.log(
+            '[VehDB] Records count:',
+            records.length
+          )
+
+
+          if (
+            records.length === 0
+          ) {
+
+            console.warn(
+              '[VehDB] Response contains no fitment records'
+            )
+
+
+            const stale =
+              readAnyPersistentCache(
+                cacheKey
+              )
+
+
+            return (
+              isUsableCachedValue(stale)
+                ? stale
+                : null
+            )
+
+          }
+
+
+          const fitments =
+            records
+
+              .map(
+                item =>
+                  normalizeFitmentRecord(
+
+                    item,
+
+                    {
+                      make,
+                      model,
+                      year
+                    }
+
+                  )
+              )
+
+              .filter(Boolean)
+
+
+          console.log(
+            '[VehDB] Normalized fitments:',
+            fitments
+          )
+
+
+          if (
+            fitments.length === 0
+          ) {
+
+            console.warn(
+              '[VehDB] Could not normalize any fitment records'
+            )
+
+
+            const stale =
+              readAnyPersistentCache(
+                cacheKey
+              )
+
+
+            return (
+              isUsableCachedValue(stale)
+                ? stale
+                : null
+            )
+
+          }
+
+
+          const oemSizes =
+            uniqueSizes(
+
+              fitments.flatMap(
+                item =>
+                  item.oemSizes
+              )
 
             )
-        )
-
-        .filter(Boolean)
 
 
-    console.log(
-      '[VehDB] Normalized fitments:',
-      fitments
+          const alternateSizes =
+            uniqueSizes(
+
+              fitments.flatMap(
+                item =>
+                  item.alternateSizes
+              )
+
+            )
+
+
+          const sizes =
+            uniqueSizes([
+
+              ...oemSizes,
+
+              ...alternateSizes
+
+            ])
+
+
+          console.log(
+            '[VehDB] OEM sizes:',
+            oemSizes
+          )
+
+          console.log(
+            '[VehDB] Alternate sizes:',
+            alternateSizes
+          )
+
+          console.log(
+            '[VehDB] Final sizes:',
+            sizes
+          )
+
+
+          if (
+            sizes.length === 0
+          ) {
+
+            console.warn(
+              '[VehDB] Fitment records found but no tire sizes were extracted'
+            )
+
+
+            const stale =
+              readAnyPersistentCache(
+                cacheKey
+              )
+
+
+            return (
+              isUsableCachedValue(stale)
+                ? stale
+                : null
+            )
+
+          }
+
+
+          const finalResult = {
+
+            make,
+
+            brand:
+              make,
+
+            model,
+
+            modelName:
+              model,
+
+            year:
+              year ?? null,
+
+            oemSizes,
+
+            alternateSizes,
+
+            sizes,
+
+            fitments,
+
+            source:
+              'vehdb',
+
+            raw:
+              result
+
+          }
+
+
+          console.log(
+            '[VehDB] FINAL FITMENT RESULT:',
+            finalResult
+          )
+
+
+          // -----------------------------------------------
+          // Persist ONLY successful non-empty results.
+          // -----------------------------------------------
+
+          writePersistentCache(
+            cacheKey,
+            finalResult
+          )
+
+
+          return finalResult
+
+        }
+
+        catch (
+          error
+        ) {
+
+          console.error(
+            '[VehDB] findTireFitment failed:',
+            error
+          )
+
+
+          const stale =
+            readAnyPersistentCache(
+              cacheKey
+            )
+
+
+          return (
+            isUsableCachedValue(stale)
+              ? stale
+              : null
+          )
+
+        }
+
+        finally {
+
+          inFlightRequests.delete(
+            requestKey
+          )
+
+        }
+
+      })()
+
+
+    inFlightRequests.set(
+      requestKey,
+      request
     )
 
 
-    if (
-      fitments.length === 0
-    ) {
-
-      console.warn(
-        '[VehDB] Could not normalize any fitment records'
-      )
-
-      return null
-
-    }
-
-
-    const oemSizes =
-      uniqueSizes(
-
-        fitments.flatMap(
-          item =>
-            item.oemSizes
-        )
-
-      )
-
-
-    const alternateSizes =
-      uniqueSizes(
-
-        fitments.flatMap(
-          item =>
-            item.alternateSizes
-        )
-
-      )
-
-
-    const sizes =
-      uniqueSizes([
-
-        ...oemSizes,
-
-        ...alternateSizes
-
-      ])
-
-
-    // ==================================================
-    // DIAGNOSTIC
-    // ==================================================
-
-    console.log(
-      '[VehDB] OEM sizes:',
-      oemSizes
-    )
-
-    console.log(
-      '[VehDB] Alternate sizes:',
-      alternateSizes
-    )
-
-    console.log(
-      '[VehDB] Final sizes:',
-      sizes
-    )
-
-
-    if (
-      sizes.length === 0
-    ) {
-
-      console.warn(
-        '[VehDB] Fitment records found but no tire sizes were extracted'
-      )
-
-      return null
-
-    }
-
-
-    const finalResult = {
-
-      make,
-
-      brand:
-        make,
-
-      model,
-
-      modelName:
-        model,
-
-      year:
-        year ?? null,
-
-      oemSizes,
-
-      alternateSizes,
-
-      sizes,
-
-      fitments,
-
-      source:
-        'vehdb',
-
-      raw:
-        result
-
-    }
-
-
-    // ==================================================
-    // DIAGNOSTIC
-    // ==================================================
-
-    console.log(
-      '[VehDB] FINAL FITMENT RESULT:',
-      finalResult
-    )
-
-
-    return finalResult
+    return request
 
   }
 
@@ -856,11 +2196,8 @@ export default class VehDBFitmentProvider {
 
 
     return (
-
       result?.oemSizes ??
-
       []
-
     )
 
   }
@@ -893,11 +2230,8 @@ export default class VehDBFitmentProvider {
 
 
     return (
-
       result?.alternateSizes ??
-
       []
-
     )
 
   }

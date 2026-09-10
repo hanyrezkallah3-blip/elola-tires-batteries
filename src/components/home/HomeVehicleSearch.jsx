@@ -2,6 +2,41 @@
 // EL OLA ERP
 // Home Vehicle Search
 // ======================================================
+//
+// RESPONSIBILITY
+// ------------------------------------------------------
+// Unified home search entry point.
+//
+// IMPORTANT
+// ------------------------------------------------------
+// The Home page exposes ONE vehicle search input only.
+// The separate AI search box has been removed from the UI.
+//
+// The underlying useVehicleSearch hook still retains
+// AI / free-text vehicle parsing and search functionality.
+//
+// SEARCH MODES
+// ------------------------------------------------------
+// 1. Vehicle
+// 2. Tire size
+// 3. Battery
+// 4. Oil
+//
+// VEHICLE SEARCH
+// ------------------------------------------------------
+// VehicleSearchForm is the single visible vehicle search
+// interface.
+//
+// It supports:
+// - Arabic / English
+// - Brand autocomplete
+// - Model autocomplete
+// - Year
+// - Free-text vehicle search
+// - AI vehicle parsing internally
+// - VehDB / local fallback through the existing hook
+//
+// ======================================================
 
 import {
   useEffect,
@@ -22,22 +57,26 @@ import HomeSearchResults
   from './HomeSearchResults'
 
 
+// ======================================================
+// COMPONENT
+// ======================================================
 
 export default function HomeVehicleSearch({
   onAddToCart
 }) {
 
-
   const [
     tab,
     setTab
-  ] = useState('vehicle')
+  ] =
+    useState('vehicle')
 
 
   const [
     searched,
     setSearched
-  ] = useState(false)
+  ] =
+    useState(false)
 
 
   const {
@@ -49,9 +88,11 @@ export default function HomeVehicleSearch({
     brands,
     models,
     years,
+    tireSearchError,
+    search,
 
     // ==================================================
-    // VEHICLE AUTOCOMPLETE
+    // VEHICLE BRAND AUTOCOMPLETE
     // ==================================================
 
     brandSuggestions,
@@ -67,246 +108,37 @@ export default function HomeVehicleSearch({
     modelSuggestions,
     suggestVehicleModels,
     clearVehicleModelSuggestions,
-    modelsLoading,
+    modelsLoading
 
-    tireSearchError,
-    search
-  } = useVehicleSearch()
-
+  } =
+    useVehicleSearch()
 
 
   // ====================================================
-  // MARKET DEMAND
+  // MARKET DEMAND CONTEXT
   // ====================================================
 
   const searchContextRef =
     useRef({
-      searchType: 'vehicle',
-      searchQuery: ''
+
+      searchType:
+        'vehicle',
+
+      searchQuery:
+        '',
+
+      vehicleType:
+        '',
+
+      make:
+        '',
+
+      model:
+        '',
+
+      year:
+        ''
     })
-
-
-
-  // ====================================================
-  // FIRST NON EMPTY
-  // ====================================================
-
-  const firstNonEmpty =
-    (...values) => {
-
-      for (
-        const value of values
-      ) {
-
-        if (
-          value === null ||
-          value === undefined
-        ) {
-          continue
-        }
-
-
-        if (
-          typeof value === 'number'
-        ) {
-
-          if (
-            Number.isFinite(
-              value
-            )
-          ) {
-            return value
-          }
-
-          continue
-
-        }
-
-
-        const normalized =
-          String(
-            value
-          ).trim()
-
-
-        if (
-          normalized
-        ) {
-          return normalized
-        }
-
-      }
-
-
-      return ''
-
-    }
-
-
-
-  // ====================================================
-  // READ VEHICLE VALUE FROM SEARCH RESPONSE
-  // ====================================================
-  //
-  // The AI/VehicleEngine response can expose vehicle
-  // information through different layers.
-  //
-  // We intentionally check aliases instead of guessing
-  // the vehicle type from the text query.
-  //
-  // ====================================================
-
-  const resolveVehicleContextFromResponse =
-    response => {
-
-      if (
-        !response ||
-        typeof response !== 'object'
-      ) {
-
-        return {}
-
-      }
-
-
-      const candidates = [
-
-        response,
-
-        response.vehicle,
-
-        response.vehicleData,
-
-        response.vehicleInfo,
-
-        response.vehicleContext,
-
-        response.searchContext,
-
-        response.resolvedVehicle,
-
-        response.parsedVehicle,
-
-        response.aiResponse,
-
-        response.aiResponse?.vehicle,
-
-        response.aiResponse?.vehicleData,
-
-        response.aiResponse?.vehicleInfo,
-
-        response.aiResponse?.vehicleContext,
-
-        response.aiResponse?.searchContext,
-
-        response.result,
-
-        response.result?.vehicle,
-
-        response.result?.vehicleData,
-
-        response.result?.vehicleInfo,
-
-        response.result?.vehicleContext,
-
-        response.result?.searchContext
-
-      ]
-        .filter(
-          value =>
-            value &&
-            typeof value === 'object'
-        )
-
-
-      let vehicleType = ''
-      let make = ''
-      let model = ''
-      let year = ''
-
-
-      for (
-        const candidate of candidates
-      ) {
-
-        vehicleType =
-          firstNonEmpty(
-
-            vehicleType,
-
-            candidate.vehicleType,
-
-            candidate.vehicle_type,
-
-            candidate.type,
-
-            candidate.vehicleTypeName,
-
-            candidate.vehicle_type_name
-
-          )
-
-
-        make =
-          firstNonEmpty(
-
-            make,
-
-            candidate.make,
-
-            candidate.brand,
-
-            candidate.manufacturer,
-
-            candidate.vehicleMake
-
-          )
-
-
-        model =
-          firstNonEmpty(
-
-            model,
-
-            candidate.model,
-
-            candidate.vehicleModel,
-
-            candidate.modelName
-
-          )
-
-
-        year =
-          firstNonEmpty(
-
-            year,
-
-            candidate.year,
-
-            candidate.modelYear,
-
-            candidate.vehicleYear
-
-          )
-
-      }
-
-
-      return {
-
-        vehicleType,
-
-        make,
-
-        model,
-
-        year
-
-      }
-
-    }
-
 
 
   // ====================================================
@@ -319,23 +151,23 @@ export default function HomeVehicleSearch({
       const currentForm =
         form || {}
 
-
       return {
 
         searchType:
           searchTab ||
           'vehicle',
 
-
         searchQuery:
+
           searchTab === 'vehicle'
+
             ? [
                 currentForm.vehicleType ||
                   currentForm.type ||
                   '',
 
-                currentForm.make ||
-                  currentForm.brand ||
+                currentForm.brand ||
+                  currentForm.make ||
                   '',
 
                 currentForm.model ||
@@ -347,194 +179,199 @@ export default function HomeVehicleSearch({
                 .filter(Boolean)
                 .join(' ')
 
-
             : searchTab === 'tire'
+
               ? (
                   currentForm.tireSize ||
                   ''
                 )
 
-
               : searchTab === 'battery'
+
                 ? (
                     currentForm.capacity ||
                     ''
                   )
 
-
                 : searchTab === 'oil'
+
                   ? (
                       currentForm.viscosity ||
                       ''
                     )
 
-
                   : '',
-
 
         vehicleType:
           currentForm.vehicleType ||
           currentForm.type ||
           '',
 
-
         make:
-          currentForm.make ||
           currentForm.brand ||
+          currentForm.make ||
           '',
-
 
         model:
           currentForm.model ||
           '',
 
-
         year:
           currentForm.year ||
           '',
-
 
         tireSize:
           currentForm.tireSize ||
           '',
 
-
         capacity:
           currentForm.capacity ||
           '',
 
-
         viscosity:
           currentForm.viscosity ||
           ''
-
       }
-
     }
 
 
-
   // ====================================================
-  // NORMALIZE MARKET DEMAND PRODUCTS
+  // MARKET DEMAND REQUEST
   // ====================================================
 
-  const normalizeDemandProduct =
-    product => {
+  const trackRequest =
+    searchContext => {
 
-      if (
-        !product ||
-        typeof product !== 'object'
+      try {
+
+        useMarketDemandStore
+          .getState()
+          .recordRequest({
+
+            query:
+              searchContext.searchQuery,
+
+            searchType:
+              searchContext.searchType,
+
+            searchContext,
+
+            products:
+              [],
+
+            metadata: {
+
+              source:
+                'HomeVehicleSearch'
+            }
+          })
+
+      }
+
+      catch (
+        error
       ) {
-        return null
+
+        console.error(
+          '[MarketDemand] request tracking failed:',
+          error
+        )
       }
-
-
-      const productId =
-        product?.productId ??
-        product?.id ??
-        product?.sku ??
-        product?.barcode ??
-        ''
-
-
-      const productName =
-        product?.productName ||
-        product?.name ||
-        product?.title ||
-        ''
-
-
-      if (
-        !String(productId).trim() &&
-        !String(productName).trim()
-      ) {
-        return null
-      }
-
-
-      return {
-
-        ...product,
-
-        id:
-          productId ||
-          product?.id,
-
-        productId:
-          productId ||
-          product?.id,
-
-        name:
-          productName,
-
-        productName:
-          productName
-
-      }
-
     }
 
 
-
   // ====================================================
-  // NORMALIZE SEARCH RESULTS
+  // SEARCH
   // ====================================================
 
-  const normalizeSearchResults =
-    value => {
+  const handleSearch =
+    async searchTab => {
 
-      if (
-        Array.isArray(value)
-      ) {
-        return value
-          .map(
-            normalizeDemandProduct
-          )
-          .filter(Boolean)
-      }
+      const searchContext =
+        buildSearchContext(
+          searchTab
+        )
 
+      searchContextRef.current =
+        searchContext
 
-      if (
-        value &&
-        typeof value === 'object'
-      ) {
+      setSearched(
+        true
+      )
 
-        const arrays = [
+      trackRequest(
+        searchContext
+      )
 
-          value.products,
+      const searchResults =
+        await search(
+          searchTab
+        )
 
-          value.results,
-
-          value.tires,
-
-          value.batteries,
-
-          value.oils,
-
-          value.parts,
-
-          value.vehicle
-
-        ]
-
-
-        return arrays
-          .filter(
-            Array.isArray
-          )
-          .flat()
-          .map(
-            normalizeDemandProduct
-          )
-          .filter(Boolean)
-
-      }
-
-
-      return []
-
+      return searchResults
     }
 
+
+  // ====================================================
+  // VIEWED TRACKING
+  // ====================================================
+
+  useEffect(
+    () => {
+
+      if (
+        !searched ||
+        loading ||
+        !Array.isArray(results) ||
+        results.length === 0
+      ) {
+        return
+      }
+
+      try {
+
+        const demandStore =
+          useMarketDemandStore
+            .getState()
+
+        results.forEach(
+          product => {
+
+            demandStore.recordViewed({
+
+              product,
+
+              searchContext:
+                searchContextRef.current,
+
+              metadata: {
+
+                source:
+                  'HomeVehicleSearch'
+              }
+            })
+          }
+        )
+
+      }
+
+      catch (
+        error
+      ) {
+
+        console.error(
+          '[MarketDemand] viewed tracking failed:',
+          error
+        )
+      }
+
+    },
+    [
+      searched,
+      loading,
+      results
+    ]
+  )
 
 
   // ====================================================
@@ -551,18 +388,9 @@ export default function HomeVehicleSearch({
         return
       }
 
-
-      const normalizedProduct =
-        normalizeDemandProduct(
-          product
-        )
-
-
       onAddToCart({
 
         ...product,
-
-        ...(normalizedProduct || {}),
 
         id:
           product?.id ??
@@ -580,450 +408,12 @@ export default function HomeVehicleSearch({
           0,
 
         searchContext:
+          searchContextRef.current,
+
+        vehicleSearchContext:
           searchContextRef.current
-
       })
-
     }
-
-
-
-  // ====================================================
-  // SEARCH
-  // ====================================================
-
-  const handleSearch =
-    async searchTab => {
-
-      const initialSearchContext =
-        buildSearchContext(
-          searchTab
-        )
-
-
-      searchContextRef.current =
-        initialSearchContext
-
-
-      setSearched(
-        true
-      )
-
-
-      // ------------------------------------------------
-      // EXECUTE THE REAL SEARCH FIRST
-      // ------------------------------------------------
-
-      let searchResults = []
-
-
-      let response = null
-
-
-      try {
-
-        response =
-          await search(
-            searchTab
-          )
-
-
-        // ------------------------------------------------
-        // IMPORTANT:
-        //
-        // If search() returns an Array, that Array is the
-        // authoritative result of THIS search.
-        //
-        // An empty Array is a valid result and MUST NOT
-        // be replaced with the previous `results` state.
-        //
-        // This prevents stale products from a previous
-        // search being recorded as Market Demand for the
-        // current search.
-        // ------------------------------------------------
-
-        if (
-          Array.isArray(response)
-        ) {
-
-          searchResults =
-            normalizeSearchResults(
-              response
-            )
-
-        } else {
-
-          searchResults =
-            normalizeSearchResults(
-              response
-            )
-
-
-          // ------------------------------------------------
-          // FALLBACK:
-          //
-          // Only use the existing `results` state when the
-          // search function did not return an Array at all.
-          //
-          // This preserves compatibility with versions of
-          // the hook that update `results` instead of
-          // returning the array directly.
-          // ------------------------------------------------
-
-          if (
-            searchResults.length === 0 &&
-            !response &&
-            Array.isArray(results)
-          ) {
-
-            searchResults =
-              normalizeSearchResults(
-                results
-              )
-
-          }
-
-        }
-
-
-      } catch (error) {
-
-        console.error(
-          '[MarketDemand] search failed:',
-          error
-        )
-
-        return
-
-      }
-
-
-
-      // ==================================================
-      // RESOLVE AUTHORITATIVE SEARCH CONTEXT
-      // ==================================================
-      //
-      // For vehicle searches, the form is not necessarily
-      // the final authoritative vehicle context.
-      //
-      // The AI/VehicleEngine can resolve:
-      //
-      // - vehicleType
-      // - make
-      // - model
-      // - year
-      //
-      // from the actual search.
-      //
-      // We preserve the form values and only replace them
-      // when the authoritative response contains a value.
-      //
-      // IMPORTANT:
-      // We NEVER invent a vehicle type from the query.
-      //
-      // ==================================================
-
-      if (
-        searchTab === 'vehicle'
-      ) {
-
-        const resolvedVehicle =
-          resolveVehicleContextFromResponse(
-            response
-          )
-
-
-        const currentContext =
-          searchContextRef.current || {}
-
-
-        const resolvedVehicleType =
-          firstNonEmpty(
-
-            resolvedVehicle.vehicleType,
-
-            currentContext.vehicleType
-
-          )
-
-
-        const resolvedMake =
-          firstNonEmpty(
-
-            resolvedVehicle.make,
-
-            currentContext.make
-
-          )
-
-
-        const resolvedModel =
-          firstNonEmpty(
-
-            resolvedVehicle.model,
-
-            currentContext.model
-
-          )
-
-
-        const resolvedYear =
-          firstNonEmpty(
-
-            resolvedVehicle.year,
-
-            currentContext.year
-
-          )
-
-
-        const realVehicleQuery =
-          typeof response?.query === 'string'
-            ? response.query.trim()
-            : ''
-
-
-        searchContextRef.current = {
-
-          ...currentContext,
-
-          searchType:
-            'vehicle',
-
-          searchQuery:
-            realVehicleQuery ||
-            currentContext.searchQuery ||
-            '',
-
-          vehicleType:
-            resolvedVehicleType,
-
-          make:
-            resolvedMake,
-
-          model:
-            resolvedModel,
-
-          year:
-            resolvedYear
-
-        }
-
-
-        console.log(
-          '[MarketDemand] Vehicle search context resolved',
-          {
-            searchQuery:
-              searchContextRef.current.searchQuery,
-
-            vehicleType:
-              searchContextRef.current.vehicleType,
-
-            make:
-              searchContextRef.current.make,
-
-            model:
-              searchContextRef.current.model,
-
-            year:
-              searchContextRef.current.year,
-
-            searchContext:
-              searchContextRef.current,
-
-            responseVehicleContext:
-              resolvedVehicle
-
-          }
-        )
-
-      }
-
-
-
-      // ------------------------------------------------
-      // MARKET DEMAND: REQUEST
-      // ------------------------------------------------
-
-      try {
-
-        const demandStore =
-          useMarketDemandStore
-            .getState()
-
-
-        if (
-          searchResults.length > 0
-        ) {
-
-          demandStore.recordRequest({
-
-            query:
-              searchContextRef.current.searchQuery,
-
-            searchType:
-              searchContextRef.current.searchType,
-
-            searchContext:
-              searchContextRef.current,
-
-            products:
-              searchResults,
-
-            metadata: {
-
-              source:
-                'HomeVehicleSearch',
-
-              resultCount:
-                searchResults.length
-
-            }
-
-          })
-
-
-          console.log(
-            '[MarketDemand] Request recorded',
-            {
-              query:
-                searchContextRef.current.searchQuery,
-
-              searchType:
-                searchContextRef.current.searchType,
-
-              searchContext:
-                searchContextRef.current,
-
-              products:
-                searchResults
-
-            }
-          )
-
-        } else {
-
-          console.log(
-            '[MarketDemand] Search returned no products',
-            {
-              query:
-                searchContextRef.current.searchQuery,
-
-              searchType:
-                searchContextRef.current.searchType,
-
-              searchContext:
-                searchContextRef.current
-            }
-          )
-
-        }
-
-      } catch (error) {
-
-        console.error(
-          '[MarketDemand] request tracking failed:',
-          error
-        )
-
-      }
-
-    }
-
-
-
-  // ====================================================
-  // MARKET DEMAND: VIEWED RESULTS
-  // ====================================================
-
-  useEffect(() => {
-
-    if (
-      !searched ||
-      loading
-    ) {
-      return
-    }
-
-
-    const visibleDemandResults =
-      normalizeSearchResults(
-        results
-      )
-
-
-    if (
-      visibleDemandResults.length === 0
-    ) {
-      return
-    }
-
-
-    try {
-
-      const demandStore =
-        useMarketDemandStore
-          .getState()
-
-
-      visibleDemandResults.forEach(
-        product => {
-
-          demandStore.recordViewed({
-
-            product,
-
-            products: [
-              product
-            ],
-
-            searchContext:
-              searchContextRef.current,
-
-            metadata: {
-
-              source:
-                'HomeVehicleSearch'
-
-            }
-
-          })
-
-        }
-      )
-
-
-      console.log(
-        '[MarketDemand] Viewed recorded',
-        {
-          count:
-            visibleDemandResults.length,
-
-          products:
-            visibleDemandResults,
-
-          searchContext:
-            searchContextRef.current
-
-        }
-      )
-
-
-    } catch (error) {
-
-      console.error(
-        '[MarketDemand] viewed tracking failed:',
-        error
-      )
-
-    }
-
-  }, [
-    searched,
-    loading,
-    results
-  ])
-
 
 
   // ====================================================
@@ -1040,50 +430,11 @@ export default function HomeVehicleSearch({
       setSearched(
         false
       )
-
-
-      searchContextRef.current = {
-
-        searchType:
-          nextTab,
-
-        searchQuery:
-          ''
-
-      }
-
-
-      // ------------------------------------------------
-      // Clear vehicle brand autocomplete
-      // ------------------------------------------------
-
-      if (
-        typeof clearBrandSuggestions ===
-        'function'
-      ) {
-
-        clearBrandSuggestions()
-      }
-
-
-      // ------------------------------------------------
-      // Clear vehicle model autocomplete
-      // ------------------------------------------------
-
-      if (
-        typeof clearVehicleModelSuggestions ===
-        'function'
-      ) {
-
-        clearVehicleModelSuggestions()
-      }
-
     }
 
 
-
   // ====================================================
-  // SEARCH RESULT TITLE
+  // RESULT TITLE
   // ====================================================
 
   const resultTitle = {
@@ -1100,10 +451,7 @@ export default function HomeVehicleSearch({
     oil:
       'الزيوت المناسبة'
 
-  }[
-    tab
-  ]
-
+  }[tab]
 
 
   // ====================================================
@@ -1124,10 +472,7 @@ export default function HomeVehicleSearch({
     oil:
       'لا توجد زيوت مطابقة للزوجة المحددة'
 
-  }[
-    tab
-  ]
-
+  }[tab]
 
 
   // ====================================================
@@ -1171,7 +516,6 @@ export default function HomeVehicleSearch({
   ]
 
 
-
   // ====================================================
   // RENDER
   // ====================================================
@@ -1195,7 +539,6 @@ export default function HomeVehicleSearch({
         "
       >
 
-
         {/* ==================================================
             TITLE
         ================================================== */}
@@ -1209,9 +552,7 @@ export default function HomeVehicleSearch({
             text-yellow-400
           "
         >
-
           ابحث عن المنتج المناسب
-
         </h2>
 
 
@@ -1220,18 +561,15 @@ export default function HomeVehicleSearch({
             text-center
             text-gray-300
             mt-4
-            mb-10
+            mb-8
           "
         >
-
-          اختر طريقة البحث للوصول إلى المنتج المناسب
-
+          ابحث باسم المركبة أو بالمقاس أو بالمواصفات
         </p>
 
 
-
         {/* ==================================================
-            SEARCH TABS
+            TABS
         ================================================== */}
 
         <div
@@ -1252,22 +590,21 @@ export default function HomeVehicleSearch({
                   key={
                     tabItem.id
                   }
-
                   type="button"
-
                   onClick={() =>
                     changeTab(
                       tabItem.id
                     )
                   }
-
                   className={`
+
                     rounded-2xl
                     py-4
                     px-4
                     font-black
                     transition
                     border
+
                     ${
                       tab ===
                       tabItem.id
@@ -1287,11 +624,9 @@ export default function HomeVehicleSearch({
                     }
                   `}
                 >
-
                   {
                     tabItem.label
                   }
-
                 </button>
 
               )
@@ -1299,7 +634,6 @@ export default function HomeVehicleSearch({
           }
 
         </div>
-
 
 
         {/* ==================================================
@@ -1317,9 +651,8 @@ export default function HomeVehicleSearch({
           "
         >
 
-
           {/* ==================================================
-              VEHICLE SEARCH
+              VEHICLE
           ================================================== */}
 
           {
@@ -1347,11 +680,8 @@ export default function HomeVehicleSearch({
                       font-black
                     "
                   >
-
                     اختر المركبة
-
                   </div>
-
 
                   <div
                     className="
@@ -1359,9 +689,7 @@ export default function HomeVehicleSearch({
                       mt-2
                     "
                   >
-
-                    ابدأ بكتابة الماركة أو الموديل أو السنة
-
+                    اكتب نوع المركبة أو الماركة أو الموديل أو السنة
                   </div>
 
                 </div>
@@ -1393,8 +721,14 @@ export default function HomeVehicleSearch({
                     setForm
                   }
 
+                  onSearch={() =>
+                    handleSearch(
+                      'vehicle'
+                    )
+                  }
+
                   // ==================================================
-                  // VEHICLE BRAND AUTOCOMPLETE
+                  // BRAND AUTOCOMPLETE
                   // ==================================================
 
                   brandSuggestions={
@@ -1418,7 +752,7 @@ export default function HomeVehicleSearch({
                   }
 
                   // ==================================================
-                  // VEHICLE MODEL AUTOCOMPLETE
+                  // MODEL AUTOCOMPLETE
                   // ==================================================
 
                   modelSuggestions={
@@ -1437,23 +771,15 @@ export default function HomeVehicleSearch({
                     modelsLoading
                   }
 
-                  onSearch={() =>
-                    handleSearch(
-                      'vehicle'
-                    )
-                  }
-
                 />
 
               </div>
-
             )
           }
 
 
-
           {/* ==================================================
-              TIRE SEARCH
+              TIRE
           ================================================== */}
 
           {
@@ -1468,132 +794,64 @@ export default function HomeVehicleSearch({
                 "
               >
 
-                <div>
-
-                  <label
-                    className="
-                      block
-                      text-white
-                      font-black
-                      text-lg
-                      mb-3
-                    "
-                  >
-
-                    مقاس الإطار المطلوب
-
-                  </label>
-
-
-                  <input
-                    type="text"
-
-                    value={
-                      form.tireSize ||
-                      ''
-                    }
-
-                    onChange={
-                      e =>
-                        setForm(
-                          prev => ({
-
-                            ...prev,
-
-                            tireSize:
-                              e.target.value
-
-                          })
-                        )
-                    }
-
-                    onKeyDown={
-                      e => {
-
-                        if (
-                          e.key ===
-                          'Enter'
-                        ) {
-
-                          handleSearch(
-                            'tire'
-                          )
-
-                        }
-
-                      }
-                    }
-
-                    placeholder="
-                      مثال: 205/55/16 أو 1200/24
-                    "
-
-                    className="
-                      w-full
-                      p-5
-                      rounded-2xl
-                      bg-slate-800
-                      border
-                      border-slate-700
-                      text-white
-                      text-xl
-                      font-bold
-                      outline-none
-                      focus:border-yellow-400
-                    "
-                  />
-
-                </div>
-
-
-
-                <div
+                <label
                   className="
-                    text-gray-400
-                    text-sm
-                    text-center
-                    leading-8
+                    block
+                    text-white
+                    font-black
+                    text-lg
                   "
                 >
+                  مقاس الإطار المطلوب
+                </label>
 
-                  أمثلة:
 
-                  <span
-                    className="
-                      text-yellow-400
-                      font-bold
-                      mx-1
-                    "
-                  >
-                    205/55/16
-                  </span>
+                <input
+                  type="text"
+                  value={
+                    form.tireSize ||
+                    ''
+                  }
+                  onChange={event =>
+                    setForm(
+                      previous => ({
+                        ...previous,
 
-                  أو
+                        tireSize:
+                          event.target.value
+                      })
+                    )
+                  }
+                  onKeyDown={event => {
 
-                  <span
-                    className="
-                      text-yellow-400
-                      font-bold
-                      mx-1
-                    "
-                  >
-                    205*55*16
-                  </span>
+                    if (
+                      event.key ===
+                      'Enter'
+                    ) {
 
-                  أو
-
-                  <span
-                    className="
-                      text-yellow-400
-                      font-bold
-                      mx-1
-                    "
-                  >
-                    1200/24
-                  </span>
-
-                </div>
-
+                      handleSearch(
+                        'tire'
+                      )
+                    }
+                  }}
+                  placeholder="
+                    مثال: 205/55/16 أو
+                    205*55*16 أو 1200/24
+                  "
+                  className="
+                    w-full
+                    p-5
+                    rounded-2xl
+                    bg-slate-800
+                    border
+                    border-slate-700
+                    text-white
+                    text-xl
+                    font-bold
+                    outline-none
+                    focus:border-yellow-400
+                  "
+                />
 
 
                 {
@@ -1611,30 +869,25 @@ export default function HomeVehicleSearch({
                         font-bold
                       "
                     >
-
                       {
                         tireSearchError
                       }
-
                     </div>
+
                   )
                 }
 
 
-
                 <button
                   type="button"
-
                   onClick={() =>
                     handleSearch(
                       'tire'
                     )
                   }
-
                   disabled={
                     loading
                   }
-
                   className="
                     w-full
                     rounded-2xl
@@ -1645,29 +898,22 @@ export default function HomeVehicleSearch({
                     py-5
                     font-black
                     text-xl
-                    transition
                   "
                 >
-
                   {
                     loading
-
                       ? 'جارٍ البحث...'
-
                       : '🔍 بحث عن الإطار'
                   }
-
                 </button>
 
               </div>
-
             )
           }
 
 
-
           {/* ==================================================
-              BATTERY SEARCH
+              BATTERY
           ================================================== */}
 
           {
@@ -1682,98 +928,75 @@ export default function HomeVehicleSearch({
                 "
               >
 
-                <div>
-
-                  <label
-                    className="
-                      block
-                      text-white
-                      font-black
-                      text-lg
-                      mb-3
-                    "
-                  >
-
-                    سعة البطارية المطلوبة
-
-                  </label>
+                <label
+                  className="
+                    block
+                    text-white
+                    font-black
+                    text-lg
+                  "
+                >
+                  سعة البطارية المطلوبة
+                </label>
 
 
-                  <input
-                    type="text"
+                <input
+                  type="text"
+                  value={
+                    form.capacity ||
+                    ''
+                  }
+                  onChange={event =>
+                    setForm(
+                      previous => ({
+                        ...previous,
 
-                    value={
-                      form.capacity ||
-                      ''
+                        capacity:
+                          event.target.value
+                      })
+                    )
+                  }
+                  onKeyDown={event => {
+
+                    if (
+                      event.key ===
+                      'Enter'
+                    ) {
+
+                      handleSearch(
+                        'battery'
+                      )
                     }
-
-                    onChange={
-                      e =>
-                        setForm(
-                          prev => ({
-
-                            ...prev,
-
-                            capacity:
-                              e.target.value
-
-                          })
-                        )
-                    }
-
-                    onKeyDown={
-                      e => {
-
-                        if (
-                          e.key ===
-                          'Enter'
-                        ) {
-
-                          handleSearch(
-                            'battery'
-                          )
-
-                        }
-
-                      }
-                    }
-
-                    placeholder="
-                      مثال: 70 أو 70Ah
-                    "
-
-                    className="
-                      w-full
-                      p-5
-                      rounded-2xl
-                      bg-slate-800
-                      border
-                      border-slate-700
-                      text-white
-                      text-xl
-                      font-bold
-                      outline-none
-                      focus:border-yellow-400
-                    "
-                  />
-
-                </div>
-
+                  }}
+                  placeholder="
+                    مثال: 70 أو 70Ah
+                  "
+                  className="
+                    w-full
+                    p-5
+                    rounded-2xl
+                    bg-slate-800
+                    border
+                    border-slate-700
+                    text-white
+                    text-xl
+                    font-bold
+                    outline-none
+                    focus:border-yellow-400
+                  "
+                />
 
 
                 <button
                   type="button"
-
                   onClick={() =>
                     handleSearch(
                       'battery'
                     )
                   }
-
                   disabled={
                     loading
                   }
-
                   className="
                     w-full
                     rounded-2xl
@@ -1784,29 +1007,22 @@ export default function HomeVehicleSearch({
                     py-5
                     font-black
                     text-xl
-                    transition
                   "
                 >
-
                   {
                     loading
-
                       ? 'جارٍ البحث...'
-
                       : '🔍 بحث عن البطارية'
                   }
-
                 </button>
 
               </div>
-
             )
           }
 
 
-
           {/* ==================================================
-              OIL SEARCH
+              OIL
           ================================================== */}
 
           {
@@ -1821,98 +1037,75 @@ export default function HomeVehicleSearch({
                 "
               >
 
-                <div>
-
-                  <label
-                    className="
-                      block
-                      text-white
-                      font-black
-                      text-lg
-                      mb-3
-                    "
-                  >
-
-                    لزوجة الزيت المطلوبة
-
-                  </label>
+                <label
+                  className="
+                    block
+                    text-white
+                    font-black
+                    text-lg
+                  "
+                >
+                  لزوجة الزيت المطلوبة
+                </label>
 
 
-                  <input
-                    type="text"
+                <input
+                  type="text"
+                  value={
+                    form.viscosity ||
+                    ''
+                  }
+                  onChange={event =>
+                    setForm(
+                      previous => ({
+                        ...previous,
 
-                    value={
-                      form.viscosity ||
-                      ''
+                        viscosity:
+                          event.target.value
+                      })
+                    )
+                  }
+                  onKeyDown={event => {
+
+                    if (
+                      event.key ===
+                      'Enter'
+                    ) {
+
+                      handleSearch(
+                        'oil'
+                      )
                     }
-
-                    onChange={
-                      e =>
-                        setForm(
-                          prev => ({
-
-                            ...prev,
-
-                            viscosity:
-                              e.target.value
-
-                          })
-                        )
-                    }
-
-                    onKeyDown={
-                      e => {
-
-                        if (
-                          e.key ===
-                          'Enter'
-                        ) {
-
-                          handleSearch(
-                            'oil'
-                          )
-
-                        }
-
-                      }
-                    }
-
-                    placeholder="
-                      مثال: 5W-30 أو 10W-40
-                    "
-
-                    className="
-                      w-full
-                      p-5
-                      rounded-2xl
-                      bg-slate-800
-                      border
-                      border-slate-700
-                      text-white
-                      text-xl
-                      font-bold
-                      outline-none
-                      focus:border-yellow-400
-                    "
-                  />
-
-                </div>
-
+                  }}
+                  placeholder="
+                    مثال: 5W-30 أو 10W-40
+                  "
+                  className="
+                    w-full
+                    p-5
+                    rounded-2xl
+                    bg-slate-800
+                    border
+                    border-slate-700
+                    text-white
+                    text-xl
+                    font-bold
+                    outline-none
+                    focus:border-yellow-400
+                  "
+                />
 
 
                 <button
                   type="button"
-
                   onClick={() =>
                     handleSearch(
                       'oil'
                     )
                   }
-
                   disabled={
                     loading
                   }
-
                   className="
                     w-full
                     rounded-2xl
@@ -1923,106 +1116,33 @@ export default function HomeVehicleSearch({
                     py-5
                     font-black
                     text-xl
-                    transition
                   "
                 >
-
                   {
                     loading
-
                       ? 'جارٍ البحث...'
-
                       : '🔍 بحث عن الزيت'
                   }
-
                 </button>
 
               </div>
-
             )
           }
 
 
-
           {/* ==================================================
-              LOADING
-          ================================================== */}
-
-          {
-            loading && (
-
-              <div
-                className="
-                  mt-8
-                  text-center
-                  text-yellow-400
-                  text-xl
-                  font-black
-                  py-6
-                "
-              >
-
-                جارٍ البحث عن المنتجات المناسبة...
-
-              </div>
-            )
-          }
-
-
-
-          {/* ==================================================
-              VEHICLE COMPATIBLE PRODUCTS AREA
+              RESULTS
           ================================================== */}
 
           {
             searched &&
-            !loading &&
-            tab ===
-            'vehicle' && (
+            !loading && (
 
               <div
                 className="
                   mt-10
-                  pt-8
-                  border-t
-                  border-yellow-500/30
                 "
               >
-
-                <div
-                  className="
-                    mb-6
-                    text-center
-                  "
-                >
-
-                  <div
-                    className="
-                      text-yellow-400
-                      text-3xl
-                      font-black
-                    "
-                  >
-
-                    المنتجات المتوافقة مع مركبتك
-
-                  </div>
-
-
-                  <div
-                    className="
-                      text-gray-400
-                      mt-2
-                    "
-                  >
-
-                    المنتجات التي تناسب المركبة التي قمت بتحديدها
-
-                  </div>
-
-                </div>
-
-
 
                 <HomeSearchResults
 
@@ -2031,11 +1151,7 @@ export default function HomeVehicleSearch({
                   }
 
                   results={
-                    Array.isArray(
-                      results
-                    )
-                      ? results
-                      : []
+                    results
                   }
 
                   emptyMessage={
@@ -2049,55 +1165,37 @@ export default function HomeVehicleSearch({
                 />
 
               </div>
+
             )
           }
-
 
 
           {/* ==================================================
-              OTHER SEARCH RESULTS
+              LOADING
           ================================================== */}
 
           {
-            searched &&
-            !loading &&
-            tab !==
-            'vehicle' && (
+            loading && (
 
-              <HomeSearchResults
-
-                title={
-                  resultTitle
-                }
-
-                results={
-                  Array.isArray(
-                    results
-                  )
-                    ? results
-                    : []
-                }
-
-                emptyMessage={
-                  emptyMessage
-                }
-
-                onAddToCart={
-                  handleAddToCart
-                }
-
-              />
+              <div
+                className="
+                  mt-10
+                  text-center
+                  text-yellow-400
+                  text-xl
+                  font-black
+                "
+              >
+                جارٍ البحث...
+              </div>
 
             )
           }
-
 
         </div>
 
       </div>
 
     </section>
-
   )
-
 }

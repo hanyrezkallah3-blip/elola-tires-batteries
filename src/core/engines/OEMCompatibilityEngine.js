@@ -683,6 +683,17 @@ const normalizeTire = specs => {
 // ======================================================
 // NORMALIZE BATTERY
 // ======================================================
+//
+// Supports:
+// - single battery object
+// - array of battery objects
+// - direct numeric/string capacities
+//
+// Examples:
+//   { capacity: 55 }
+//   [{ capacity: 55 }, { capacity: 60 }]
+//   { ah: 60 }
+// ======================================================
 
 const normalizeBattery = specs => {
 
@@ -694,31 +705,68 @@ const normalizeBattery = specs => {
 
       capacity: null,
       capacities: [],
-      values: []
+      values: [],
+
+      batteries: []
 
     }
 
   }
 
 
+  const entries =
+    Array.isArray(specs)
+      ? specs
+      : [specs]
+
+
   const capacities =
     uniqueValues(
 
-      collectValues([
+      entries.flatMap(
+        entry => {
 
-        specs.capacity,
-        specs.batteryCapacity,
+          if (
+            entry === null ||
+            entry === undefined ||
+            entry === ''
+          ) {
 
-        specs.ah,
-        specs.ampHour,
+            return []
 
-        specs.ampHours,
+          }
 
-        specs.capacities,
 
-        specs.batteryCapacities
+          if (
+            typeof entry === 'object' &&
+            !Array.isArray(entry)
+          ) {
 
-      ])
+            return collectValues([
+
+              entry.capacity,
+              entry.batteryCapacity,
+
+              entry.ah,
+              entry.ampHour,
+
+              entry.ampHours,
+
+              entry.capacities,
+
+              entry.batteryCapacities
+
+            ])
+
+          }
+
+
+          return collectValues(
+            entry
+          )
+
+        }
+      )
 
     )
 
@@ -733,6 +781,9 @@ const normalizeBattery = specs => {
     capacities,
 
     values:
+      capacities,
+
+    batteries:
       capacities
 
   }
@@ -742,6 +793,16 @@ const normalizeBattery = specs => {
 
 // ======================================================
 // NORMALIZE OIL
+// ======================================================
+//
+// Supports:
+// - single oil object
+// - array of oil objects
+// - direct viscosity/grade values
+//
+// Examples:
+//   { viscosity: "5W-30" }
+//   [{ viscosity: "0W-20" }, { viscosity: "5W-30" }]
 // ======================================================
 
 const normalizeOil = specs => {
@@ -755,35 +816,72 @@ const normalizeOil = specs => {
       viscosity: null,
       viscosities: [],
       grades: [],
-      values: []
+      values: [],
+
+      oils: []
 
     }
 
   }
 
 
+  const entries =
+    Array.isArray(specs)
+      ? specs
+      : [specs]
+
+
   const viscosities =
     uniqueValues(
 
-      collectValues([
+      entries.flatMap(
+        entry => {
 
-        specs.viscosity,
+          if (
+            entry === null ||
+            entry === undefined ||
+            entry === ''
+          ) {
 
-        specs.viscosities,
+            return []
 
-        specs.oilViscosity,
+          }
 
-        specs.oilViscosities,
 
-        specs.grade,
+          if (
+            typeof entry === 'object' &&
+            !Array.isArray(entry)
+          ) {
 
-        specs.grades,
+            return collectValues([
 
-        specs.oilGrade,
+              entry.viscosity,
 
-        specs.oilGrades
+              entry.viscosities,
 
-      ])
+              entry.oilViscosity,
+
+              entry.oilViscosities,
+
+              entry.grade,
+
+              entry.grades,
+
+              entry.oilGrade,
+
+              entry.oilGrades
+
+            ])
+
+          }
+
+
+          return collectValues(
+            entry
+          )
+
+        }
+      )
 
     )
 
@@ -801,6 +899,9 @@ const normalizeOil = specs => {
       viscosities,
 
     values:
+      viscosities,
+
+    oils:
       viscosities
 
   }
@@ -1334,10 +1435,12 @@ const resolveBattery = specs => {
     )
 
 
+  // ====================================================
+  // ARRAY / MULTIPLE BATTERIES
+  // ====================================================
+
   if (
-    value &&
-    typeof value === 'object' &&
-    !Array.isArray(value)
+    Array.isArray(value)
   ) {
 
     return normalizeBattery(
@@ -1346,6 +1449,26 @@ const resolveBattery = specs => {
 
   }
 
+
+  // ====================================================
+  // SINGLE BATTERY OBJECT
+  // ====================================================
+
+  if (
+    value &&
+    typeof value === 'object'
+  ) {
+
+    return normalizeBattery(
+      value
+    )
+
+  }
+
+
+  // ====================================================
+  // DIRECT VALUE
+  // ====================================================
 
   return normalizeBattery({
 
@@ -1385,10 +1508,12 @@ const resolveOil = specs => {
     )
 
 
+  // ====================================================
+  // ARRAY / MULTIPLE OILS
+  // ====================================================
+
   if (
-    value &&
-    typeof value === 'object' &&
-    !Array.isArray(value)
+    Array.isArray(value)
   ) {
 
     return normalizeOil(
@@ -1397,6 +1522,26 @@ const resolveOil = specs => {
 
   }
 
+
+  // ====================================================
+  // SINGLE OIL OBJECT
+  // ====================================================
+
+  if (
+    value &&
+    typeof value === 'object'
+  ) {
+
+    return normalizeOil(
+      value
+    )
+
+  }
+
+
+  // ====================================================
+  // DIRECT VALUE
+  // ====================================================
 
   return normalizeOil({
 
@@ -1475,6 +1620,10 @@ const buildResult = (
       specs?.vehicle ??
       null,
 
+    // ==================================================
+    // TIRE REQUIREMENTS
+    // ==================================================
+
     tire,
 
     oemSizes:
@@ -1492,15 +1641,49 @@ const buildResult = (
     compatibleTireSizes:
       tire.compatibleSizes,
 
+    // ==================================================
+    // BATTERY REQUIREMENTS
+    // ==================================================
+
     battery,
+
+    batteries:
+      battery.batteries,
+
+    batteryCapacities:
+      battery.capacities,
+
+    compatibleBatteryCapacities:
+      battery.capacities,
+
+    // ==================================================
+    // OIL REQUIREMENTS
+    // ==================================================
 
     oil,
 
+    oils:
+      oil.oils,
+
+    oilViscosities:
+      oil.viscosities,
+
+    compatibleOilViscosities:
+      oil.viscosities,
+
+    // ==================================================
+    // STATUS
+    // ==================================================
+
     compatibilityResolved:
       Boolean(
+
         tire.compatibleSizes.length ||
+
         battery.values.length ||
+
         oil.values.length
+
       ),
 
     availabilityChecked:

@@ -36,7 +36,10 @@ class VehicleLookupService {
   // MODELS
   // ======================================================
 
-  static getModels(brand, vehicleType = '') {
+  static getModels(
+    brand,
+    vehicleType = ''
+  ) {
 
     return VehicleRepository.getModels({
 
@@ -84,9 +87,9 @@ class VehicleLookupService {
 
   }) {
 
-    return VehicleRepository.find({
+    return VehicleRepository.findVehicle({
 
-      brand: manufacturer,
+      make: manufacturer,
 
       model,
 

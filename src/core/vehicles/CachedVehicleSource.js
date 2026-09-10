@@ -8,19 +8,26 @@
 //
 // Persistent vehicle catalog cache.
 //
+// SOURCES
+// ------------------------------------------------------
+//
+// 1. VehiclesDB local open dataset.
+// 2. Existing OnlineVehicleSource.
+//
 // IMPORTANT
 // ------------------------------------------------------
 //
-// 1. Online vehicle data is cached cumulatively.
-// 2. New non-empty results are merged with previous data.
-// 3. Empty online results are NEVER allowed to erase cache.
-// 4. Existing cached data remains available offline.
-// 5. Duplicate vehicles/brands/models/years are removed.
-// 6. This layer does NOT fabricate vehicle data.
-// 7. VehDB fitment cache is handled separately.
-// 8. Brand catalog cache uses a versioned key so an old
-//    limited catalog cannot permanently block expansion.
-//
+// 1. VehiclesDB is local and requires no API request.
+// 2. Online vehicle data remains available as fallback/
+//    supplementary source.
+// 3. Online data is cached cumulatively.
+// 4. New non-empty results are merged with previous data.
+// 5. Empty results NEVER erase existing cache.
+// 6. Existing cached data remains available offline.
+// 7. Duplicate vehicles/brands/models/years are removed.
+// 8. This layer does NOT fabricate vehicle data.
+// 9. VehDB fitment cache is handled separately.
+// 10. Identical concurrent requests share one Promise.
 // ======================================================
 
 import VehicleCache
@@ -29,18 +36,32 @@ import VehicleCache
 import OnlineVehicleSource
   from './OnlineVehicleSource'
 
+import VehiclesDBLocalSource
+  from './VehiclesDBLocalSource'
+
 
 // ======================================================
 // CACHE VERSION
 // ======================================================
 //
-// Changing this value intentionally creates a new cache
-// namespace for the expanded vehicle brand catalog.
+// New version intentionally separates the catalog cache
+// created before VehiclesDB integration.
 //
-// ======================================================
+// This prevents an old catalog cache from hiding the
+// newly integrated local VehiclesDB catalog.
+//
 
 const BRAND_CACHE_VERSION =
-  'v2-expanded'
+  'v3-vehiclesdb'
+
+const MODEL_CACHE_VERSION =
+  'v1-vehiclesdb'
+
+const VEHICLE_CACHE_VERSION =
+  'v1-vehiclesdb'
+
+const DATABASE_CACHE_VERSION =
+  'v1-vehiclesdb'
 
 
 // ======================================================
@@ -140,6 +161,7 @@ const getVehicleKey = item => {
   if (
     key
   ) {
+
     return key
   }
 
@@ -149,6 +171,7 @@ const getVehicleKey = item => {
     item.label ??
     ''
   )
+
 }
 
 
@@ -190,18 +213,35 @@ const getItemKey = item => {
   }
 
 
-  const name =
-    item.name ??
-    item.label ??
-    item.value ??
-    item.make ??
-    item.model ??
+  const brand =
     item.brand ??
+    item.make ??
     item.manufacturer ??
     ''
 
 
-  return stableValue(name)
+  const model =
+    item.model ??
+    item.modelName ??
+    ''
+
+
+  const name =
+    item.name ??
+    item.label ??
+    ''
+
+
+  return stableValue(
+    [
+      brand,
+      model,
+      name
+    ]
+      .filter(Boolean)
+      .join('|')
+  )
+
 }
 
 
@@ -284,6 +324,7 @@ const mergeLists = (
       key,
       item
     )
+
   }
 
 
@@ -295,6 +336,7 @@ const mergeLists = (
   return Array.from(
     map.values()
   )
+
 }
 
 
@@ -377,6 +419,7 @@ const mergeVehicles = (
       key,
       vehicle
     )
+
   }
 
 
@@ -388,6 +431,7 @@ const mergeVehicles = (
   return Array.from(
     map.values()
   )
+
 }
 
 
@@ -467,6 +511,7 @@ const mergeYears = (
         value
       )
     }
+
   })
 
 
@@ -478,6 +523,7 @@ const mergeYears = (
         Number(b) -
         Number(a)
     )
+
 }
 
 
@@ -515,6 +561,7 @@ const isEmptyValue = value => {
   return (
     String(value).trim() === ''
   )
+
 }
 
 
@@ -523,6 +570,21 @@ const isEmptyValue = value => {
 // ======================================================
 
 class CachedVehicleSource {
+
+
+  constructor() {
+
+    // --------------------------------------------------
+    // Requests currently being resolved.
+    //
+    // Prevents duplicate concurrent requests.
+    // --------------------------------------------------
+
+    this.inFlight =
+      new Map()
+
+  }
+
 
   // ====================================================
   // READ CACHE
@@ -577,6 +639,7 @@ class CachedVehicleSource {
 
 
     return value
+
   }
 
 
@@ -604,6 +667,22 @@ class CachedVehicleSource {
 
 
     return value
+
+  }
+
+
+  // ====================================================
+  // IN-FLIGHT KEY
+  // ====================================================
+
+  getInFlightKey(
+    key
+  ) {
+
+    return String(
+      key ?? ''
+    )
+
   }
 
 
@@ -631,82 +710,129 @@ class CachedVehicleSource {
     }
 
 
-    try {
-
-      const fresh =
-        await loader()
-
-
-      if (
-        isEmptyValue(fresh)
-      ) {
-
-        return (
-          cached ??
-          (
-            Array.isArray(fresh)
-              ? []
-              : null
-          )
-        )
-      }
-
-
-      if (
-        options.merge === true &&
-        Array.isArray(fresh)
-      ) {
-
-        const merged =
-          options.mergeYears
-            ? mergeYears(
-                cached,
-                fresh
-              )
-            : options.mergeVehicles
-              ? mergeVehicles(
-                  cached,
-                  fresh
-                )
-              : mergeLists(
-                  cached,
-                  fresh
-                )
-
-
-        return this.save(
-          key,
-          merged
-        )
-      }
-
-
-      return this.save(
-        key,
-        fresh
+    const requestKey =
+      this.getInFlightKey(
+        key
       )
 
-    } catch (
-      error
+
+    const existingRequest =
+      this.inFlight.get(
+        requestKey
+      )
+
+
+    if (
+      existingRequest
     ) {
 
-      console.warn(
-        '[CachedVehicleSource] Online source failed:',
-        error
-      )
-
-
-      return (
-        cached ??
-        (
-          Array.isArray(
-            cached
-          )
-            ? []
-            : null
-        )
-      )
+      return existingRequest
     }
+
+
+    const request =
+
+      (async () => {
+
+        try {
+
+          const fresh =
+            await loader()
+
+
+          if (
+            isEmptyValue(fresh)
+          ) {
+
+            return (
+              cached ??
+              (
+                Array.isArray(fresh)
+                  ? []
+                  : null
+              )
+            )
+          }
+
+
+          if (
+            options.merge === true &&
+            Array.isArray(fresh)
+          ) {
+
+            const merged =
+              options.mergeYears
+                ? mergeYears(
+                    cached,
+                    fresh
+                  )
+                : options.mergeVehicles
+                  ? mergeVehicles(
+                      cached,
+                      fresh
+                    )
+                  : mergeLists(
+                      cached,
+                      fresh
+                    )
+
+
+            return this.save(
+              key,
+              merged
+            )
+          }
+
+
+          return this.save(
+            key,
+            fresh
+          )
+
+        }
+
+        catch (
+          error
+        ) {
+
+          console.warn(
+            '[CachedVehicleSource] Source failed:',
+            error
+          )
+
+
+          return (
+            cached ??
+            (
+              Array.isArray(
+                cached
+              )
+                ? []
+                : null
+            )
+          )
+
+        }
+
+        finally {
+
+          this.inFlight.delete(
+            requestKey
+          )
+
+        }
+
+      })()
+
+
+    this.inFlight.set(
+      requestKey,
+      request
+    )
+
+
+    return request
+
   }
 
 
@@ -716,16 +842,67 @@ class CachedVehicleSource {
 
   async getVehicleTypes() {
 
+    const key =
+      `vehicleTypes:${VEHICLE_CACHE_VERSION}`
+
+
     return this.resolve(
-      'vehicleTypes',
-      () =>
-        OnlineVehicleSource
-          .getVehicleTypes(),
+      key,
+
+      async () => {
+
+        const local =
+          typeof VehiclesDBLocalSource
+            .getVehicleTypes ===
+            'function'
+            ? VehiclesDBLocalSource
+                .getVehicleTypes()
+            : []
+
+
+        let online = []
+
+
+        try {
+
+          if (
+            typeof OnlineVehicleSource
+              .getVehicleTypes ===
+              'function'
+          ) {
+
+            online =
+              await OnlineVehicleSource
+                .getVehicleTypes()
+
+          }
+
+        }
+
+        catch (
+          error
+        ) {
+
+          console.warn(
+            '[CachedVehicleSource] Online vehicle types failed:',
+            error
+          )
+
+        }
+
+
+        return mergeLists(
+          local,
+          online
+        )
+
+      },
 
       {
         merge: true
       }
     )
+
   }
 
 
@@ -744,17 +921,6 @@ class CachedVehicleSource {
       )
 
 
-    // --------------------------------------------------
-    // VERSIONED CACHE
-    // --------------------------------------------------
-    //
-    // The old brands:<type> cache may contain the
-    // previous limited catalog.
-    //
-    // The expanded catalog uses a separate namespace.
-    //
-    // --------------------------------------------------
-
     const key =
       [
         'brands',
@@ -767,16 +933,56 @@ class CachedVehicleSource {
     return this.resolve(
       key,
 
-      () =>
-        OnlineVehicleSource
-          .getBrands(
-            vehicleType
-          ),
+      async () => {
+
+        const local =
+          typeof VehiclesDBLocalSource
+            .getBrands ===
+            'function'
+            ? VehiclesDBLocalSource
+                .getBrands(
+                  vehicleType
+                )
+            : []
+
+
+        let online = []
+
+
+        try {
+
+          online =
+            await OnlineVehicleSource
+              .getBrands(
+                vehicleType
+              )
+
+        }
+
+        catch (
+          error
+        ) {
+
+          console.warn(
+            '[CachedVehicleSource] Online brands failed:',
+            error
+          )
+
+        }
+
+
+        return mergeLists(
+          local,
+          online
+        )
+
+      },
 
       {
         merge: true
       }
     )
+
   }
 
 
@@ -812,14 +1018,18 @@ class CachedVehicleSource {
 
 
     const exactKey =
-      `models:${JSON.stringify(
-        params
-      )}`
+      [
+        'models',
+        MODEL_CACHE_VERSION,
+        JSON.stringify(params)
+      ]
+        .join(':')
 
 
     const familyKey =
       [
         'modelsCatalog',
+        MODEL_CACHE_VERSION,
         vehicleType || '__all__',
         brand || '__all__'
       ]
@@ -858,10 +1068,54 @@ class CachedVehicleSource {
     try {
 
       const fresh =
-        await OnlineVehicleSource
-          .getModels(
-            params
-          )
+        await this.resolve(
+          exactKey,
+
+          async () => {
+
+            const local =
+              typeof VehiclesDBLocalSource
+                .getModels ===
+                'function'
+                ? VehiclesDBLocalSource
+                    .getModels(
+                      params
+                    )
+                : []
+
+
+            let online = []
+
+
+            try {
+
+              online =
+                await OnlineVehicleSource
+                  .getModels(
+                    params
+                  )
+
+            }
+
+            catch (
+              error
+            ) {
+
+              console.warn(
+                '[CachedVehicleSource] Online models failed:',
+                error
+              )
+
+            }
+
+
+            return mergeLists(
+              local,
+              online
+            )
+
+          }
+        )
 
 
       if (
@@ -890,20 +1144,16 @@ class CachedVehicleSource {
       )
 
 
-      this.save(
-        exactKey,
-        fresh
-      )
-
-
       return merged
 
-    } catch (
+    }
+
+    catch (
       error
     ) {
 
       console.warn(
-        '[CachedVehicleSource] Models online source failed:',
+        '[CachedVehicleSource] Models failed:',
         error
       )
 
@@ -913,7 +1163,9 @@ class CachedVehicleSource {
         exactCached ??
         []
       )
+
     }
+
   }
 
 
@@ -999,10 +1251,14 @@ class CachedVehicleSource {
     try {
 
       const fresh =
-        await OnlineVehicleSource
-          .getYears(
-            params
-          )
+        await this.resolve(
+          exactKey,
+          () =>
+            OnlineVehicleSource
+              .getYears(
+                params
+              )
+        )
 
 
       if (
@@ -1031,15 +1287,11 @@ class CachedVehicleSource {
       )
 
 
-      this.save(
-        exactKey,
-        fresh
-      )
-
-
       return merged
 
-    } catch (
+    }
+
+    catch (
       error
     ) {
 
@@ -1054,7 +1306,9 @@ class CachedVehicleSource {
         exactCached ??
         []
       )
+
     }
+
   }
 
 
@@ -1067,9 +1321,12 @@ class CachedVehicleSource {
   ) {
 
     const key =
-      `vehicle:${JSON.stringify(
-        params
-      )}`
+      [
+        'vehicle',
+        VEHICLE_CACHE_VERSION,
+        JSON.stringify(params)
+      ]
+        .join(':')
 
 
     const cached =
@@ -1086,40 +1343,96 @@ class CachedVehicleSource {
     }
 
 
-    try {
+    return this.resolve(
+      key,
 
-      const fresh =
-        await OnlineVehicleSource
-          .findVehicle(
-            params
+      async () => {
+
+        // ------------------------------------------------
+        // VehiclesDB local catalog first.
+        // ------------------------------------------------
+
+        let local =
+          null
+
+
+        try {
+
+          if (
+            typeof VehiclesDBLocalSource
+              .findVehicle ===
+              'function'
+          ) {
+
+            local =
+              VehiclesDBLocalSource
+                .findVehicle(
+                  params
+                )
+
+          }
+
+        }
+
+        catch (
+          error
+        ) {
+
+          console.warn(
+            '[CachedVehicleSource] VehiclesDB findVehicle failed:',
+            error
           )
 
+        }
 
-      if (
-        fresh == null
-      ) {
 
-        return cached ?? null
+        if (
+          local
+        ) {
+
+          return local
+        }
+
+
+        // ------------------------------------------------
+        // Existing online sources remain fallback.
+        // ------------------------------------------------
+
+        try {
+
+          const fresh =
+            await OnlineVehicleSource
+              .findVehicle(
+                params
+              )
+
+
+          if (
+            fresh != null
+          ) {
+
+            return fresh
+          }
+
+        }
+
+        catch (
+          error
+        ) {
+
+          console.warn(
+            '[CachedVehicleSource] Online findVehicle failed:',
+            error
+          )
+
+        }
+
+
+        return null
+
       }
+    )
 
-
-      return this.save(
-        key,
-        fresh
-      )
-
-    } catch (
-      error
-    ) {
-
-      console.warn(
-        '[CachedVehicleSource] Vehicle lookup failed:',
-        error
-      )
-
-
-      return cached ?? null
-    }
   }
 
 
@@ -1130,7 +1443,7 @@ class CachedVehicleSource {
   async getAll() {
 
     const key =
-      'vehicleDatabase'
+      `vehicleDatabase:${DATABASE_CACHE_VERSION}`
 
 
     const cached =
@@ -1149,23 +1462,63 @@ class CachedVehicleSource {
 
     try {
 
-      if (
-        typeof OnlineVehicleSource
-          .getAll !== 'function'
+      // ------------------------------------------------
+      // Local VehiclesDB catalog.
+      // ------------------------------------------------
+
+      const local =
+        typeof VehiclesDBLocalSource
+          .getAll ===
+          'function'
+          ? VehiclesDBLocalSource
+              .getAll()
+          : []
+
+
+      // ------------------------------------------------
+      // Existing online database.
+      // ------------------------------------------------
+
+      let online = []
+
+
+      try {
+
+        if (
+          typeof OnlineVehicleSource
+            .getAll ===
+            'function'
+        ) {
+
+          online =
+            await OnlineVehicleSource
+              .getAll()
+
+        }
+
+      }
+
+      catch (
+        error
       ) {
 
-        return []
+        console.warn(
+          '[CachedVehicleSource] Online getAll failed:',
+          error
+        )
+
       }
 
 
-      const fresh =
-        await OnlineVehicleSource
-          .getAll()
+      const merged =
+        mergeVehicles(
+          local,
+          online
+        )
 
 
       if (
-        !Array.isArray(fresh) ||
-        fresh.length === 0
+        merged.length === 0
       ) {
 
         return []
@@ -1174,10 +1527,12 @@ class CachedVehicleSource {
 
       return this.save(
         key,
-        fresh
+        merged
       )
 
-    } catch (
+    }
+
+    catch (
       error
     ) {
 
@@ -1188,7 +1543,9 @@ class CachedVehicleSource {
 
 
       return cached ?? []
+
     }
+
   }
 
 
@@ -1198,8 +1555,12 @@ class CachedVehicleSource {
 
   clear() {
 
+    this.inFlight.clear()
+
     VehicleCache.clear()
+
   }
+
 }
 
 

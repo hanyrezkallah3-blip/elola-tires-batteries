@@ -6,25 +6,23 @@
 // RESPONSIBILITY
 // ------------------------------------------------------
 //
-// Central online vehicle data source.
+// Central online vehicle source.
+//
+// PROVIDER ORDER
+// ------------------------------------------------------
+//
+// 1. VehDB
+// 2. NHTSA
+// 3. CarQuery
 //
 // IMPORTANT
 // ------------------------------------------------------
 //
-// 1. Multiple providers may contribute vehicle data.
-// 2. Vehicle brand autocomplete uses VehDB tire-fitment
-//    makes as the primary clean consumer catalog.
-// 3. NHTSA remains available for vehicle/model resolution.
-// 4. NHTSA broad manufacturer catalogs are NOT used for
-//    default brand autocomplete.
-// 5. CarQueryProvider is NOT used for default brand
-//    autocomplete because its current vPIC source can
-//    return thousands of non-consumer manufacturers.
-// 6. Empty provider responses never erase useful results.
-// 7. Duplicate brands/models/years are removed.
-// 8. No vehicle data is fabricated.
-// 9. VehDB fitment remains the authoritative fitment
-//    source used elsewhere in the vehicle pipeline.
+// VehDB is an optional enrichment source.
+//
+// If VehDB is unavailable, rate-limited, or its quota is
+// exhausted, the application MUST continue using fallback
+// providers.
 //
 // ======================================================
 
@@ -34,526 +32,618 @@ import CarQueryProvider
 import NHTSAProvider
   from './providers/NHTSAProvider'
 
-
-// ======================================================
-// PROVIDERS
-// ======================================================
-
-const providers = [
-
-  CarQueryProvider,
-
-  NHTSAProvider
-
-]
+import VehDBFitmentProvider
+  from './providers/VehDBFitmentProvider'
 
 
 // ======================================================
-// VEHDB
+// CONSTANTS
 // ======================================================
 
 const VEHDB_BASE_URL =
   'https://api.vehdb.com/v1'
 
+const VEHDB_BRANDS_ENDPOINT =
+  `${VEHDB_BASE_URL}/tire-sizes/makes`
 
-const VEHDB_API_KEY =
-  String(
-    import.meta.env.VITE_VEHDB_API_KEY ?? ''
-  ).trim()
+const VEHDB_BRAND_CACHE_KEY =
+  'elola:vehdb:brand-catalog:v4'
+
+const VEHDB_BRAND_CACHE_TTL =
+  7 * 24 * 60 * 60 * 1000
+
+const VEHDB_BRAND_FETCH_COOLDOWN =
+  60 * 1000
+
+const VEHDB_BRAND_QUOTA_BLOCK_KEY =
+  'elola:vehdb:brand-quota-block:v1'
+
+const FALLBACK_BRAND_CACHE_KEY =
+  'elola:nhtsa:brand-catalog:v1'
+
+const FALLBACK_BRAND_CACHE_TTL =
+  30 * 24 * 60 * 60 * 1000
+
+const MIN_VALID_BRAND_COUNT =
+  1
+
+const NHTSA_BRAND_TYPES = [
+  'car',
+  'truck',
+  'motorcycle',
+  'bus'
+]
 
 
 // ======================================================
-// NORMALIZE
+// MEMORY STATE
 // ======================================================
 
-const normalize = value =>
-  String(value ?? '')
+let vehDBBrandCatalog = null
+
+let vehDBBrandCatalogPromise = null
+
+let vehDBBrandCatalogBlockedUntil = 0
+
+let fallbackBrandCatalog = null
+
+let fallbackBrandCatalogPromise = null
+
+
+// ======================================================
+// TEXT NORMALIZATION
+// ======================================================
+
+const normalizeText = value => {
+
+  return String(
+    value ?? ''
+  )
     .trim()
     .toLowerCase()
+}
 
 
-// ======================================================
-// STABLE VALUE
-// ======================================================
+const normalizeArabic = value => {
 
-const stableValue = value =>
-  normalize(value)
-    .replace(/\s+/g, ' ')
-
-
-// ======================================================
-// GENERIC ITEM KEY
-// ======================================================
-
-const getItemKey = item => {
-
-  if (
-    item == null
-  ) {
-    return ''
-  }
-
-
-  if (
-    typeof item !== 'object'
-  ) {
-    return stableValue(item)
-  }
-
-
-  const name =
-    item.name ??
-    item.label ??
-    item.value ??
-    item.brand ??
-    item.make ??
-    item.model ??
-    item.manufacturer ??
-    ''
-
-
-  return stableValue(name)
+  return normalizeText(value)
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ى/g, 'ي')
+    .replace(/ة/g, 'ه')
 }
 
 
 // ======================================================
-// MERGE LISTS
+// SAFE LOCAL STORAGE
 // ======================================================
 
-const mergeLists = (
-  existing,
-  incoming
-) => {
+const readLocalStorage = key => {
 
-  const previous =
-    Array.isArray(existing)
-      ? existing
-      : []
-
-
-  const fresh =
-    Array.isArray(incoming)
-      ? incoming
-      : []
-
-
-  const map =
-    new Map()
-
-
-  const add = item => {
+  try {
 
     if (
-      item == null
-    ) {
-      return
-    }
-
-
-    const key =
-      getItemKey(item)
-
-
-    if (
-      !key
-    ) {
-      return
-    }
-
-
-    const current =
-      map.get(key)
-
-
-    if (
-      current &&
-      typeof current === 'object' &&
-      typeof item === 'object'
-    ) {
-
-      map.set(
-        key,
-        {
-          ...current,
-          ...item
-        }
-      )
-
-      return
-    }
-
-
-    map.set(
-      key,
-      item
-    )
-  }
-
-
-  previous.forEach(add)
-
-  fresh.forEach(add)
-
-
-  return Array.from(
-    map.values()
-  )
-}
-
-
-// ======================================================
-// NORMALIZE VEHICLE TYPE
-// ======================================================
-
-const normalizeVehicleType = value => {
-
-  const type =
-    stableValue(value)
-
-
-  const aliases = {
-
-    car:
-      'car',
-
-    cars:
-      'car',
-
-    automobile:
-      'car',
-
-    automobiles:
-      'car',
-
-    suv:
-      'suv',
-
-    suvs:
-      'suv',
-
-    truck:
-      'truck',
-
-    trucks:
-      'truck',
-
-    pickup:
-      'pickup',
-
-    pickups:
-      'pickup',
-
-    motorcycle:
-      'motorcycle',
-
-    motorcycles:
-      'motorcycle',
-
-    bike:
-      'motorcycle',
-
-    bikes:
-      'motorcycle',
-
-    bus:
-      'bus',
-
-    buses:
-      'bus'
-
-  }
-
-
-  return (
-    aliases[type] ??
-    type
-  )
-}
-
-
-// ======================================================
-// VEHDB BRAND NORMALIZATION
-// ======================================================
-
-const normalizeVehDBBrand = item => {
-
-  if (
-    item == null
-  ) {
-    return null
-  }
-
-
-  // ----------------------------------------------------
-  // String response
-  // ----------------------------------------------------
-
-  if (
-    typeof item === 'string'
-  ) {
-
-    const name =
-      item.trim()
-
-
-    if (
-      !name
+      typeof window === 'undefined' ||
+      !window.localStorage
     ) {
       return null
     }
 
+    const raw =
+      window.localStorage.getItem(key)
 
-    return {
-
-      id:
-        name,
-
-      value:
-        name,
-
-      name:
-        name,
-
-      label:
-        name
-
+    if (!raw) {
+      return null
     }
-  }
 
+    return JSON.parse(raw)
 
-  // ----------------------------------------------------
-  // Object response
-  // ----------------------------------------------------
-
-  if (
-    typeof item !== 'object'
-  ) {
-    return null
-  }
-
-
-  const name =
-    String(
-      item.name ??
-      item.make ??
-      item.brand ??
-      item.value ??
-      item.label ??
-      item.manufacturer ??
-      ''
-    ).trim()
-
-
-  if (
-    !name
-  ) {
-    return null
-  }
-
-
-  const id =
-    String(
-      item.id ??
-      item.uuid ??
-      name
-    ).trim()
-
-
-  return {
-
-    id:
-      id || name,
-
-    value:
-      name,
-
-    name:
-      name,
-
-    label:
-      name
-
-  }
-}
-
-
-// ======================================================
-// VEHDB RESPONSE EXTRACTION
-// ======================================================
-
-const extractVehDBBrands = payload => {
-
-  if (
-    Array.isArray(payload)
-  ) {
-
-    return payload
-      .map(
-        normalizeVehDBBrand
-      )
-      .filter(Boolean)
-  }
-
-
-  if (
-    !payload ||
-    typeof payload !== 'object'
-  ) {
-    return []
-  }
-
-
-  const candidates = [
-
-    payload.data,
-
-    payload.makes,
-
-    payload.results,
-
-    payload.items,
-
-    payload.records
-
-  ]
-
-
-  for (
-    const candidate
-    of candidates
-  ) {
-
-    if (
-      Array.isArray(candidate)
-    ) {
-
-      return candidate
-        .map(
-          normalizeVehDBBrand
-        )
-        .filter(Boolean)
-    }
-  }
-
-
-  // ----------------------------------------------------
-  // Single make object
-  // ----------------------------------------------------
-
-  const single =
-    normalizeVehDBBrand(
-      payload
-    )
-
-
-  return single
-    ? [single]
-    : []
-}
-
-
-// ======================================================
-// VEHDB BRAND CATALOG
-// ======================================================
-//
-// VehDB documents this endpoint specifically as the
-// make list for dropdown/type-ahead selectors:
-//
-// GET /v1/tire-sizes/makes
-//
-// This is intentionally isolated from NHTSA/CarQuery.
-//
-// ======================================================
-
-const getVehDBBrands = async () => {
-
-  if (
-    !VEHDB_API_KEY
-  ) {
+  } catch (error) {
 
     console.warn(
-      '[OnlineVehicleSource] VehDB brand catalog skipped: VITE_VEHDB_API_KEY is missing.'
+      '[OnlineVehicleSource] localStorage read failed:',
+      key,
+      error
+    )
+
+    return null
+  }
+}
+
+
+const writeLocalStorage = (
+  key,
+  value
+) => {
+
+  try {
+
+    if (
+      typeof window === 'undefined' ||
+      !window.localStorage
+    ) {
+      return false
+    }
+
+    window.localStorage.setItem(
+      key,
+      JSON.stringify(value)
+    )
+
+    return true
+
+  } catch (error) {
+
+    console.warn(
+      '[OnlineVehicleSource] localStorage write failed:',
+      key,
+      error
+    )
+
+    return false
+  }
+}
+
+
+// ======================================================
+// VEHDB API KEY
+// ======================================================
+
+const getVehDBApiKey = () => {
+
+  return String(
+    import.meta.env.VITE_VEHDB_API_KEY ?? ''
+  ).trim()
+}
+
+
+// ======================================================
+// BRAND RECORD NORMALIZATION
+// ======================================================
+
+const normalizeBrandRecord = value => {
+
+  if (
+    value === null ||
+    value === undefined
+  ) {
+    return null
+  }
+
+  if (
+    typeof value === 'string' ||
+    typeof value === 'number'
+  ) {
+
+    const name =
+      String(value).trim()
+
+    if (!name) {
+      return null
+    }
+
+    return {
+      name
+    }
+  }
+
+  if (
+    typeof value !== 'object'
+  ) {
+    return null
+  }
+
+  const name =
+    value.name ??
+    value.brand ??
+    value.make ??
+    value.title ??
+    value.label ??
+    value.value
+
+  if (
+    name === null ||
+    name === undefined ||
+    !String(name).trim()
+  ) {
+    return null
+  }
+
+  return {
+    ...value,
+    name: String(name).trim()
+  }
+}
+
+
+// ======================================================
+// BRAND ARRAY EXTRACTION
+// ======================================================
+
+const extractBrandArray = payload => {
+
+  if (Array.isArray(payload)) {
+    return payload
+  }
+
+  if (
+    payload &&
+    typeof payload === 'object'
+  ) {
+
+    const candidates = [
+      payload.makes,
+      payload.brands,
+      payload.data,
+      payload.items,
+      payload.results,
+      payload.records,
+      payload.list,
+      payload.vehicles
+    ]
+
+    for (
+      const candidate of candidates
+    ) {
+
+      if (Array.isArray(candidate)) {
+        return candidate
+      }
+    }
+
+    const values =
+      Object.values(payload)
+
+    if (
+      values.length &&
+      values.some(
+        value =>
+          typeof value === 'string' ||
+          typeof value === 'object'
+      )
+    ) {
+      return values
+    }
+  }
+
+  return []
+}
+
+
+// ======================================================
+// BRAND CATALOG NORMALIZATION
+// ======================================================
+
+const normalizeBrandCatalog = payload => {
+
+  const array =
+    extractBrandArray(payload)
+
+  const result = []
+
+  const seen =
+    new Set()
+
+  for (
+    const item of array
+  ) {
+
+    const normalized =
+      normalizeBrandRecord(item)
+
+    if (!normalized) {
+      continue
+    }
+
+    const key =
+      normalizeArabic(
+        normalized.name
+      )
+
+    if (!key) {
+      continue
+    }
+
+    if (seen.has(key)) {
+      continue
+    }
+
+    seen.add(key)
+
+    result.push(normalized)
+  }
+
+  return result
+}
+
+
+// ======================================================
+// VEHDB BRAND CACHE
+// ======================================================
+
+const readCachedVehDBBrandCatalog = () => {
+
+  const cached =
+    readLocalStorage(
+      VEHDB_BRAND_CACHE_KEY
+    )
+
+  if (
+    !cached ||
+    !Array.isArray(cached.data)
+  ) {
+    return []
+  }
+
+  const timestamp =
+    Number(
+      cached.timestamp ?? 0
+    )
+
+  if (
+    !timestamp ||
+    Date.now() - timestamp >
+      VEHDB_BRAND_CACHE_TTL
+  ) {
+    return []
+  }
+
+  return normalizeBrandCatalog(
+    cached.data
+  )
+}
+
+
+const writeCachedVehDBBrandCatalog = catalog => {
+
+  if (!Array.isArray(catalog)) {
+    return false
+  }
+
+  return writeLocalStorage(
+    VEHDB_BRAND_CACHE_KEY,
+    {
+      timestamp: Date.now(),
+      data: catalog
+    }
+  )
+}
+
+
+// ======================================================
+// VEHDB QUOTA BLOCK
+// ======================================================
+
+const readVehDBBrandQuotaBlock = () => {
+
+  const cached =
+    readLocalStorage(
+      VEHDB_BRAND_QUOTA_BLOCK_KEY
+    )
+
+  const blockedUntil =
+    Number(
+      cached?.blockedUntil ?? 0
+    )
+
+  if (
+    blockedUntil > Date.now()
+  ) {
+    return blockedUntil
+  }
+
+  return 0
+}
+
+
+const writeVehDBBrandQuotaBlock = blockedUntil => {
+
+  if (
+    !Number.isFinite(
+      blockedUntil
+    ) ||
+    blockedUntil <= Date.now()
+  ) {
+    return false
+  }
+
+  return writeLocalStorage(
+    VEHDB_BRAND_QUOTA_BLOCK_KEY,
+    {
+      blockedUntil,
+      reason: 'quota-exceeded'
+    }
+  )
+}
+
+
+// ======================================================
+// FALLBACK BRAND CACHE
+// ======================================================
+
+const readCachedFallbackBrandCatalog = () => {
+
+  const cached =
+    readLocalStorage(
+      FALLBACK_BRAND_CACHE_KEY
+    )
+
+  if (
+    !cached ||
+    !Array.isArray(cached.data)
+  ) {
+    return []
+  }
+
+  const timestamp =
+    Number(
+      cached.timestamp ?? 0
+    )
+
+  if (
+    !timestamp ||
+    Date.now() - timestamp >
+      FALLBACK_BRAND_CACHE_TTL
+  ) {
+    return []
+  }
+
+  return normalizeBrandCatalog(
+    cached.data
+  )
+}
+
+
+const writeCachedFallbackBrandCatalog = catalog => {
+
+  if (!Array.isArray(catalog)) {
+    return false
+  }
+
+  return writeLocalStorage(
+    FALLBACK_BRAND_CACHE_KEY,
+    {
+      timestamp: Date.now(),
+      data: catalog
+    }
+  )
+}
+
+
+// ======================================================
+// VEHDB BRAND FETCH
+// ======================================================
+
+const fetchVehDBBrandCatalog = async () => {
+
+  const apiKey =
+    getVehDBApiKey()
+
+  if (!apiKey) {
+
+    console.warn(
+      '[OnlineVehicleSource] VITE_VEHDB_API_KEY is missing'
     )
 
     return []
   }
-
-
-  const url =
-    `${VEHDB_BASE_URL}/tire-sizes/makes`
-
 
   try {
 
     const response =
       await fetch(
-        url,
+        VEHDB_BRANDS_ENDPOINT,
         {
-
-          method:
-            'GET',
+          method: 'GET',
 
           headers: {
-
             Accept:
               'application/json',
 
             Authorization:
-              `Bearer ${VEHDB_API_KEY}`
-
+              `Bearer ${apiKey}`
           }
-
         }
       )
 
+    if (!response.ok) {
+
+      let payload = null
+
+      try {
+
+        payload =
+          await response.json()
+
+      } catch {
+        payload = null
+      }
+
+      if (
+        response.status === 429
+      ) {
+
+        const resetAt =
+          Date.parse(
+            payload?.resets_at ?? ''
+          )
+
+        const blockedUntil =
+          Number.isFinite(resetAt) &&
+          resetAt > Date.now()
+
+            ? resetAt
+
+            : Date.now() +
+              VEHDB_BRAND_FETCH_COOLDOWN
+
+        vehDBBrandCatalogBlockedUntil =
+          blockedUntil
+
+        writeVehDBBrandQuotaBlock(
+          blockedUntil
+        )
+
+        console.warn(
+          '[OnlineVehicleSource] VehDB brand quota exhausted until:',
+          new Date(
+            blockedUntil
+          ).toISOString()
+        )
+
+      } else {
+
+        vehDBBrandCatalogBlockedUntil =
+          Date.now() +
+          VEHDB_BRAND_FETCH_COOLDOWN
+
+        console.warn(
+          '[OnlineVehicleSource] VehDB brand request failed:',
+          response.status
+        )
+      }
+
+      return []
+    }
+
+    const payload =
+      await response.json()
+
+    const catalog =
+      normalizeBrandCatalog(
+        payload
+      )
 
     if (
-      !response.ok
+      catalog.length <
+      MIN_VALID_BRAND_COUNT
     ) {
 
       console.warn(
-        '[OnlineVehicleSource] VehDB brand catalog HTTP error:',
-        response.status
+        '[OnlineVehicleSource] VehDB returned an empty brand catalog'
       )
 
       return []
     }
 
+    vehDBBrandCatalog =
+      catalog
 
-    const payload =
-      await response.json()
-
-
-    const brands =
-      extractVehDBBrands(
-        payload
-      )
-
-
-    const result =
-      mergeLists(
-        [],
-        brands
-      )
-
-
-    console.log(
-      '[OnlineVehicleSource] VehDB brand catalog:',
-      result.length
+    writeCachedVehDBBrandCatalog(
+      catalog
     )
 
+    return catalog
 
-    return result
+  } catch (error) {
 
-  } catch (
-    error
-  ) {
+    vehDBBrandCatalogBlockedUntil =
+      Date.now() +
+      VEHDB_BRAND_FETCH_COOLDOWN
 
     console.warn(
-      '[OnlineVehicleSource] VehDB brand catalog request failed:',
+      '[OnlineVehicleSource] VehDB brand request failed:',
       error
     )
-
 
     return []
   }
@@ -561,23 +651,257 @@ const getVehDBBrands = async () => {
 
 
 // ======================================================
-// DEFAULT BRAND CATALOG
-// ======================================================
-//
-// IMPORTANT
-// ------------------------------------------------------
-//
-// The default autocomplete must NEVER fall back to the
-// broad CarQuery/NHTSA manufacturer catalog.
-//
-// If VehDB is unavailable, returning an empty catalog is
-// safer than reintroducing thousands of irrelevant
-// manufacturers.
-//
+// INITIALIZE VEHDB BRAND CATALOG
 // ======================================================
 
-const DEFAULT_BRAND_CATALOG_TYPE =
-  'car'
+const initializeVehDBBrandCatalog = async () => {
+
+  if (
+    Array.isArray(
+      vehDBBrandCatalog
+    ) &&
+    vehDBBrandCatalog.length
+  ) {
+    return vehDBBrandCatalog
+  }
+
+
+  const persistedBlock =
+    readVehDBBrandQuotaBlock()
+
+  if (
+    persistedBlock >
+    Date.now()
+  ) {
+
+    vehDBBrandCatalogBlockedUntil =
+      persistedBlock
+
+    return []
+  }
+
+
+  if (
+    vehDBBrandCatalogBlockedUntil >
+    Date.now()
+  ) {
+    return []
+  }
+
+
+  const cached =
+    readCachedVehDBBrandCatalog()
+
+  if (cached.length) {
+
+    vehDBBrandCatalog =
+      cached
+
+    return cached
+  }
+
+
+  if (
+    vehDBBrandCatalogPromise
+  ) {
+    return vehDBBrandCatalogPromise
+  }
+
+
+  vehDBBrandCatalogPromise =
+    fetchVehDBBrandCatalog()
+
+      .finally(() => {
+
+        vehDBBrandCatalogPromise =
+          null
+      })
+
+
+  return vehDBBrandCatalogPromise
+}
+
+
+// ======================================================
+// FILTER BRAND CATALOG BY VEHICLE TYPE
+// ======================================================
+
+const filterBrandCatalogByVehicleType = (
+  catalog,
+  vehicleType = ''
+) => {
+
+  if (
+    !Array.isArray(catalog)
+  ) {
+    return []
+  }
+
+  const normalizedType =
+    normalizeArabic(
+      vehicleType
+    )
+
+  if (!normalizedType) {
+    return catalog
+  }
+
+  const typed =
+    catalog.filter(
+      item => {
+
+        const itemType =
+          normalizeArabic(
+            item?.vehicleType ??
+            item?.type ??
+            ''
+          )
+
+        return (
+          itemType ===
+          normalizedType
+        )
+      }
+    )
+
+  if (typed.length) {
+    return typed
+  }
+
+  return catalog
+}
+
+
+// ======================================================
+// INITIALIZE NHTSA FALLBACK BRAND CATALOG
+// ======================================================
+
+const initializeFallbackBrandCatalog = async (
+  vehicleType = ''
+) => {
+
+  const normalizedType =
+    normalizeText(
+      vehicleType
+    )
+
+
+  if (
+    Array.isArray(
+      fallbackBrandCatalog
+    ) &&
+    fallbackBrandCatalog.length
+  ) {
+
+    return filterBrandCatalogByVehicleType(
+      fallbackBrandCatalog,
+      normalizedType
+    )
+  }
+
+
+  const cached =
+    readCachedFallbackBrandCatalog()
+
+  if (cached.length) {
+
+    fallbackBrandCatalog =
+      cached
+
+    return filterBrandCatalogByVehicleType(
+      cached,
+      normalizedType
+    )
+  }
+
+
+  if (
+    fallbackBrandCatalogPromise
+  ) {
+
+    const catalog =
+      await fallbackBrandCatalogPromise
+
+    return filterBrandCatalogByVehicleType(
+      catalog,
+      normalizedType
+    )
+  }
+
+
+  const requestedTypes =
+    normalizedType
+
+      ? [normalizedType]
+
+      : NHTSA_BRAND_TYPES
+
+
+  fallbackBrandCatalogPromise =
+    Promise.all(
+      requestedTypes.map(
+        async type => {
+
+          try {
+
+            const result =
+              await NHTSAProvider.getBrands(
+                type
+              )
+
+            return normalizeBrandCatalog(
+              result
+            )
+
+          } catch (error) {
+
+            console.warn(
+              '[OnlineVehicleSource] NHTSA brand fallback failed:',
+              type,
+              error
+            )
+
+            return []
+          }
+        }
+      )
+    )
+
+      .then(results => {
+
+        const catalog =
+          normalizeBrandCatalog(
+            results.flat()
+          )
+
+        if (catalog.length) {
+
+          fallbackBrandCatalog =
+            catalog
+
+          writeCachedFallbackBrandCatalog(
+            catalog
+          )
+        }
+
+        return catalog
+      })
+
+      .finally(() => {
+
+        fallbackBrandCatalogPromise =
+          null
+      })
+
+
+  const catalog =
+    await fallbackBrandCatalogPromise
+
+  return filterBrandCatalogByVehicleType(
+    catalog,
+    normalizedType
+  )
+}
 
 
 // ======================================================
@@ -587,147 +911,75 @@ const DEFAULT_BRAND_CATALOG_TYPE =
 class OnlineVehicleSource {
 
   // ====================================================
-  // PROVIDER MANAGEMENT
+  // PROVIDERS
   // ====================================================
 
-  static register(
-    provider
-  ) {
+  static providers = [
 
-    if (
-      !provider
-    ) {
-      return
-    }
+    VehDBFitmentProvider,
 
+    NHTSAProvider,
 
-    if (
-      providers.includes(provider)
-    ) {
-      return
-    }
+    CarQueryProvider
 
-
-    providers.push(
-      provider
-    )
-  }
-
-
-  static unregister(
-    provider
-  ) {
-
-    const index =
-      providers.indexOf(
-        provider
-      )
-
-
-    if (
-      index === -1
-    ) {
-      return
-    }
-
-
-    providers.splice(
-      index,
-      1
-    )
-  }
-
-
-  static clearProviders() {
-
-    providers.length = 0
-  }
-
-
-  static getProviders() {
-
-    return [
-      ...providers
-    ]
-  }
+  ]
 
 
   // ====================================================
-  // GENERIC EXECUTION
+  // GENERIC EXECUTOR
   // ====================================================
 
   static async execute(
     method,
-    ...args
+    params = {}
   ) {
-
-    let result = null
-
 
     for (
       const provider
-      of providers
+      of OnlineVehicleSource.providers
     ) {
 
       if (
         !provider ||
-        typeof provider[method] !== 'function'
+        typeof provider[method] !==
+          'function'
       ) {
         continue
       }
 
-
       try {
 
-        const value =
+        const result =
           await provider[method](
-            ...args
+            params
           )
 
-
         if (
-          Array.isArray(value)
+          Array.isArray(result) &&
+          result.length
         ) {
-
-          if (
-            value.length > 0
-          ) {
-
-            result =
-              mergeLists(
-                result,
-                value
-              )
-          }
-
-
-          continue
+          return result
         }
 
-
         if (
-          value != null
+          result &&
+          !Array.isArray(result)
         ) {
-
-          return value
+          return result
         }
 
-      } catch (
-        error
-      ) {
+      } catch (error) {
 
         console.warn(
           `[OnlineVehicleSource] ${method} provider failed:`,
+          provider?.name ??
+            'UnknownProvider',
           error
         )
       }
     }
 
-
-    return (
-      result ??
-      []
-    )
+    return []
   }
 
 
@@ -735,10 +987,13 @@ class OnlineVehicleSource {
   // VEHICLE TYPES
   // ====================================================
 
-  static async getVehicleTypes() {
+  static async getVehicleTypes(
+    params = {}
+  ) {
 
-    return this.execute(
-      'getVehicleTypes'
+    return OnlineVehicleSource.execute(
+      'getVehicleTypes',
+      params
     )
   }
 
@@ -746,122 +1001,40 @@ class OnlineVehicleSource {
   // ====================================================
   // BRANDS
   // ====================================================
-  //
-  // DEFAULT
-  // ----------------------------------------------------
-  //
-  // VehDB is the only source for the default brand
-  // autocomplete.
-  //
-  // We deliberately DO NOT use:
-  //
-  //   CarQueryProvider.getBrands('car')
-  //   NHTSAProvider.getBrands('car')
-  //
-  // because the current vPIC-backed catalog can contain
-  // thousands of specialist / aftermarket / custom
-  // manufacturers that are not suitable for Elola's
-  // consumer vehicle selector.
-  //
-  // EXPLICIT TYPE
-  // ----------------------------------------------------
-  //
-  // When the UI explicitly selects a vehicle type,
-  // existing provider resolution remains available.
-  //
-  // ====================================================
 
   static async getBrands(
-    vehicleType
+    params = {}
   ) {
 
-    const requestedType =
-      normalizeVehicleType(
-        vehicleType
-      )
+    const vehicleType =
+      typeof params === 'string'
+
+        ? params
+
+        : (
+            params?.vehicleType ??
+            params?.type ??
+            ''
+          )
 
 
-    // --------------------------------------------------
-    // DEFAULT CONSUMER BRAND CATALOG
-    // --------------------------------------------------
+    const vehDBCatalog =
+      await initializeVehDBBrandCatalog()
+
 
     if (
-      !requestedType ||
-      requestedType === '__all__'
+      vehDBCatalog.length
     ) {
 
-      const result =
-        await getVehDBBrands()
-
-
-      console.log(
-        '[OnlineVehicleSource] Consumer brand catalog:',
-        result.length
+      return filterBrandCatalogByVehicleType(
+        vehDBCatalog,
+        vehicleType
       )
-
-
-      return result
     }
 
 
-    // --------------------------------------------------
-    // EXPLICIT TYPE
-    // --------------------------------------------------
-    //
-    // Preserve existing provider behavior for explicitly
-    // selected vehicle types.
-    //
-    // --------------------------------------------------
-
-    const results = []
-
-
-    for (
-      const provider
-      of providers
-    ) {
-
-      if (
-        !provider ||
-        typeof provider.getBrands !== 'function'
-      ) {
-        continue
-      }
-
-
-      try {
-
-        const value =
-          await provider.getBrands(
-            requestedType
-          )
-
-
-        if (
-          Array.isArray(value) &&
-          value.length > 0
-        ) {
-
-          results.push(
-            value
-          )
-        }
-
-      } catch (
-        error
-      ) {
-
-        console.warn(
-          `[OnlineVehicleSource] Brand provider failed for ${requestedType}:`,
-          error
-        )
-      }
-    }
-
-
-    return mergeLists(
-      [],
-      results.flat()
+    return initializeFallbackBrandCatalog(
+      vehicleType
     )
   }
 
@@ -874,7 +1047,7 @@ class OnlineVehicleSource {
     params = {}
   ) {
 
-    return this.execute(
+    return OnlineVehicleSource.execute(
       'getModels',
       params
     )
@@ -889,7 +1062,7 @@ class OnlineVehicleSource {
     params = {}
   ) {
 
-    return this.execute(
+    return OnlineVehicleSource.execute(
       'getYears',
       params
     )
@@ -904,7 +1077,7 @@ class OnlineVehicleSource {
     params = {}
   ) {
 
-    return this.execute(
+    return OnlineVehicleSource.execute(
       'findVehicle',
       params
     )
@@ -912,15 +1085,19 @@ class OnlineVehicleSource {
 
 
   // ====================================================
-  // GET ALL
+  // ALL VEHICLES
   // ====================================================
 
-  static async getAll() {
+  static async getAll(
+    params = {}
+  ) {
 
-    return this.execute(
-      'getAll'
+    return OnlineVehicleSource.execute(
+      'getAll',
+      params
     )
   }
+
 }
 
 

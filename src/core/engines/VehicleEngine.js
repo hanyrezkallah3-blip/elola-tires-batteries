@@ -1,4 +1,4 @@
-// ======================================================
+﻿// ======================================================
 // EL OLA ERP
 // Vehicle Engine
 // ======================================================
@@ -12,15 +12,15 @@
 // ------------------------------------------------------
 //
 // Vehicle
-//   ↓
+//   â†“
 // VehDB / OEM specifications
-//   ↓
+//   â†“
 // Technical requirements
-//   ↓
+//   â†“
 // Technical Product Universe
-//   ↓
+//   â†“
 // Compatible products / requirements
-//   ↓
+//   â†“
 // Warehouse availability
 //
 // IMPORTANT
@@ -29,14 +29,13 @@
 // Technical compatibility MUST be decided independently
 // from stock quantity.
 //
-// For tires, ALL OEM/VehDB tire sizes are results.
-//
-// If a matching Elola product exists:
-//   → attach its availability.
+// Tires, batteries and oils are technical requirements.
+// If a matching Elola Product Master exists:
+//   â†’ attach its availability.
 //
 // If no Elola product exists:
-//   → keep the technical tire requirement as a result
-//   → mark it unavailable.
+//   â†’ keep the technical requirement as a result
+//   â†’ mark it unavailable.
 //
 // ======================================================
 
@@ -53,25 +52,21 @@ import ProductsRepository
   from '../../repositories/ProductsRepository'
 
 
-
 // ======================================================
 // NORMALIZE TEXT
 // ======================================================
 
 const normalizeText = value => {
-
   return String(
     value ?? ''
   )
     .trim()
     .toLowerCase()
-    .replace(/أ|إ|آ/g, 'ا')
-    .replace(/ة/g, 'ه')
-    .replace(/ى/g, 'ي')
+    .replace(/ط£|ط¥|ط¢/g, 'ط§')
+    .replace(/ط©/g, 'ظ‡')
+    .replace(/ظ‰/g, 'ظٹ')
     .replace(/[\u064B-\u065F\u0670]/g, '')
-
 }
-
 
 
 // ======================================================
@@ -79,12 +74,9 @@ const normalizeText = value => {
 // ======================================================
 
 const compactText = value => {
-
   return normalizeText(value)
-    .replace(/[\s\-_/\\*×x]/gi, '')
-
+    .replace(/[\s_\-/*\\xأ—]/gi, '')
 }
-
 
 
 // ======================================================
@@ -92,7 +84,6 @@ const compactText = value => {
 // ======================================================
 
 const numberValue = value => {
-
   if (
     value === null ||
     value === undefined ||
@@ -111,9 +102,7 @@ const numberValue = value => {
   return Number.isFinite(number)
     ? number
     : null
-
 }
-
 
 
 // ======================================================
@@ -124,7 +113,6 @@ const valuesMatch = (
   actual,
   wanted
 ) => {
-
   const left =
     compactText(actual)
 
@@ -143,9 +131,7 @@ const valuesMatch = (
     left.includes(right) ||
     right.includes(left)
   )
-
 }
-
 
 
 // ======================================================
@@ -153,9 +139,7 @@ const valuesMatch = (
 // ======================================================
 
 const normalizeProductType = product => {
-
   const rawValues = [
-
     product?.type,
     product?.productType,
     product?.category,
@@ -165,13 +149,11 @@ const normalizeProductType = product => {
     product?.productCategory,
     product?.specifications?.type,
     product?.attributes?.type
-
   ]
 
   for (
     const value of rawValues
   ) {
-
     const raw =
       normalizeText(value)
 
@@ -181,48 +163,39 @@ const normalizeProductType = product => {
         'tires',
         'tyre',
         'tyres',
-        'اطار',
-        'اطارات'
+        'ط§ط·ط§ط±',
+        'ط§ط·ط§ط±ط§طھ'
       ].includes(raw)
     ) {
-
       return 'tire'
-
     }
 
     if (
       [
         'battery',
         'batteries',
-        'بطاريه',
-        'بطاريات',
-        'بطارية'
+        'ط¨ط·ط§ط±ظٹظ‡',
+        'ط¨ط·ط§ط±ظٹط§طھ',
+        'ط¨ط·ط§ط±ظٹظ‡'
       ].includes(raw)
     ) {
-
       return 'battery'
-
     }
 
     if (
       [
         'oil',
         'oils',
-        'زيت',
-        'زيوت'
+        'ط²ظٹطھ',
+        'ط²ظٹظˆطھ'
       ].includes(raw)
     ) {
-
       return 'oil'
-
     }
-
   }
 
   return ''
-
 }
-
 
 
 // ======================================================
@@ -230,9 +203,7 @@ const normalizeProductType = product => {
 // ======================================================
 
 const getProductTire = product => {
-
   return (
-
     product?.tire ||
     product?.tireData ||
     product?.tireSpecification ||
@@ -241,17 +212,12 @@ const getProductTire = product => {
     product?.specification?.tire ||
     product?.attributes?.tire ||
     {}
-
   )
-
 }
 
 
-
 const getProductBattery = product => {
-
   return (
-
     product?.battery ||
     product?.batteryData ||
     product?.batterySpecification ||
@@ -260,17 +226,12 @@ const getProductBattery = product => {
     product?.specification?.battery ||
     product?.attributes?.battery ||
     {}
-
   )
-
 }
 
 
-
 const getProductOil = product => {
-
   return (
-
     product?.oil ||
     product?.oilData ||
     product?.oilSpecification ||
@@ -279,11 +240,8 @@ const getProductOil = product => {
     product?.specification?.oil ||
     product?.attributes?.oil ||
     {}
-
   )
-
 }
-
 
 
 // ======================================================
@@ -294,11 +252,9 @@ const getValue = (
   object,
   keys = []
 ) => {
-
   for (
     const key of keys
   ) {
-
     const value =
       object?.[key]
 
@@ -307,17 +263,12 @@ const getValue = (
       value !== null &&
       String(value).trim() !== ''
     ) {
-
       return value
-
     }
-
   }
 
   return null
-
 }
-
 
 
 // ======================================================
@@ -331,7 +282,6 @@ const getValue = (
 // 205-55-16
 // 205/55R16
 // 205/55 R16
-// 205×55×16
 // 215 55 16
 // 1200/24
 // 1200*24
@@ -339,7 +289,6 @@ const getValue = (
 // ======================================================
 
 const parseTireSize = value => {
-
   let text =
     String(
       value ?? ''
@@ -353,8 +302,7 @@ const parseTireSize = value => {
 
   text =
     text
-      .replace(/×/g, '/')
-      .replace(/\*/g, '/')
+      .replace(/[أ—*]/g, '/')
       .replace(/\\/g, '/')
       .replace(/-/g, '/')
       .replace(/\s+/g, '')
@@ -379,7 +327,6 @@ const parseTireSize = value => {
   if (
     numbers.length >= 3
   ) {
-
     const width =
       numberValue(
         numbers[0]
@@ -400,22 +347,18 @@ const parseTireSize = value => {
       profile !== null &&
       rim !== null
     ) {
-
       return {
         width,
         profile,
         rim,
         format: 'three-part'
       }
-
     }
-
   }
 
   if (
     numbers.length === 2
   ) {
-
     const width =
       numberValue(
         numbers[0]
@@ -430,22 +373,17 @@ const parseTireSize = value => {
       width !== null &&
       rim !== null
     ) {
-
       return {
         width,
         profile: null,
         rim,
         format: 'two-part'
       }
-
     }
-
   }
 
   return null
-
 }
-
 
 
 // ======================================================
@@ -453,7 +391,6 @@ const parseTireSize = value => {
 // ======================================================
 
 const formatTireSize = tire => {
-
   if (!tire) {
     return ''
   }
@@ -466,11 +403,9 @@ const formatTireSize = tire => {
     tire.rim !== null &&
     tire.rim !== undefined
   ) {
-
     return (
       `${tire.width}/${tire.profile}/${tire.rim}`
     )
-
   }
 
   if (
@@ -479,20 +414,16 @@ const formatTireSize = tire => {
     tire.rim !== null &&
     tire.rim !== undefined
   ) {
-
     return (
       `${tire.width}/${tire.rim}`
     )
-
   }
 
   return (
     tire.size ||
     ''
   )
-
 }
-
 
 
 // ======================================================
@@ -500,7 +431,6 @@ const formatTireSize = tire => {
 // ======================================================
 
 const extractProductTire = product => {
-
   const tire =
     getProductTire(
       product
@@ -559,20 +489,17 @@ const extractProductTire = product => {
   if (
     width === null
   ) {
-
     width =
       numberValue(
         product?.width ??
         product?.sectionWidth ??
         product?.tireWidth
       )
-
   }
 
   if (
     profile === null
   ) {
-
     profile =
       numberValue(
         product?.profile ??
@@ -580,13 +507,11 @@ const extractProductTire = product => {
         product?.aspectRatio ??
         product?.aspect
       )
-
   }
 
   if (
     rim === null
   ) {
-
     rim =
       numberValue(
         product?.rim ??
@@ -594,29 +519,24 @@ const extractProductTire = product => {
         product?.wheelDiameter ??
         product?.diameter
       )
-
   }
 
   if (!size) {
-
     size =
       product?.tireSize ??
       product?.size ??
       product?.dimension ??
       product?.dimensions ??
       null
-
   }
 
   if (size) {
-
     const parsed =
       parseTireSize(
         size
       )
 
     if (parsed) {
-
       width =
         width ??
         parsed.width
@@ -628,9 +548,7 @@ const extractProductTire = product => {
       rim =
         rim ??
         parsed.rim
-
     }
-
   }
 
   if (
@@ -641,9 +559,7 @@ const extractProductTire = product => {
       size === null
     )
   ) {
-
     const candidateTexts = [
-
       product?.name,
       product?.productName,
       product?.shortName,
@@ -659,13 +575,11 @@ const extractProductTire = product => {
       product?.specifications?.size,
       product?.attributes?.name,
       product?.attributes?.size
-
     ]
 
     for (
       const candidate of candidateTexts
     ) {
-
       if (
         candidate === null ||
         candidate === undefined ||
@@ -705,9 +619,7 @@ const extractProductTire = product => {
       ) {
         break
       }
-
     }
-
   }
 
   return {
@@ -716,9 +628,7 @@ const extractProductTire = product => {
     rim,
     size
   }
-
 }
-
 
 
 // ======================================================
@@ -729,7 +639,6 @@ const collectValues = (
   value,
   output = []
 ) => {
-
   if (
     value === null ||
     value === undefined ||
@@ -741,7 +650,6 @@ const collectValues = (
   if (
     Array.isArray(value)
   ) {
-
     value.forEach(
       item =>
         collectValues(
@@ -751,13 +659,11 @@ const collectValues = (
     )
 
     return output
-
   }
 
   if (
     typeof value === 'object'
   ) {
-
     Object.values(
       value
     ).forEach(
@@ -769,7 +675,6 @@ const collectValues = (
     )
 
     return output
-
   }
 
   output.push(
@@ -777,9 +682,7 @@ const collectValues = (
   )
 
   return output
-
 }
-
 
 
 // ======================================================
@@ -787,11 +690,9 @@ const collectValues = (
 // ======================================================
 
 const collectOEMTireValues = oem => {
-
   const values = []
 
   const sources = [
-
     oem?.tire,
     oem?.vehicle?.tire,
     oem?.vehicle?.tireSize,
@@ -799,19 +700,20 @@ const collectOEMTireValues = oem => {
     oem?.tireSize,
     oem?.oemTire,
 
-    // VehDB
+    // VehDB / technical sources
     oem?.oemSizes,
     oem?.alternativeSizes,
     oem?.alternateSizes,
     oem?.compatibleSizes,
     oem?.compatibleTireSizes,
+
     oem?.vehicle?.oemSizes,
     oem?.vehicle?.alternativeSizes,
     oem?.vehicle?.alternateSizes,
     oem?.vehicle?.compatibleSizes,
     oem?.vehicle?.compatibleTireSizes,
-    oem?.fitments
 
+    oem?.fitments
   ]
 
   sources.forEach(
@@ -832,9 +734,7 @@ const collectOEMTireValues = oem => {
         .filter(Boolean)
     )
   ]
-
 }
-
 
 
 // ======================================================
@@ -845,7 +745,6 @@ const tireMatchesOEM = (
   product,
   oem
 ) => {
-
   if (!oem) {
     return false
   }
@@ -884,7 +783,6 @@ const tireMatchesOEM = (
   for (
     const wanted of wantedValues
   ) {
-
     const parsedWanted =
       parseTireSize(
         wanted
@@ -895,38 +793,32 @@ const tireMatchesOEM = (
       productTire.width !== null &&
       productTire.rim !== null
     ) {
-
       if (
         productTire.width ===
         parsedWanted.width
       ) {
-
         if (
           parsedWanted.profile === null
         ) {
-
           if (
             productTire.rim ===
             parsedWanted.rim
           ) {
             return true
           }
-
         }
 
         if (
           parsedWanted.profile !== null &&
           productTire.profile !== null &&
           productTire.rim ===
-          parsedWanted.rim &&
+            parsedWanted.rim &&
           productTire.profile ===
-          parsedWanted.profile
+            parsedWanted.profile
         ) {
           return true
         }
-
       }
-
     }
 
     if (
@@ -938,13 +830,10 @@ const tireMatchesOEM = (
     ) {
       return true
     }
-
   }
 
   return false
-
 }
-
 
 
 // ======================================================
@@ -955,12 +844,10 @@ const collectProductValues = (
   product,
   fields = []
 ) => {
-
   const values = []
 
   fields.forEach(
     field => {
-
       values.push(
         ...collectValues(
           product?.[field]
@@ -1014,7 +901,6 @@ const collectProductValues = (
           product?.attributes?.oil?.[field]
         )
       )
-
     }
   )
 
@@ -1028,9 +914,7 @@ const collectProductValues = (
         .filter(Boolean)
     )
   ]
-
 }
-
 
 
 // ======================================================
@@ -1038,18 +922,21 @@ const collectProductValues = (
 // ======================================================
 
 const collectOEMBatteryValues = oem => {
-
   const values = []
 
   const sources = [
-
     oem?.battery,
+    oem?.batteries,
+    oem?.batteryCapacities,
+    oem?.compatibleBatteryCapacities,
+
     oem?.vehicle?.battery,
+    oem?.vehicle?.batteries,
     oem?.vehicle?.batterySpec,
     oem?.vehicle?.oemBattery,
+
     oem?.batterySpec,
     oem?.oemBattery
-
   ]
 
   sources.forEach(
@@ -1070,20 +957,65 @@ const collectOEMBatteryValues = oem => {
         .filter(Boolean)
     )
   ]
-
 }
 
+
+// ======================================================
+// NORMALIZE BATTERY CAPACITY
+// ======================================================
+
+const normalizeBatteryCapacity = value => {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ''
+  ) {
+    return null
+  }
+
+  const text =
+    String(value)
+      .trim()
+      .toLowerCase()
+
+  const match =
+    text.match(
+      /\d+(?:\.\d+)?/
+    )
+
+  if (!match) {
+    return null
+  }
+
+  const number =
+    numberValue(
+      match[0]
+    )
+
+  return number
+}
 
 
 // ======================================================
 // BATTERY MATCH
+// ======================================================
+//
+// IMPORTANT
+// ------------------------------------------------------
+//
+// When OEM battery requirements exist, battery
+// compatibility is decided technically by capacity.
+//
+// We do NOT declare a battery compatible merely because
+// its product name, code, N70 code, SKU, or description
+// happens to contain a similar number.
+//
 // ======================================================
 
 const batteryMatchesOEM = (
   product,
   oem
 ) => {
-
   if (!oem) {
     return false
   }
@@ -1099,6 +1031,21 @@ const batteryMatchesOEM = (
     return false
   }
 
+  const wantedCapacities =
+    wantedValues
+      .map(
+        normalizeBatteryCapacity
+      )
+      .filter(
+        value =>
+          value !== null
+      )
+
+  const battery =
+    getProductBattery(
+      product
+    )
+
   const productValues =
     collectProductValues(
       product,
@@ -1106,40 +1053,82 @@ const batteryMatchesOEM = (
         'capacity',
         'batteryCapacity',
         'ampereHour',
+        'ampHour',
         'ah',
-        'amp',
         'ampHours',
-        'batteryType',
-        'typeCode',
-        'batteryCode',
-        'code',
-        'model',
-        'batteryModel',
-        'group',
-        'groupSize',
-        'size',
-        'sizeCode',
-        'name',
-        'productName',
-        'title',
-        'description',
-        'sku'
+        'capacities',
+        'batteryCapacities'
       ]
     )
 
-  return wantedValues.some(
-    wanted =>
-      productValues.some(
-        actual =>
-          valuesMatch(
-            actual,
-            wanted
-          )
+  const productCapacities = [
+    ...productValues,
+    ...collectValues(
+      battery?.capacity
+    ),
+    ...collectValues(
+      battery?.batteryCapacity
+    ),
+    ...collectValues(
+      battery?.ah
+    ),
+    ...collectValues(
+      battery?.ampereHour
+    ),
+    ...collectValues(
+      battery?.ampHours
+    ),
+    ...collectValues(
+      battery?.capacities
+    ),
+    ...collectValues(
+      battery?.batteryCapacities
+    )
+  ]
+    .map(
+      normalizeBatteryCapacity
+    )
+    .filter(
+      value =>
+        value !== null
+    )
+
+  const uniqueProductCapacities =
+    [
+      ...new Set(
+        productCapacities
       )
+    ]
+
+  console.log(
+    '[VehicleEngine] BATTERY MATCH CHECK:',
+    {
+      product:
+        product?.name ??
+        product?.productName ??
+        product?.title,
+      wantedValues,
+      wantedCapacities,
+      productCapacities:
+        uniqueProductCapacities
+    }
   )
 
-}
+  if (
+    wantedCapacities.length === 0 ||
+    uniqueProductCapacities.length === 0
+  ) {
+    return false
+  }
 
+  return wantedCapacities.some(
+    wanted =>
+      uniqueProductCapacities.some(
+        actual =>
+          actual === wanted
+      )
+  )
+}
 
 
 // ======================================================
@@ -1147,18 +1136,22 @@ const batteryMatchesOEM = (
 // ======================================================
 
 const collectOILValues = oem => {
-
   const values = []
 
   const sources = [
-
     oem?.oil,
+    oem?.oils,
+    oem?.oilViscosity,
+    oem?.oilViscosities,
+    oem?.compatibleOilViscosities,
+
     oem?.vehicle?.oil,
+    oem?.vehicle?.oils,
     oem?.vehicle?.oilViscosity,
     oem?.vehicle?.oemOil,
+
     oem?.oilViscosity,
     oem?.oemOil
-
   ]
 
   sources.forEach(
@@ -1179,20 +1172,116 @@ const collectOILValues = oem => {
         .filter(Boolean)
     )
   ]
-
 }
 
+
+// ======================================================
+// NORMALIZE OIL VISCOSITY
+// ======================================================
+
+const normalizeOilViscosity = value => {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ''
+  ) {
+    return ''
+  }
+
+  return String(value)
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, '')
+    .replace(/_/g, '-')
+}
+
+
+// ======================================================
+// EXTRACT OIL VISCOSITIES FROM PRODUCT
+// ======================================================
+
+const extractProductOilViscosities = product => {
+  const oil =
+    getProductOil(
+      product
+    )
+
+  const values = [
+    ...collectValues(
+      oil?.viscosity
+    ),
+    ...collectValues(
+      oil?.viscosities
+    ),
+    ...collectValues(
+      oil?.oilViscosity
+    ),
+    ...collectValues(
+      oil?.oilViscosities
+    ),
+    ...collectValues(
+      oil?.grade
+    ),
+    ...collectValues(
+      oil?.grades
+    ),
+    ...collectValues(
+      oil?.oilGrade
+    ),
+    ...collectValues(
+      oil?.oilGrades
+    ),
+    ...collectValues(
+      oil?.sae
+    ),
+
+    ...collectProductValues(
+      product,
+      [
+        'viscosity',
+        'viscosityGrade',
+        'grade',
+        'oilGrade',
+        'oilViscosity',
+        'oilViscosities',
+        'sae',
+        'SAE'
+      ]
+    )
+  ]
+
+  return [
+    ...new Set(
+      values
+        .map(
+          normalizeOilViscosity
+        )
+        .filter(Boolean)
+    )
+  ]
+}
 
 
 // ======================================================
 // OIL MATCH
+// ======================================================
+//
+// IMPORTANT
+// ------------------------------------------------------
+//
+// Oil compatibility is based on the technical viscosity /
+// grade requirement.
+//
+// We do NOT infer compatibility from a generic product
+// name or description when the product has no technical
+// viscosity value.
+//
 // ======================================================
 
 const oilMatchesOEM = (
   product,
   oem
 ) => {
-
   if (!oem) {
     return false
   }
@@ -1208,66 +1297,46 @@ const oilMatchesOEM = (
     return false
   }
 
-  const productValues =
-    collectProductValues(
-      product,
-      [
-        'viscosity',
-        'viscosityGrade',
-        'grade',
-        'oilGrade',
-        'oilViscosity',
-        'sae',
-        'SAE',
-        'weight',
-        'oilWeight',
-        'specification',
-        'description',
-        'name',
-        'productName',
-        'title',
-        'code',
-        'sku'
-      ]
+  const wantedViscosities =
+    wantedValues
+      .map(
+        normalizeOilViscosity
+      )
+      .filter(Boolean)
+
+  const productViscosities =
+    extractProductOilViscosities(
+      product
     )
 
-  return wantedValues.some(
-    wanted => {
-
-      const wantedText =
-        compactText(
-          wanted
-        )
-
-      return productValues.some(
-        actual => {
-
-          const actualText =
-            compactText(
-              actual
-            )
-
-          if (
-            !wantedText ||
-            !actualText
-          ) {
-            return false
-          }
-
-          return (
-            actualText === wantedText ||
-            actualText.includes(wantedText) ||
-            wantedText.includes(actualText)
-          )
-
-        }
-      )
-
+  console.log(
+    '[VehicleEngine] OIL MATCH CHECK:',
+    {
+      product:
+        product?.name ??
+        product?.productName ??
+        product?.title,
+      wantedValues,
+      wantedViscosities,
+      productViscosities
     }
   )
 
-}
+  if (
+    wantedViscosities.length === 0 ||
+    productViscosities.length === 0
+  ) {
+    return false
+  }
 
+  return wantedViscosities.some(
+    wanted =>
+      productViscosities.some(
+        actual =>
+          actual === wanted
+      )
+  )
+}
 
 
 // ======================================================
@@ -1281,33 +1350,24 @@ const explicitVehicleMatch = ({
   year,
   vehicleType
 }) => {
-
   try {
-
     return VehicleCompatibilityEngine.matchVehicle({
-
       product,
       make,
       model,
       year,
       vehicleType
-
     })
-
   }
   catch (error) {
-
     console.warn(
       '[VehicleEngine] Explicit compatibility check failed:',
       error
     )
 
     return false
-
   }
-
 }
-
 
 
 // ======================================================
@@ -1322,7 +1382,6 @@ const productMatchesVehicle = ({
   vehicleType,
   oem
 }) => {
-
   if (!product) {
     return false
   }
@@ -1332,52 +1391,95 @@ const productMatchesVehicle = ({
       product
     )
 
+  // ----------------------------------------------------
+  // Technical tire matching
+  // ----------------------------------------------------
+
   if (
-    type === 'tire' &&
-    tireMatchesOEM(
+    type === 'tire'
+  ) {
+    return tireMatchesOEM(
       product,
       oem
     )
-  ) {
-    return true
   }
+
+  // ----------------------------------------------------
+  // Technical battery matching
+  // ----------------------------------------------------
 
   if (
-    type === 'battery' &&
-    batteryMatchesOEM(
-      product,
-      oem
-    )
+    type === 'battery'
   ) {
-    return true
+    const technicalMatch =
+      batteryMatchesOEM(
+        product,
+        oem
+      )
+
+    if (technicalMatch) {
+      return true
+    }
+
+    // If OEM battery requirements exist, do not allow
+    // explicit vehicle compatibility to bypass the
+    // technical battery requirement.
+    const batteryRequirements =
+      collectOEMBatteryValues(
+        oem
+      )
+
+    if (
+      batteryRequirements.length > 0
+    ) {
+      return false
+    }
   }
+
+  // ----------------------------------------------------
+  // Technical oil matching
+  // ----------------------------------------------------
 
   if (
-    type === 'oil' &&
-    oilMatchesOEM(
-      product,
-      oem
-    )
+    type === 'oil'
   ) {
-    return true
+    const technicalMatch =
+      oilMatchesOEM(
+        product,
+        oem
+      )
+
+    if (technicalMatch) {
+      return true
+    }
+
+    // If OEM oil requirements exist, do not allow
+    // explicit vehicle compatibility to bypass the
+    // technical oil requirement.
+    const oilRequirements =
+      collectOILValues(
+        oem
+      )
+
+    if (
+      oilRequirements.length > 0
+    ) {
+      return false
+    }
   }
 
-  if (
-    explicitVehicleMatch({
-      product,
-      make,
-      model,
-      year,
-      vehicleType
-    })
-  ) {
-    return true
-  }
+  // ----------------------------------------------------
+  // Explicit compatibility
+  // ----------------------------------------------------
 
-  return false
-
+  return explicitVehicleMatch({
+    product,
+    make,
+    model,
+    year,
+    vehicleType
+  })
 }
-
 
 
 // ======================================================
@@ -1385,7 +1487,6 @@ const productMatchesVehicle = ({
 // ======================================================
 
 const getProductId = product => {
-
   return String(
     product?.productId ??
     product?.id ??
@@ -1395,9 +1496,7 @@ const getProductId = product => {
     product?.code ??
     ''
   ).trim()
-
 }
-
 
 
 // ======================================================
@@ -1405,16 +1504,13 @@ const getProductId = product => {
 // ======================================================
 
 const getAvailabilityIds = product => {
-
   return [
-
     product?.productId,
     product?.id,
     product?.selectedProductId,
     product?.selectedWarehouseProductId,
     product?.sku,
     product?.code
-
   ]
     .filter(
       value =>
@@ -1426,9 +1522,7 @@ const getAvailabilityIds = product => {
       value =>
         String(value).trim()
     )
-
 }
-
 
 
 // ======================================================
@@ -1436,20 +1530,16 @@ const getAvailabilityIds = product => {
 // ======================================================
 
 const getAvailabilityQuantity = product => {
-
   const values = [
-
     product?.availableQuantity,
     product?.availability?.quantity,
     product?.quantity,
     product?.stock
-
   ]
 
   for (
     const value of values
   ) {
-
     const quantity =
       Number(value)
 
@@ -1458,13 +1548,10 @@ const getAvailabilityQuantity = product => {
     ) {
       return quantity
     }
-
   }
 
   return 0
-
 }
-
 
 
 // ======================================================
@@ -1474,13 +1561,11 @@ const getAvailabilityQuantity = product => {
 const buildAvailabilityMap = (
   products = []
 ) => {
-
   const map =
     new Map()
 
   products.forEach(
     product => {
-
       if (!product) {
         return
       }
@@ -1497,12 +1582,12 @@ const buildAvailabilityMap = (
 
       ids.forEach(
         id => {
-
           const current =
-            map.get(id)
+            map.get(
+              id
+            )
 
           if (!current) {
-
             map.set(
               id,
               {
@@ -1512,14 +1597,12 @@ const buildAvailabilityMap = (
             )
 
             return
-
           }
 
           if (
             quantity >
             current.quantity
           ) {
-
             map.set(
               id,
               {
@@ -1527,39 +1610,24 @@ const buildAvailabilityMap = (
                 product
               }
             )
-
           }
-
         }
       )
-
     }
   )
 
   return map
-
 }
-
 
 
 // ======================================================
 // FIND INVENTORY PRODUCT BY TIRE SIZE
-// ======================================================
-//
-// IMPORTANT:
-//
-// Synthetic VehDB requirements do not have Product IDs.
-//
-// Therefore availability for tires must ALSO be resolved
-// by technical tire size.
-//
 // ======================================================
 
 const findAvailabilityByTireSize = (
   tireRequirement,
   availabilityProducts = []
 ) => {
-
   if (!tireRequirement) {
     return null
   }
@@ -1573,7 +1641,6 @@ const findAvailabilityByTireSize = (
   for (
     const product of availabilityProducts
   ) {
-
     if (!product) {
       continue
     }
@@ -1628,13 +1695,178 @@ const findAvailabilityByTireSize = (
         ),
       product
     }
-
   }
 
   return null
-
 }
 
+
+// ======================================================
+// FIND PRODUCT BY BATTERY CAPACITY
+// ======================================================
+
+const findProductByBatteryCapacity = (
+  capacity,
+  products = []
+) => {
+  const wanted =
+    normalizeBatteryCapacity(
+      capacity
+    )
+
+  if (
+    wanted === null
+  ) {
+    return null
+  }
+
+  for (
+    const product of products
+  ) {
+    if (!product) {
+      continue
+    }
+
+    if (
+      normalizeProductType(
+        product
+      ) !== 'battery'
+    ) {
+      continue
+    }
+
+    const battery =
+      getProductBattery(
+        product
+      )
+
+    const values = [
+      ...collectValues(
+        battery?.capacity
+      ),
+      ...collectValues(
+        battery?.batteryCapacity
+      ),
+      ...collectValues(
+        battery?.ah
+      ),
+      ...collectValues(
+        battery?.ampereHour
+      ),
+      ...collectValues(
+        battery?.ampHour
+      ),
+      ...collectValues(
+        battery?.ampHours
+      ),
+      ...collectValues(
+        battery?.capacities
+      ),
+      ...collectValues(
+        battery?.batteryCapacities
+      ),
+      ...collectProductValues(
+        product,
+        [
+          'capacity',
+          'batteryCapacity',
+          'ampereHour',
+          'ampHour',
+          'ah',
+          'ampHours',
+          'capacities',
+          'batteryCapacities'
+        ]
+      )
+    ]
+
+    const capacities =
+      [
+        ...new Set(
+          values
+            .map(
+              normalizeBatteryCapacity
+            )
+            .filter(
+              value =>
+                value !== null
+            )
+        )
+      ]
+
+    if (
+      capacities.includes(
+        wanted
+      )
+    ) {
+      return {
+        quantity:
+          getAvailabilityQuantity(
+            product
+          ),
+        product
+      }
+    }
+  }
+
+  return null
+}
+
+
+// ======================================================
+// FIND PRODUCT BY OIL VISCOSITY
+// ======================================================
+
+const findProductByOilViscosity = (
+  viscosity,
+  products = []
+) => {
+  const wanted =
+    normalizeOilViscosity(
+      viscosity
+    )
+
+  if (!wanted) {
+    return null
+  }
+
+  for (
+    const product of products
+  ) {
+    if (!product) {
+      continue
+    }
+
+    if (
+      normalizeProductType(
+        product
+      ) !== 'oil'
+    ) {
+      continue
+    }
+
+    const viscosities =
+      extractProductOilViscosities(
+        product
+      )
+
+    if (
+      viscosities.includes(
+        wanted
+      )
+    ) {
+      return {
+        quantity:
+          getAvailabilityQuantity(
+            product
+          ),
+        product
+      }
+    }
+  }
+
+  return null
+}
 
 
 // ======================================================
@@ -1643,10 +1875,8 @@ const findAvailabilityByTireSize = (
 //
 // This is NOT a fake Elola product.
 //
-// It represents a technical requirement returned by VehDB.
-//
-// If there is no Product Master for this size, it remains
-// in the results as unavailable.
+// It represents a technical requirement returned by
+// the vehicle technical source.
 //
 // ======================================================
 
@@ -1654,7 +1884,6 @@ const buildTechnicalTireRequirement = (
   size,
   index = 0
 ) => {
-
   const parsed =
     parseTireSize(
       size
@@ -1673,27 +1902,28 @@ const buildTechnicalTireRequirement = (
     )
 
   return {
-
     id:
-      `vehdb-tire-${compactText(formatted)}-${index}`,
+      `technical-tire-${compactText(formatted)}-${index}`,
 
     productId:
-      `vehdb-tire-${compactText(formatted)}-${index}`,
+      `technical-tire-${compactText(formatted)}-${index}`,
 
     name:
-      formatted || String(size),
+      formatted ||
+      String(size),
 
     productName:
-      formatted || String(size),
+      formatted ||
+      String(size),
 
     title:
-      formatted || String(size),
+      formatted ||
+      String(size),
 
     type:
       'tire',
 
     tire: {
-
       width:
         parsed.width,
 
@@ -1704,11 +1934,12 @@ const buildTechnicalTireRequirement = (
         parsed.rim,
 
       size:
-        formatted || String(size),
+        formatted ||
+        String(size),
 
       tireSize:
-        formatted || String(size)
-
+        formatted ||
+        String(size)
     },
 
     technicalRequirement:
@@ -1717,6 +1948,9 @@ const buildTechnicalTireRequirement = (
     technicalRequirementType:
       'tire-size',
 
+    technicalCompatibility:
+      true,
+
     compatibilitySource:
       'vehdb',
 
@@ -1724,13 +1958,11 @@ const buildTechnicalTireRequirement = (
       String(size),
 
     availability: {
-
       available:
         false,
 
       quantity:
         0
-
     },
 
     isAvailable:
@@ -1759,24 +1991,234 @@ const buildTechnicalTireRequirement = (
 
     warehouseName:
       null
-
   }
-
 }
 
+
+// ======================================================
+// BUILD SYNTHETIC TECHNICAL BATTERY
+// ======================================================
+//
+// This is NOT a fake Elola product.
+//
+// It represents an OEM technical requirement.
+//
+// ======================================================
+
+const buildTechnicalBatteryRequirement = (
+  capacity,
+  index = 0
+) => {
+  const normalized =
+    normalizeBatteryCapacity(
+      capacity
+    )
+
+  if (
+    normalized === null
+  ) {
+    return null
+  }
+
+  const displayCapacity =
+    String(
+      normalized
+    )
+
+  return {
+    id:
+      `technical-battery-${compactText(displayCapacity)}-${index}`,
+
+    productId:
+      `technical-battery-${compactText(displayCapacity)}-${index}`,
+
+    name:
+      `${displayCapacity}Ah`,
+
+    productName:
+      `${displayCapacity}Ah`,
+
+    title:
+      `${displayCapacity}Ah`,
+
+    type:
+      'battery',
+
+    battery: {
+      capacity:
+        normalized,
+
+      ah:
+        normalized,
+
+      ampereHour:
+        normalized
+    },
+
+    technicalRequirement:
+      true,
+
+    technicalRequirementType:
+      'battery-capacity',
+
+    technicalCompatibility:
+      true,
+
+    compatibilitySource:
+      'technical',
+
+    technicalBatteryCapacity:
+      normalized,
+
+    availability: {
+      available:
+        false,
+
+      quantity:
+        0
+    },
+
+    isAvailable:
+      false,
+
+    available:
+      false,
+
+    quantity:
+      0,
+
+    stock:
+      0,
+
+    availableQuantity:
+      0,
+
+    salePrice:
+      0,
+
+    price:
+      0,
+
+    warehouseId:
+      null,
+
+    warehouseName:
+      null
+  }
+}
+
+
+// ======================================================
+// BUILD SYNTHETIC TECHNICAL OIL
+// ======================================================
+//
+// This is NOT a fake Elola product.
+//
+// It represents an OEM technical requirement.
+//
+// ======================================================
+
+const buildTechnicalOilRequirement = (
+  viscosity,
+  index = 0
+) => {
+  const normalized =
+    normalizeOilViscosity(
+      viscosity
+    )
+
+  if (!normalized) {
+    return null
+  }
+
+  return {
+    id:
+      `technical-oil-${compactText(normalized)}-${index}`,
+
+    productId:
+      `technical-oil-${compactText(normalized)}-${index}`,
+
+    name:
+      normalized,
+
+    productName:
+      normalized,
+
+    title:
+      normalized,
+
+    type:
+      'oil',
+
+    oil: {
+      viscosity:
+        normalized,
+
+      viscosityGrade:
+        normalized,
+
+      grade:
+        normalized,
+
+      oilViscosity:
+        normalized
+    },
+
+    technicalRequirement:
+      true,
+
+    technicalRequirementType:
+      'oil-viscosity',
+
+    technicalCompatibility:
+      true,
+
+    compatibilitySource:
+      'technical',
+
+    technicalOilViscosity:
+      normalized,
+
+    availability: {
+      available:
+        false,
+
+      quantity:
+        0
+    },
+
+    isAvailable:
+      false,
+
+    available:
+      false,
+
+    quantity:
+      0,
+
+    stock:
+      0,
+
+    availableQuantity:
+      0,
+
+    salePrice:
+      0,
+
+    price:
+      0,
+
+    warehouseId:
+      null,
+
+    warehouseName:
+      null
+  }
+}
 
 
 // ======================================================
 // BUILD TIRE REQUIREMENT RESULTS
-// ======================================================
-//
-// ALL VehDB tire sizes become results.
-//
-// Existing Elola products are attached to the matching
-// requirement.
-//
-// Missing Elola products remain as unavailable results.
-//
 // ======================================================
 
 const buildTireRequirementResults = ({
@@ -1784,7 +2226,6 @@ const buildTireRequirementResults = ({
   availabilityProducts = [],
   technicalCatalog = []
 }) => {
-
   const wantedValues =
     collectOEMTireValues(
       oem
@@ -1806,7 +2247,6 @@ const buildTireRequirementResults = ({
 
   uniqueSizes.forEach(
     (size, index) => {
-
       const requirement =
         buildTechnicalTireRequirement(
           size,
@@ -1827,7 +2267,7 @@ const buildTireRequirementResults = ({
       }
 
       // ------------------------------------------------
-      // First search the supplied availability records.
+      // First search supplied availability records.
       // ------------------------------------------------
 
       let inventoryMatch =
@@ -1837,11 +2277,7 @@ const buildTireRequirementResults = ({
         )
 
       // ------------------------------------------------
-      // If not found there, search Product Master.
-      //
-      // This is important because a Product Master
-      // product may exist even if no warehouse record
-      // is currently supplied.
+      // Search Product Master.
       // ------------------------------------------------
 
       let catalogMatch =
@@ -1850,7 +2286,6 @@ const buildTireRequirementResults = ({
       for (
         const product of technicalCatalog
       ) {
-
         if (
           normalizeProductType(
             product
@@ -1866,29 +2301,22 @@ const buildTireRequirementResults = ({
 
         if (
           actual.width ===
-          requirementParsed.width &&
+            requirementParsed.width &&
           actual.rim ===
-          requirementParsed.rim &&
+            requirementParsed.rim &&
           (
             requirementParsed.profile === null ||
             requirementParsed.profile === undefined ||
             actual.profile ===
-            requirementParsed.profile
+              requirementParsed.profile
           )
         ) {
-
           catalogMatch =
             product
 
           break
-
         }
-
       }
-
-      // ------------------------------------------------
-      // Prefer actual Product Master.
-      // ------------------------------------------------
 
       const baseProduct =
         catalogMatch ||
@@ -1907,9 +2335,7 @@ const buildTireRequirementResults = ({
         availability?.product
 
       results.push({
-
         ...requirement,
-
         ...baseProduct,
 
         id:
@@ -1992,7 +2418,6 @@ const buildTireRequirementResults = ({
           0,
 
         availability: {
-
           available:
             quantity > 0,
 
@@ -2005,7 +2430,6 @@ const buildTireRequirementResults = ({
           warehouseName:
             inventoryProduct?.warehouseName ??
             null
-
         },
 
         isAvailable:
@@ -2013,16 +2437,393 @@ const buildTireRequirementResults = ({
 
         available:
           quantity > 0
-
       })
-
     }
   )
 
   return results
-
 }
 
+
+// ======================================================
+// BUILD BATTERY REQUIREMENT RESULTS
+// ======================================================
+//
+// ALL technical battery capacities become results.
+//
+// Product Master / availability is attached separately.
+//
+// ======================================================
+
+const buildBatteryRequirementResults = ({
+  oem,
+  availabilityProducts = [],
+  technicalCatalog = []
+}) => {
+  const wantedValues =
+    collectOEMBatteryValues(
+      oem
+    )
+
+  const capacities =
+    [
+      ...new Set(
+        wantedValues
+          .map(
+            normalizeBatteryCapacity
+          )
+          .filter(
+            value =>
+              value !== null
+          )
+      )
+    ]
+
+  const results = []
+
+  capacities.forEach(
+    (capacity, index) => {
+      const requirement =
+        buildTechnicalBatteryRequirement(
+          capacity,
+          index
+        )
+
+      if (!requirement) {
+        return
+      }
+
+      // ------------------------------------------------
+      // Search supplied availability records first.
+      // ------------------------------------------------
+
+      let inventoryMatch =
+        findProductByBatteryCapacity(
+          capacity,
+          availabilityProducts
+        )
+
+      // ------------------------------------------------
+      // Search Product Master.
+      // ------------------------------------------------
+
+      let catalogMatch =
+        findProductByBatteryCapacity(
+          capacity,
+          technicalCatalog
+        )
+
+      const baseProduct =
+        catalogMatch?.product ||
+        inventoryMatch?.product ||
+        requirement
+
+      const inventoryProduct =
+        inventoryMatch?.product
+
+      const quantity =
+        inventoryMatch?.quantity ??
+        0
+
+      results.push({
+        ...requirement,
+        ...baseProduct,
+
+        id:
+          baseProduct?.id ??
+          requirement.id,
+
+        productId:
+          baseProduct?.productId ??
+          baseProduct?.id ??
+          requirement.productId,
+
+        name:
+          baseProduct?.name ||
+          baseProduct?.productName ||
+          `${capacity}Ah`,
+
+        productName:
+          baseProduct?.productName ||
+          baseProduct?.name ||
+          `${capacity}Ah`,
+
+        title:
+          baseProduct?.title ||
+          baseProduct?.name ||
+          `${capacity}Ah`,
+
+        type:
+          'battery',
+
+        battery:
+          baseProduct?.battery ||
+          requirement.battery,
+
+        technicalRequirement:
+          true,
+
+        technicalRequirementType:
+          'battery-capacity',
+
+        technicalCompatibility:
+          true,
+
+        compatibilitySource:
+          'technical',
+
+        technicalBatteryCapacity:
+          capacity,
+
+        warehouseId:
+          inventoryProduct?.warehouseId ??
+          null,
+
+        warehouseName:
+          inventoryProduct?.warehouseName ??
+          null,
+
+        quantity,
+
+        stock:
+          quantity,
+
+        availableQuantity:
+          quantity,
+
+        salePrice:
+          inventoryProduct?.salePrice ??
+          inventoryProduct?.sellingPrice ??
+          inventoryProduct?.consumerPrice ??
+          inventoryProduct?.price ??
+          baseProduct?.salePrice ??
+          baseProduct?.price ??
+          0,
+
+        price:
+          inventoryProduct?.salePrice ??
+          inventoryProduct?.sellingPrice ??
+          inventoryProduct?.consumerPrice ??
+          inventoryProduct?.price ??
+          baseProduct?.salePrice ??
+          baseProduct?.price ??
+          0,
+
+        availability: {
+          available:
+            quantity > 0,
+
+          quantity,
+
+          warehouseId:
+            inventoryProduct?.warehouseId ??
+            null,
+
+          warehouseName:
+            inventoryProduct?.warehouseName ??
+            null
+        },
+
+        isAvailable:
+          quantity > 0,
+
+        available:
+          quantity > 0
+      })
+    }
+  )
+
+  return results
+}
+
+
+// ======================================================
+// BUILD OIL REQUIREMENT RESULTS
+// ======================================================
+//
+// ALL technical oil viscosities become results.
+//
+// Product Master / availability is attached separately.
+//
+// ======================================================
+
+const buildOilRequirementResults = ({
+  oem,
+  availabilityProducts = [],
+  technicalCatalog = []
+}) => {
+  const wantedValues =
+    collectOILValues(
+      oem
+    )
+
+  const viscosities =
+    [
+      ...new Set(
+        wantedValues
+          .map(
+            normalizeOilViscosity
+          )
+          .filter(Boolean)
+      )
+    ]
+
+  const results = []
+
+  viscosities.forEach(
+    (viscosity, index) => {
+      const requirement =
+        buildTechnicalOilRequirement(
+          viscosity,
+          index
+        )
+
+      if (!requirement) {
+        return
+      }
+
+      // ------------------------------------------------
+      // Search supplied availability records first.
+      // ------------------------------------------------
+
+      let inventoryMatch =
+        findProductByOilViscosity(
+          viscosity,
+          availabilityProducts
+        )
+
+      // ------------------------------------------------
+      // Search Product Master.
+      // ------------------------------------------------
+
+      let catalogMatch =
+        findProductByOilViscosity(
+          viscosity,
+          technicalCatalog
+        )
+
+      const baseProduct =
+        catalogMatch?.product ||
+        inventoryMatch?.product ||
+        requirement
+
+      const inventoryProduct =
+        inventoryMatch?.product
+
+      const quantity =
+        inventoryMatch?.quantity ??
+        0
+
+      results.push({
+        ...requirement,
+        ...baseProduct,
+
+        id:
+          baseProduct?.id ??
+          requirement.id,
+
+        productId:
+          baseProduct?.productId ??
+          baseProduct?.id ??
+          requirement.productId,
+
+        name:
+          baseProduct?.name ||
+          baseProduct?.productName ||
+          viscosity,
+
+        productName:
+          baseProduct?.productName ||
+          baseProduct?.name ||
+          viscosity,
+
+        title:
+          baseProduct?.title ||
+          baseProduct?.name ||
+          viscosity,
+
+        type:
+          'oil',
+
+        oil:
+          baseProduct?.oil ||
+          requirement.oil,
+
+        technicalRequirement:
+          true,
+
+        technicalRequirementType:
+          'oil-viscosity',
+
+        technicalCompatibility:
+          true,
+
+        compatibilitySource:
+          'technical',
+
+        technicalOilViscosity:
+          viscosity,
+
+        warehouseId:
+          inventoryProduct?.warehouseId ??
+          null,
+
+        warehouseName:
+          inventoryProduct?.warehouseName ??
+          null,
+
+        quantity,
+
+        stock:
+          quantity,
+
+        availableQuantity:
+          quantity,
+
+        salePrice:
+          inventoryProduct?.salePrice ??
+          inventoryProduct?.sellingPrice ??
+          inventoryProduct?.consumerPrice ??
+          inventoryProduct?.price ??
+          baseProduct?.salePrice ??
+          baseProduct?.price ??
+          0,
+
+        price:
+          inventoryProduct?.salePrice ??
+          inventoryProduct?.sellingPrice ??
+          inventoryProduct?.consumerPrice ??
+          inventoryProduct?.price ??
+          baseProduct?.salePrice ??
+          baseProduct?.price ??
+          0,
+
+        availability: {
+          available:
+            quantity > 0,
+
+          quantity,
+
+          warehouseId:
+            inventoryProduct?.warehouseId ??
+            null,
+
+          warehouseName:
+            inventoryProduct?.warehouseName ??
+            null
+        },
+
+        isAvailable:
+          quantity > 0,
+
+        available:
+          quantity > 0
+      })
+    }
+  )
+
+  return results
+}
 
 
 // ======================================================
@@ -2030,7 +2831,6 @@ const buildTireRequirementResults = ({
 // ======================================================
 
 function formattedSizeFallback(size) {
-
   const parsed =
     parseTireSize(
       size
@@ -2044,9 +2844,7 @@ function formattedSizeFallback(size) {
         })
       : String(size)
   )
-
 }
-
 
 
 // ======================================================
@@ -2057,7 +2855,6 @@ const mergeCatalogWithAvailability = (
   compatibleCatalog,
   availabilityProducts
 ) => {
-
   const availabilityMap =
     buildAvailabilityMap(
       availabilityProducts
@@ -2065,7 +2862,6 @@ const mergeCatalogWithAvailability = (
 
   return compatibleCatalog.map(
     catalogProduct => {
-
       const ids =
         getAvailabilityIds(
           catalogProduct
@@ -2077,27 +2873,21 @@ const mergeCatalogWithAvailability = (
       for (
         const id of ids
       ) {
-
         const found =
           availabilityMap.get(
             id
           )
 
         if (found) {
-
           availability =
             found
 
           break
-
         }
-
       }
 
       // ------------------------------------------------
       // Tire technical requirement.
-      //
-      // Resolve availability by tire size instead of ID.
       // ------------------------------------------------
 
       if (
@@ -2106,7 +2896,6 @@ const mergeCatalogWithAvailability = (
           catalogProduct
         ) === 'tire'
       ) {
-
         const tire =
           extractProductTire(
             catalogProduct
@@ -2117,7 +2906,6 @@ const mergeCatalogWithAvailability = (
             tire,
             availabilityProducts
           )
-
       }
 
       // ------------------------------------------------
@@ -2125,19 +2913,15 @@ const mergeCatalogWithAvailability = (
       // ------------------------------------------------
 
       if (!availability) {
-
         return {
-
           ...catalogProduct,
 
           availability: {
-
             available:
               false,
 
             quantity:
               0
-
           },
 
           isAvailable:
@@ -2164,9 +2948,7 @@ const mergeCatalogWithAvailability = (
           compatibilitySource:
             catalogProduct?.compatibilitySource ||
             'technical'
-
         }
-
       }
 
       const inventoryProduct =
@@ -2176,7 +2958,6 @@ const mergeCatalogWithAvailability = (
         availability.quantity
 
       return {
-
         ...catalogProduct,
 
         id:
@@ -2243,7 +3024,6 @@ const mergeCatalogWithAvailability = (
           0,
 
         availability: {
-
           available:
             quantity > 0,
 
@@ -2254,7 +3034,6 @@ const mergeCatalogWithAvailability = (
 
           warehouseName:
             inventoryProduct?.warehouseName
-
         },
 
         isAvailable:
@@ -2266,14 +3045,10 @@ const mergeCatalogWithAvailability = (
         compatibilitySource:
           catalogProduct?.compatibilitySource ||
           'technical'
-
       }
-
     }
   )
-
 }
-
 
 
 // ======================================================
@@ -2281,32 +3056,24 @@ const mergeCatalogWithAvailability = (
 // ======================================================
 
 const loadProductCatalog = async () => {
-
   try {
-
     let result =
       await ProductsRepository.getAllData()
 
     if (
       !Array.isArray(result)
     ) {
-
       if (
         Array.isArray(
           result?.data
         )
       ) {
-
         result =
           result.data
-
       }
       else {
-
         result = []
-
       }
-
     }
 
     console.log(
@@ -2318,7 +3085,6 @@ const loadProductCatalog = async () => {
         products:
           result.map(
             product => ({
-
               id:
                 product?.id ??
                 product?.productId,
@@ -2356,29 +3122,22 @@ const loadProductCatalog = async () => {
                 )
                   ? product.compatibleVehicles.length
                   : 0
-
             })
           )
-
       }
     )
 
     return result
-
   }
   catch (error) {
-
     console.error(
       '[VehicleEngine] Product catalog load failed:',
       error
     )
 
     return []
-
   }
-
 }
-
 
 
 // ======================================================
@@ -2386,7 +3145,6 @@ const loadProductCatalog = async () => {
 // ======================================================
 
 const normalizeCatalog = products => {
-
   if (
     !Array.isArray(products)
   ) {
@@ -2398,7 +3156,6 @@ const normalizeCatalog = products => {
 
   products.forEach(
     product => {
-
       if (!product) {
         return
       }
@@ -2413,7 +3170,6 @@ const normalizeCatalog = products => {
       }
 
       const normalized = {
-
         ...product,
 
         id:
@@ -2432,7 +3188,6 @@ const normalizeCatalog = products => {
         compatibilitySource:
           product?.compatibilitySource ||
           'catalog'
-
       }
 
       const existing =
@@ -2441,14 +3196,12 @@ const normalizeCatalog = products => {
         )
 
       if (!existing) {
-
         map.set(
           id,
           normalized
         )
 
         return
-
       }
 
       const existingTire =
@@ -2463,7 +3216,6 @@ const normalizeCatalog = products => {
 
       const existingScore =
         [
-
           existingTire.width,
           existingTire.profile,
           existingTire.rim,
@@ -2472,14 +3224,12 @@ const normalizeCatalog = products => {
           existing?.specifications,
           existing?.battery,
           existing?.oil
-
         ]
           .filter(Boolean)
           .length
 
       const currentScore =
         [
-
           currentTire.width,
           currentTire.profile,
           currentTire.rim,
@@ -2488,7 +3238,6 @@ const normalizeCatalog = products => {
           normalized?.specifications,
           normalized?.battery,
           normalized?.oil
-
         ]
           .filter(Boolean)
           .length
@@ -2497,7 +3246,6 @@ const normalizeCatalog = products => {
         currentScore >
         existingScore
       ) {
-
         map.set(
           id,
           {
@@ -2505,10 +3253,8 @@ const normalizeCatalog = products => {
             ...normalized
           }
         )
-
       }
       else {
-
         map.set(
           id,
           {
@@ -2516,18 +3262,14 @@ const normalizeCatalog = products => {
             ...existing
           }
         )
-
       }
-
     }
   )
 
   return [
     ...map.values()
   ]
-
 }
-
 
 
 // ======================================================
@@ -2538,7 +3280,6 @@ const buildTechnicalProductUniverse = (
   catalogProducts = [],
   suppliedProducts = []
 ) => {
-
   const combined = []
 
   if (
@@ -2546,27 +3287,21 @@ const buildTechnicalProductUniverse = (
       catalogProducts
     )
   ) {
-
     catalogProducts.forEach(
       product => {
-
         if (!product) {
           return
         }
 
         combined.push({
-
           ...product,
 
           compatibilitySource:
             product?.compatibilitySource ||
             'catalog'
-
         })
-
       }
     )
-
   }
 
   if (
@@ -2574,27 +3309,21 @@ const buildTechnicalProductUniverse = (
       suppliedProducts
     )
   ) {
-
     suppliedProducts.forEach(
       product => {
-
         if (!product) {
           return
         }
 
         combined.push({
-
           ...product,
 
           compatibilitySource:
             product?.compatibilitySource ||
             'supplied-product-record'
-
         })
-
       }
     )
-
   }
 
   const universe =
@@ -2605,7 +3334,6 @@ const buildTechnicalProductUniverse = (
   console.log(
     '[VehicleEngine] TECHNICAL PRODUCT UNIVERSE:',
     {
-
       catalogCount:
         Array.isArray(
           catalogProducts
@@ -2622,14 +3350,11 @@ const buildTechnicalProductUniverse = (
 
       universeCount:
         universe.length
-
     }
   )
 
   return universe
-
 }
-
 
 
 // ======================================================
@@ -2644,7 +3369,6 @@ const debugCompatibilityCatalog = ({
   vehicleType,
   oem
 }) => {
-
   console.groupCollapsed(
     '[VehicleEngine] COMPATIBILITY CATALOG'
   )
@@ -2667,13 +3391,26 @@ const debugCompatibilityCatalog = ({
   )
 
   console.log(
+    'OEM battery requirements:',
+    collectOEMBatteryValues(
+      oem
+    )
+  )
+
+  console.log(
+    'OEM oil requirements:',
+    collectOILValues(
+      oem
+    )
+  )
+
+  console.log(
     'Catalog count:',
     catalog.length
   )
 
   catalog.forEach(
     product => {
-
       const type =
         normalizeProductType(
           product
@@ -2688,7 +3425,6 @@ const debugCompatibilityCatalog = ({
 
       console.log(
         {
-
           id:
             product?.id ??
             product?.productId,
@@ -2716,6 +3452,20 @@ const debugCompatibilityCatalog = ({
                 )
               : null,
 
+          batteryCapacities:
+            type === 'battery'
+              ? extractProductBatteryCapacities(
+                  product
+                )
+              : [],
+
+          oilViscosities:
+            type === 'oil'
+              ? extractProductOilViscosities(
+                  product
+                )
+              : [],
+
           explicitCompatibility:
             Array.isArray(
               product?.compatibleVehicles
@@ -2725,17 +3475,78 @@ const debugCompatibilityCatalog = ({
 
           compatibilitySource:
             product?.compatibilitySource
-
         }
       )
-
     }
   )
 
   console.groupEnd()
-
 }
 
+
+// ======================================================
+// EXTRACT PRODUCT BATTERY CAPACITIES
+// ======================================================
+
+const extractProductBatteryCapacities = product => {
+  const battery =
+    getProductBattery(
+      product
+    )
+
+  const values = [
+    ...collectValues(
+      battery?.capacity
+    ),
+    ...collectValues(
+      battery?.batteryCapacity
+    ),
+    ...collectValues(
+      battery?.ah
+    ),
+    ...collectValues(
+      battery?.ampereHour
+    ),
+    ...collectValues(
+      battery?.ampHour
+    ),
+    ...collectValues(
+      battery?.ampHours
+    ),
+    ...collectValues(
+      battery?.capacities
+    ),
+    ...collectValues(
+      battery?.batteryCapacities
+    ),
+    ...collectProductValues(
+      product,
+      [
+        'capacity',
+        'batteryCapacity',
+        'ampereHour',
+        'ampHour',
+        'ah',
+        'ampHours',
+        'capacities',
+        'batteryCapacities'
+      ]
+    )
+  ]
+
+  return [
+    ...new Set(
+      values
+        .map(
+          normalizeBatteryCapacity
+        )
+        .filter(
+          value =>
+            value !== null
+        )
+    )
+  ]
+}
 
 
 // ======================================================
@@ -2743,8 +3554,6 @@ const debugCompatibilityCatalog = ({
 // ======================================================
 
 export class VehicleEngine {
-
-
 
   // ====================================================
   // FIND VEHICLE
@@ -2755,31 +3564,22 @@ export class VehicleEngine {
     model,
     year
   }) {
-
     try {
-
       return await VehicleProvider.findVehicle({
-
         make,
         model,
         year
-
       })
-
     }
     catch (error) {
-
       console.warn(
         '[VehicleEngine] Vehicle provider failed:',
         error
       )
 
       return null
-
     }
-
   }
-
 
 
   // ====================================================
@@ -2793,24 +3593,19 @@ export class VehicleEngine {
     year,
     products = []
   }) {
-
     console.log(
       '[VehicleEngine] SEARCH INPUT:',
       {
-
         vehicleType,
         make,
         model,
         year,
-
         productsCount:
           Array.isArray(products)
             ? products.length
             : 0
-
       }
     )
-
 
 
     // --------------------------------------------------
@@ -2821,26 +3616,19 @@ export class VehicleEngine {
       null
 
     try {
-
       vehicle =
         await this.findVehicle({
-
           make,
           model,
           year
-
         })
-
     }
     catch (error) {
-
       console.warn(
         '[VehicleEngine] Vehicle lookup failed:',
         error
       )
-
     }
-
 
 
     // --------------------------------------------------
@@ -2851,31 +3639,25 @@ export class VehicleEngine {
       null
 
     try {
-
       oem =
         await OEMCompatibilityEngine.search({
-
+          vehicleType,
           make,
           model,
           year
-
         })
-
     }
     catch (error) {
-
       console.warn(
         '[VehicleEngine] OEM lookup failed:',
         error
       )
-
     }
 
     console.log(
       '[VehicleEngine] OEM RESULT:',
       oem
     )
-
 
 
     // --------------------------------------------------
@@ -2893,16 +3675,13 @@ export class VehicleEngine {
     console.log(
       '[VehicleEngine] CATALOG NORMALIZED:',
       {
-
         rawCount:
           rawCatalog.length,
 
         normalizedCount:
           catalog.length
-
       }
     )
-
 
 
     // --------------------------------------------------
@@ -2917,24 +3696,18 @@ export class VehicleEngine {
         : []
 
 
-
     // --------------------------------------------------
     // TECHNICAL PRODUCT UNIVERSE
     // --------------------------------------------------
 
     const technicalProductUniverse =
       buildTechnicalProductUniverse(
-
         catalog,
-
         availabilityProducts
-
       )
 
 
-
     debugCompatibilityCatalog({
-
       catalog:
         technicalProductUniverse,
 
@@ -2943,9 +3716,7 @@ export class VehicleEngine {
       year,
       vehicleType,
       oem
-
     })
-
 
 
     // --------------------------------------------------
@@ -2956,30 +3727,24 @@ export class VehicleEngine {
       technicalProductUniverse.filter(
         product =>
           productMatchesVehicle({
-
             product,
             make,
             model,
             year,
             vehicleType,
             oem
-
           })
       )
-
-
 
     console.log(
       '[VehicleEngine] TECHNICALLY COMPATIBLE PRODUCTS:',
       {
-
         count:
           technicallyCompatible.length,
 
         products:
           technicallyCompatible.map(
             product => ({
-
               id:
                 product?.id ??
                 product?.productId,
@@ -3002,108 +3767,190 @@ export class VehicleEngine {
                     )
                   : null,
 
+              batteryCapacities:
+                normalizeProductType(
+                  product
+                ) === 'battery'
+                  ? extractProductBatteryCapacities(
+                      product
+                    )
+                  : [],
+
+              oilViscosities:
+                normalizeProductType(
+                  product
+                ) === 'oil'
+                  ? extractProductOilViscosities(
+                      product
+                    )
+                  : [],
+
               compatibilitySource:
                 product?.compatibilitySource
-
             })
           )
-
       }
     )
 
 
-
     // --------------------------------------------------
-    // ALL VEHDB TIRE REQUIREMENTS
-    // --------------------------------------------------
-    //
-    // This is the critical part.
-    //
-    // We do NOT use technicallyCompatible as the source
-    // of tire results.
-    //
-    // VehDB is the source of ALL technically compatible
-    // tire sizes.
-    //
+    // ALL TECHNICAL TIRE REQUIREMENTS
     // --------------------------------------------------
 
     const tireRequirementResults =
       buildTireRequirementResults({
-
         oem,
-
         availabilityProducts,
-
         technicalCatalog:
           technicalProductUniverse
-
       })
 
-
-
     console.log(
-      '[VehicleEngine] ALL VEHDB TIRE RESULTS:',
+      '[VehicleEngine] ALL TECHNICAL TIRE RESULTS:',
       {
-
         count:
           tireRequirementResults.length,
 
         results:
           tireRequirementResults.map(
             product => ({
-
               name:
                 product?.name,
 
               size:
                 product?.tire?.size,
 
-              vehdbSize:
-                product?.vehdbSize,
+              technicalRequirement:
+                product?.technicalRequirement,
 
               isAvailable:
                 product?.isAvailable,
 
               quantity:
                 product?.quantity
-
             })
           )
-
       }
     )
 
+
+    // --------------------------------------------------
+    // ALL TECHNICAL BATTERY REQUIREMENTS
+    // --------------------------------------------------
+
+    const batteryRequirementResults =
+      buildBatteryRequirementResults({
+        oem,
+        availabilityProducts,
+        technicalCatalog:
+          technicalProductUniverse
+      })
+
+    console.log(
+      '[VehicleEngine] ALL TECHNICAL BATTERY RESULTS:',
+      {
+        count:
+          batteryRequirementResults.length,
+
+        results:
+          batteryRequirementResults.map(
+            product => ({
+              name:
+                product?.name,
+
+              capacity:
+                product?.technicalBatteryCapacity ??
+                product?.battery?.capacity,
+
+              technicalRequirement:
+                product?.technicalRequirement,
+
+              isAvailable:
+                product?.isAvailable,
+
+              quantity:
+                product?.quantity
+            })
+          )
+      }
+    )
+
+
+    // --------------------------------------------------
+    // ALL TECHNICAL OIL REQUIREMENTS
+    // --------------------------------------------------
+
+    const oilRequirementResults =
+      buildOilRequirementResults({
+        oem,
+        availabilityProducts,
+        technicalCatalog:
+          technicalProductUniverse
+      })
+
+    console.log(
+      '[VehicleEngine] ALL TECHNICAL OIL RESULTS:',
+      {
+        count:
+          oilRequirementResults.length,
+
+        results:
+          oilRequirementResults.map(
+            product => ({
+              name:
+                product?.name,
+
+              viscosity:
+                product?.technicalOilViscosity ??
+                product?.oil?.viscosity,
+
+              technicalRequirement:
+                product?.technicalRequirement,
+
+              isAvailable:
+                product?.isAvailable,
+
+              quantity:
+                product?.quantity
+            })
+          )
+      }
+    )
 
 
     // --------------------------------------------------
     // OTHER TECHNICAL RESULTS
     // --------------------------------------------------
     //
-    // Keep battery/oil technical matching unchanged.
+    // Tire, battery and oil requirements are now built
+    // independently from inventory.
     //
-    // Tires are replaced by the complete VehDB result set.
+    // Therefore they must NOT be taken again from
+    // technicallyCompatible.
     //
     // --------------------------------------------------
 
-    const nonTireCompatible =
+    const otherTechnicalCompatible =
       technicallyCompatible.filter(
-        product =>
-          normalizeProductType(
-            product
-          ) !== 'tire'
+        product => {
+          const type =
+            normalizeProductType(
+              product
+            )
+
+          return (
+            type !== 'tire' &&
+            type !== 'battery' &&
+            type !== 'oil'
+          )
+        }
       )
 
-
-
-    const nonTireMatched =
+    const otherTechnicalMatched =
       mergeCatalogWithAvailability(
-
-        nonTireCompatible,
-
+        otherTechnicalCompatible,
         availabilityProducts
-
       )
-
 
 
     // --------------------------------------------------
@@ -3111,13 +3958,11 @@ export class VehicleEngine {
     // --------------------------------------------------
 
     const matched = [
-
       ...tireRequirementResults,
-
-      ...nonTireMatched
-
+      ...batteryRequirementResults,
+      ...oilRequirementResults,
+      ...otherTechnicalMatched
     ]
-
 
 
     // --------------------------------------------------
@@ -3149,7 +3994,6 @@ export class VehicleEngine {
       )
 
 
-
     // --------------------------------------------------
     // FINAL LOGS
     // --------------------------------------------------
@@ -3162,7 +4006,6 @@ export class VehicleEngine {
     console.log(
       '[VehicleEngine] AVAILABILITY SUMMARY:',
       {
-
         totalCompatible:
           matched.length,
 
@@ -3177,31 +4020,20 @@ export class VehicleEngine {
             product =>
               product?.isAvailable !== true
           ).length
-
       }
     )
 
 
-
     return {
-
       vehicle,
-
       oem,
-
       tires,
-
       batteries,
-
       oils,
-
       products:
         matched
-
     }
-
   }
-
 
 
   // ====================================================
@@ -3216,15 +4048,12 @@ export class VehicleEngine {
     year,
     oem
   }) {
-
     return (
-
       Array.isArray(
         products
       )
         ? products
         : []
-
     )
       .filter(
         product =>
@@ -3235,19 +4064,15 @@ export class VehicleEngine {
       .filter(
         product =>
           productMatchesVehicle({
-
             product,
             make,
             model,
             year,
             vehicleType,
             oem
-
           })
       )
-
   }
-
 
 
   // ====================================================
@@ -3262,15 +4087,12 @@ export class VehicleEngine {
     year,
     oem
   }) {
-
     return (
-
       Array.isArray(
         products
       )
         ? products
         : []
-
     )
       .filter(
         product =>
@@ -3281,19 +4103,15 @@ export class VehicleEngine {
       .filter(
         product =>
           productMatchesVehicle({
-
             product,
             make,
             model,
             year,
             vehicleType,
             oem
-
           })
       )
-
   }
-
 
 
   // ====================================================
@@ -3308,15 +4126,12 @@ export class VehicleEngine {
     year,
     oem
   }) {
-
     return (
-
       Array.isArray(
         products
       )
         ? products
         : []
-
     )
       .filter(
         product =>
@@ -3327,19 +4142,15 @@ export class VehicleEngine {
       .filter(
         product =>
           productMatchesVehicle({
-
             product,
             make,
             model,
             year,
             vehicleType,
             oem
-
           })
       )
-
   }
-
 
 
   // ====================================================
@@ -3347,9 +4158,7 @@ export class VehicleEngine {
   // ====================================================
 
   static filterAll(params) {
-
     return [
-
       ...this.filterTires(
         params
       ),
@@ -3361,13 +4170,9 @@ export class VehicleEngine {
       ...this.filterOils(
         params
       )
-
     ]
-
   }
-
 }
-
 
 
 // ======================================================
@@ -3375,3 +4180,6 @@ export class VehicleEngine {
 // ======================================================
 
 export default VehicleEngine
+
+
+

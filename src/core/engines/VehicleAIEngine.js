@@ -13,21 +13,44 @@
 //
 // Free text
 //    ↓
-// Arabic / English normalization
+// Multilingual Alias Resolution
 //    ↓
-// VehicleSearchIndex
+// VehiclesDB Local Vehicle Resolution
 //    ↓
-// Online Vehicle Resolution
+// Resolve make
 //    ↓
-// VehicleProvider
+// Resolve model
 //    ↓
-// make / model / year / vehicleType
+// Resolve year
 //    ↓
 // VehicleEngine
 //    ↓
 // OEMCompatibilityEngine
 //    ↓
+// VehicleSpecificationProvider
+//    ↓
 // Technical product compatibility
+//
+// VEHICLE IDENTIFICATION PROVIDER PRIORITY
+// -----------------------------------------------------
+//
+// 1. Multilingual aliases
+// 2. VehiclesDB local catalog
+// 3. NHTSA fallback
+// 4. Local VehicleSearchIndex
+//
+// TECHNICAL FITMENT PROVIDER PRIORITY
+// -----------------------------------------------------
+//
+// VehicleAIEngine does NOT resolve technical fitment
+// directly.
+//
+// VehicleSpecificationProvider owns:
+//
+// 1. VehDB technical fitment when available
+// 2. LocalTechnicalFitmentProvider fallback
+// 3. CarQuery fallback
+// 4. NHTSA fallback
 //
 // IMPORTANT
 // -----------------------------------------------------
@@ -37,13 +60,7 @@
 // Warehouse stock, prices and availability are handled
 // separately by the product/search layer.
 //
-// IMPORTANT
-// -----------------------------------------------------
-//
-// VehicleProvider is asynchronous.
-//
-// Therefore all vehicle resolution paths in this engine
-// MUST await VehicleProvider.
+// Compatibility and availability are separate concepts.
 //
 // =====================================================
 
@@ -55,11 +72,453 @@
 import VehicleProvider
   from '../vehicles/VehicleProvider'
 
+import VehiclesDBLocalSource
+  from '../vehicles/VehiclesDBLocalSource'
+
 import VehicleSearchIndex
   from '../search/VehicleSearchIndex'
 
+import NHTSAProvider
+  from '../vehicles/providers/NHTSAProvider'
+
 import VehicleEngine
   from './VehicleEngine'
+
+
+// =====================================================
+// COMMON VEHICLE MAKE FALLBACK
+// =====================================================
+
+const COMMON_VEHICLE_MAKES = [
+
+  'Toyota',
+  'Lexus',
+  'Honda',
+  'Nissan',
+  'Infiniti',
+  'Mazda',
+  'Mitsubishi',
+  'Subaru',
+  'Suzuki',
+  'Hyundai',
+  'Kia',
+  'Genesis',
+  'Ford',
+  'Lincoln',
+  'Chevrolet',
+  'GMC',
+  'Cadillac',
+  'Buick',
+  'Chrysler',
+  'Dodge',
+  'Jeep',
+  'Ram',
+  'Tesla',
+  'Volkswagen',
+  'Audi',
+  'BMW',
+  'Mercedes-Benz',
+  'Mercedes',
+  'Porsche',
+  'Volvo',
+  'Land Rover',
+  'Range Rover',
+  'Jaguar',
+  'Peugeot',
+  'Renault',
+  'Citroen',
+  'Fiat',
+  'Alfa Romeo',
+  'Skoda',
+  'Seat',
+  'Opel',
+  'Isuzu',
+  'Hino',
+  'Maserati',
+  'Bentley',
+  'Rolls-Royce',
+  'Ferrari',
+  'Lamborghini',
+  'McLaren'
+
+]
+
+
+// =====================================================
+// MULTILINGUAL VEHICLE ALIASES
+// =====================================================
+//
+// These aliases are only a resolution layer.
+//
+// INTERNAL/CANONICAL VALUE:
+// English vehicle make/model.
+//
+// USER INPUT:
+// Arabic, English, transliterated or localized text.
+//
+// This keeps the rest of Elola architecture unchanged.
+//
+// The registry can be extended without changing the
+// vehicle search engine itself.
+// =====================================================
+
+const VEHICLE_ALIASES = {
+
+  makes: {
+
+    Toyota: [
+      'toyota',
+      'تويوتا',
+      'تيوتا'
+    ],
+
+    Lexus: [
+      'lexus',
+      'لكزس',
+      'لكزس'
+    ],
+
+    Honda: [
+      'honda',
+      'هوندا'
+    ],
+
+    Nissan: [
+      'nissan',
+      'نيسان'
+    ],
+
+    Infiniti: [
+      'infiniti',
+      'انفينيتي',
+      'إنفينيتي'
+    ],
+
+    Mazda: [
+      'mazda',
+      'مازدا'
+    ],
+
+    Mitsubishi: [
+      'mitsubishi',
+      'ميتسوبيشي',
+      'متسوبيشي'
+    ],
+
+    Subaru: [
+      'subaru',
+      'سوبارو'
+    ],
+
+    Suzuki: [
+      'suzuki',
+      'سوزوكي'
+    ],
+
+    Hyundai: [
+      'hyundai',
+      'هيونداي',
+      'هونداي',
+      'هيوندي'
+    ],
+
+    Kia: [
+      'kia',
+      'كيا'
+    ],
+
+    Genesis: [
+      'genesis',
+      'جينيسيس',
+      'جينيسس'
+    ],
+
+    Ford: [
+      'ford',
+      'فورد'
+    ],
+
+    Lincoln: [
+      'lincoln',
+      'لينكولن'
+    ],
+
+    Chevrolet: [
+      'chevrolet',
+      'chevy',
+      'شيفروليه',
+      'شفروليه'
+    ],
+
+    GMC: [
+      'gmc',
+      'جي ام سي',
+      'جيمسي',
+      'جي إم سي'
+    ],
+
+    Cadillac: [
+      'cadillac',
+      'كاديلاك'
+    ],
+
+    Buick: [
+      'buick',
+      'بويك'
+    ],
+
+    Chrysler: [
+      'chrysler',
+      'كرايسلر'
+    ],
+
+    Dodge: [
+      'dodge',
+      'دودج'
+    ],
+
+    Jeep: [
+      'jeep',
+      'جيب'
+    ],
+
+    Ram: [
+      'ram',
+      'رام'
+    ],
+
+    Tesla: [
+      'tesla',
+      'تسلا'
+    ],
+
+    Volkswagen: [
+      'volkswagen',
+      'vw',
+      'فولكسفاجن',
+      'فولكس واجن',
+      'فولكس فاجن'
+    ],
+
+    Audi: [
+      'audi',
+      'اودي',
+      'أودي'
+    ],
+
+    BMW: [
+      'bmw',
+      'بي ام دبليو',
+      'بي إم دبليو'
+    ],
+
+    'Mercedes-Benz': [
+      'mercedes benz',
+      'mercedes-benz',
+      'mercedes',
+      'مرسيدس',
+      'مرسيدس بنز'
+    ],
+
+    Mercedes: [
+      'mercedes',
+      'مرسيدس',
+      'mercedes benz',
+      'mercedes-benz',
+      'مرسيدس بنز'
+    ],
+
+    Porsche: [
+      'porsche',
+      'بورشه',
+      'بورش'
+    ],
+
+    Volvo: [
+      'volvo',
+      'فولفو'
+    ],
+
+    'Land Rover': [
+      'land rover',
+      'لاند روفر',
+      'لاندروفر'
+    ],
+
+    'Range Rover': [
+      'range rover',
+      'رينج روفر',
+      'رينجروفر'
+    ],
+
+    Jaguar: [
+      'jaguar',
+      'جاكوار'
+    ],
+
+    Peugeot: [
+      'peugeot',
+      'بيجو'
+    ],
+
+    Renault: [
+      'renault',
+      'رينو'
+    ],
+
+    Citroen: [
+      'citroen',
+      'سيتروين'
+    ],
+
+    Fiat: [
+      'fiat',
+      'فيات'
+    ],
+
+    'Alfa Romeo': [
+      'alfa romeo',
+      'الفا روميو',
+      'ألفا روميو'
+    ],
+
+    Skoda: [
+      'skoda',
+      'سكودا'
+    ],
+
+    Seat: [
+      'seat',
+      'سيات'
+    ],
+
+    Opel: [
+      'opel',
+      'اوبل',
+      'أوبل'
+    ],
+
+    Isuzu: [
+      'isuzu',
+      'ايسوزو',
+      'إيسوزو'
+    ],
+
+    Hino: [
+      'hino',
+      'هينو'
+    ],
+
+    Maserati: [
+      'maserati',
+      'مازيراتي'
+    ],
+
+    Bentley: [
+      'bentley',
+      'بنتلي'
+    ],
+
+    'Rolls-Royce': [
+      'rolls royce',
+      'rolls-royce',
+      'رولز رويس',
+      'رولزرويس'
+    ],
+
+    Ferrari: [
+      'ferrari',
+      'فيراري'
+    ],
+
+    Lamborghini: [
+      'lamborghini',
+      'لامبورجيني',
+      'لامبورغيني'
+    ],
+
+    McLaren: [
+      'mclaren',
+      'ماكلارين'
+    ]
+
+  },
+
+
+  models: {
+
+    Corolla: [
+      'corolla',
+      'كورولا'
+    ],
+
+    Camry: [
+      'camry',
+      'كامري',
+      'كامرى'
+    ],
+
+    RAV4: [
+      'rav4',
+      'rav 4',
+      'rav-4',
+      'راف 4',
+      'راف4',
+      'راف فور'
+    ],
+
+    Elantra: [
+      'elantra',
+      'النترا',
+      'إلنترا',
+      'الانترا',
+      'النترا'
+    ],
+
+    Tucson: [
+      'tucson',
+      'توسان'
+    ],
+
+    Cerato: [
+      'cerato',
+      'سيراتو'
+    ],
+
+    Sportage: [
+      'sportage',
+      'سبورتاج',
+      'سبورتج'
+    ],
+
+    Sunny: [
+      'sunny',
+      'صني',
+      'سني',
+      'صونى'
+    ],
+
+    Qashqai: [
+      'qashqai',
+      'qash qai',
+      'قشقاي',
+      'قشقائي',
+      'قشقاي'
+    ],
+
+    Lancer: [
+      'lancer',
+      'لانسر'
+    ],
+
+    Pajero: [
+      'pajero',
+      'باجيرو'
+    ]
+
+  }
+
+}
 
 
 // =====================================================
@@ -73,936 +532,678 @@ export default class VehicleAIEngine {
   // NORMALIZE
   // =====================================================
 
-  static normalize(text = '') {
+  static normalize(
+    text = ''
+  ) {
 
     return String(
       text ?? ''
     )
       .toLowerCase()
-      .replace(/أ|إ|آ/g, 'ا')
-      .replace(/ة/g, 'ه')
-      .replace(/ى/g, 'ي')
-      .replace(/ؤ/g, 'و')
-      .replace(/ئ/g, 'ي')
-      .replace(/ـ/g, '')
-      .replace(/[\u064B-\u065F\u0670]/g, '')
-      .replace(/[،,؛;|/\\()[\]{}]/g, ' ')
-      .replace(/\s+/g, ' ')
+      .replace(
+        /أ|إ|آ/g,
+        'ا'
+      )
+      .replace(
+        /ة/g,
+        'ه'
+      )
+      .replace(
+        /ى/g,
+        'ي'
+      )
+      .replace(
+        /ؤ/g,
+        'و'
+      )
+      .replace(
+        /ئ/g,
+        'ي'
+      )
+      .replace(
+        /ـ/g,
+        ''
+      )
+      .replace(
+        /[\u064B-\u065F\u0670]/g,
+        ''
+      )
+      .replace(
+        /[\u2010-\u2015]/g,
+        '-'
+      )
+      .replace(
+        /\s+/g,
+        ' '
+      )
       .trim()
-
   }
 
 
   // =====================================================
-  // ARABIC VEHICLE ALIASES
-  // =====================================================
-  //
-  // Arabic user input must be resolved to the canonical
-  // English make/model names used by the online catalog
-  // and VehDB.
-  //
-  // This is intentionally kept here at the AI resolution
-  // layer. It does NOT modify stored products.
-  //
+  // GET ALIAS VALUES
   // =====================================================
 
-  static getArabicVehicleAliases() {
-
-    return {
-
-      // ---------------------------------------------------
-      // MAKES
-      // ---------------------------------------------------
-
-      'تويوتا':
-        'Toyota',
-
-      'تيوتا':
-        'Toyota',
-
-      'هونداي':
-        'Hyundai',
-
-      'هيونداي':
-        'Hyundai',
-
-      'هيونداى':
-        'Hyundai',
-
-      'نيسان':
-        'Nissan',
-
-      'كيا':
-        'Kia',
-
-      'هيوندا':
-        'Honda',
-
-      'هوندا':
-        'Honda',
-
-      'فورد':
-        'Ford',
-
-      'شيفروليه':
-        'Chevrolet',
-
-      'شفروليه':
-        'Chevrolet',
-
-      'شيفروليه':
-        'Chevrolet',
-
-      'مرسيدس':
-        'Mercedes-Benz',
-
-      'مرسيدس بنز':
-        'Mercedes-Benz',
-
-      'بي ام دبليو':
-        'BMW',
-
-      'بي ام':
-        'BMW',
-
-      'بى ام دبليو':
-        'BMW',
-
-      'ب ام دبليو':
-        'BMW',
-
-      'اودي':
-        'Audi',
-
-      'أودي':
-        'Audi',
-
-      'فولكس':
-        'Volkswagen',
-
-      'فولكس فاجن':
-        'Volkswagen',
-
-      'فولكسفاجن':
-        'Volkswagen',
-
-      'سكودا':
-        'Skoda',
-
-      'رينو':
-        'Renault',
-
-      'بيجو':
-        'Peugeot',
-
-      'سيتروين':
-        'Citroen',
-
-      'فيات':
-        'Fiat',
-
-      'سوزوكي':
-        'Suzuki',
-
-      'ميتسوبيشي':
-        'Mitsubishi',
-
-      'مازدا':
-        'Mazda',
-
-      'جيلي':
-        'Geely',
-
-      'شيري':
-        'Chery',
-
-      'ام جي':
-        'MG',
-
-      'ام جي موتور':
-        'MG',
-
-      'إم جي':
-        'MG',
-
-      'إم جي موتور':
-        'MG',
-
-      'جاك':
-        'JAC',
-
-      'بايك':
-        'BAIC',
-
-      'بريليانس':
-        'Brilliance',
-
-      'دايو':
-        'Daewoo',
-
-      'ايسوزو':
-        'Isuzu',
-
-      'إيسوزو':
-        'Isuzu',
-
-      'دودج':
-        'Dodge',
-
-      'جيب':
-        'Jeep',
-
-      'كرايسلر':
-        'Chrysler',
-
-      'فولفو':
-        'Volvo',
-
-      'لاند روفر':
-        'Land Rover',
-
-      'لاندروفر':
-        'Land Rover',
-
-      'رينج روفر':
-        'Range Rover',
-
-      'بورش':
-        'Porsche',
-
-      'جاكوار':
-        'Jaguar',
-
-      'لكزس':
-        'Lexus',
-
-      'انفينيتي':
-        'Infiniti',
-
-      'إنفينيتي':
-        'Infiniti',
-
-      'كاديلاك':
-        'Cadillac',
-
-      'لينكولن':
-        'Lincoln',
-
-      'اوبل':
-        'Opel',
-
-      'أوبل':
-        'Opel',
-
-      'سوبارو':
-        'Subaru',
-
-      'دايهاتسو':
-        'Daihatsu',
-
-      'ايفيكو':
-        'Iveco',
-
-      'إيفيكو':
-        'Iveco',
-
-      'مان':
-        'MAN',
-
-      'مرسيدس بنز':
-        'Mercedes-Benz',
-
-
-      // ---------------------------------------------------
-      // TOYOTA
-      // ---------------------------------------------------
-
-      'كورولا':
-        'Corolla',
-
-      'كرولا':
-        'Corolla',
-
-      'كامري':
-        'Camry',
-
-      'كامرى':
-        'Camry',
-
-      'يارس':
-        'Yaris',
-
-      'ياريـس':
-        'Yaris',
-
-      'راف فور':
-        'RAV4',
-
-      'راف فور':
-        'RAV4',
-
-      'هايلكس':
-        'Hilux',
-
-      'هاى لوكس':
-        'Hilux',
-
-      'لاند كروزر':
-        'Land Cruiser',
-
-      'لاندكروزر':
-        'Land Cruiser',
-
-      'برادو':
-        'Prado',
-
-      'افالون':
-        'Avalon',
-
-      'أفالون':
-        'Avalon',
-
-      'سيكويا':
-        'Sequoia',
-
-      'تندرا':
-        'Tundra',
-
-      'فورتشنر':
-        'Fortuner',
-
-      'انوفا':
-        'Innova',
-
-      'أينوفا':
-        'Innova',
-
-
-      // ---------------------------------------------------
-      // HYUNDAI
-      // ---------------------------------------------------
-
-      'النترا':
-        'Elantra',
-
-      'إلنترا':
-        'Elantra',
-
-      'النترا':
-        'Elantra',
-
-      'اكسنت':
-        'Accent',
-
-      'أكسنت':
-        'Accent',
-
-      'سوناتا':
-        'Sonata',
-
-      'توسان':
-        'Tucson',
-
-      'توسان':
-        'Tucson',
-
-      'سانتافي':
-        'Santa Fe',
-
-      'سانتا في':
-        'Santa Fe',
-
-      'كريتا':
-        'Creta',
-
-      'كونا':
-        'Kona',
-
-      'اى 10':
-        'i10',
-
-      'اي 10':
-        'i10',
-
-      'اى 20':
-        'i20',
-
-      'اي 20':
-        'i20',
-
-      'ازيرا':
-        'Azera',
-
-      'أزيرا':
-        'Azera',
-
-      'ستاريا':
-        'Staria',
-
-
-      // ---------------------------------------------------
-      // KIA
-      // ---------------------------------------------------
-
-      'سيراتو':
-        'Cerato',
-
-      'سبورتاج':
-        'Sportage',
-
-      'سبورتاج':
-        'Sportage',
-
-      'ريو':
-        'Rio',
-
-      'بيكانتو':
-        'Picanto',
-
-      'سورينتو':
-        'Sorento',
-
-      'كارينز':
-        'Carens',
-
-      'سيلتوس':
-        'Seltos',
-
-      'ك5':
-        'K5',
-
-      'كي 5':
-        'K5',
-
-      'اوبتيما':
-        'Optima',
-
-      'أوبتيما':
-        'Optima',
-
-
-      // ---------------------------------------------------
-      // NISSAN
-      // ---------------------------------------------------
-
-      'صني':
-        'Sunny',
-
-      'ساني':
-        'Sunny',
-
-      'قشقاي':
-        'Qashqai',
-
-      'قشقاي':
-        'Qashqai',
-
-      'اكس تريل':
-        'X-Trail',
-
-      'اكس تريل':
-        'X-Trail',
-
-      'باترول':
-        'Patrol',
-
-      'نافارا':
-        'Navara',
-
-      'سنترا':
-        'Sentra',
-
-      'جوك':
-        'Juke',
-
-      'مورانو':
-        'Murano',
-
-      'ألتيما':
-        'Altima',
-
-      'التيما':
-        'Altima',
-
-
-      // ---------------------------------------------------
-      // HONDA
-      // ---------------------------------------------------
-
-      'سيفيك':
-        'Civic',
-
-      'اكورد':
-        'Accord',
-
-      'أكورد':
-        'Accord',
-
-      'سيتي':
-        'City',
-
-      'سي ار في':
-        'CR-V',
-
-      'اتش ار في':
-        'HR-V',
-
-      'بايلوت':
-        'Pilot',
-
-
-      // ---------------------------------------------------
-      // CHEVROLET
-      // ---------------------------------------------------
-
-      'لانوس':
-        'Lanos',
-
-      'افيو':
-        'Aveo',
-
-      'أفيو':
-        'Aveo',
-
-      'اوبترا':
-        'Optra',
-
-      'أوبترا':
-        'Optra',
-
-      'كروز':
-        'Cruze',
-
-      'ماليبو':
-        'Malibu',
-
-      'كابتيفا':
-        'Captiva',
-
-      'تاهو':
-        'Tahoe',
-
-      'ترافيرس':
-        'Traverse',
-
-      'سوبربان':
-        'Suburban',
-
-
-      // ---------------------------------------------------
-      // FORD
-      // ---------------------------------------------------
-
-      'فوكاس':
-        'Focus',
-
-      'فيستا':
-        'Fiesta',
-
-      'فيوجن':
-        'Fusion',
-
-      'اكسبلورر':
-        'Explorer',
-
-      'إكسبلورر':
-        'Explorer',
-
-      'إكسبدشن':
-        'Expedition',
-
-      'اكسبدشن':
-        'Expedition',
-
-      'رانجر':
-        'Ranger',
-
-      'اف 150':
-        'F-150',
-
-
-      // ---------------------------------------------------
-      // RENAULT
-      // ---------------------------------------------------
-
-      'لوجان':
-        'Logan',
-
-      'ميجان':
-        'Megane',
-
-      'ميجان':
-        'Megane',
-
-      'داستر':
-        'Duster',
-
-      'كادجار':
-        'Kadjar',
-
-      'كابتشر':
-        'Captur',
-
-      'سيمبول':
-        'Symbol',
-
-
-      // ---------------------------------------------------
-      // PEUGEOT
-      // ---------------------------------------------------
-
-      'بيجو ٣٠١':
-        '301',
-
-      'بيجو 301':
-        '301',
-
-      '٣٠٨':
-        '308',
-
-      '٣٠٠٨':
-        '3008',
-
-      '٥٠٠٨':
-        '5008',
-
-      'بارتنر':
-        'Partner',
-
-
-      // ---------------------------------------------------
-      // MITSUBISHI
-      // ---------------------------------------------------
-
-      'لانسر':
-        'Lancer',
-
-      'لانسر شارك':
-        'Lancer',
-
-      'باجيرو':
-        'Pajero',
-
-      'اوتلاندر':
-        'Outlander',
-
-      'أوتلاندر':
-        'Outlander',
-
-      'اكليبس':
-        'Eclipse',
-
-      'إكليبس':
-        'Eclipse',
-
-
-      // ---------------------------------------------------
-      // SUZUKI
-      // ---------------------------------------------------
-
-      'سويفت':
-        'Swift',
-
-      'سويفت ديزاير':
-        'Swift Dzire',
-
-      'ديزاير':
-        'Dzire',
-
-      'فيتارا':
-        'Vitara',
-
-      'ارتجا':
-        'Ertiga',
-
-      'ارتيجا':
-        'Ertiga',
-
-      'التو':
-        'Alto',
-
-      'بريزا':
-        'Brezza',
-
-
-      // ---------------------------------------------------
-      // MAZDA
-      // ---------------------------------------------------
-
-      'مازدا 3':
-        'Mazda 3',
-
-      'مازدا 6':
-        'Mazda 6',
-
-      'سي اكس 5':
-        'CX-5',
-
-      'سي اكس 9':
-        'CX-9',
-
-
-      // ---------------------------------------------------
-      // MG
-      // ---------------------------------------------------
-
-      'ام جي 3':
-        'MG 3',
-
-      'إم جي 3':
-        'MG 3',
-
-      'ام جي 5':
-        'MG 5',
-
-      'إم جي 5':
-        'MG 5',
-
-      'ام جي 6':
-        'MG 6',
-
-      'إم جي 6':
-        'MG 6',
-
-      'زد اس':
-        'ZS',
-
-      'اتش اس':
-        'HS',
-
-      'ار اكس 5':
-        'RX5',
-
-      'آر اكس 5':
-        'RX5',
-
-
-      // ---------------------------------------------------
-      // JEEP
-      // ---------------------------------------------------
-
-      'رانجلر':
-        'Wrangler',
-
-      'جراند شيروكي':
-        'Grand Cherokee',
-
-      'جراند شيروكي':
-        'Grand Cherokee',
-
-      'شيروكي':
-        'Cherokee',
-
-      'كومباس':
-        'Compass',
-
-      'رينجيد':
-        'Renegade'
-
-    }
-
-  }
-
-
-  // =====================================================
-  // ARABIC ALIAS LOOKUP
-  // =====================================================
-
-  static resolveArabicAlias(
-    value = ''
+  static getAliasValues(
+    item,
+    type = ''
   ) {
 
-    const normalized =
-      this.normalize(
-        value
-      )
+    const aliases = []
 
-
-    if (!normalized) {
-
-      return ''
-
-    }
-
-
-    const aliases =
-      this.getArabicVehicleAliases()
-
-
-    // ---------------------------------------------------
-    // Exact alias
-    // ---------------------------------------------------
 
     if (
-      aliases[normalized]
+      typeof item === 'string' ||
+      typeof item === 'number'
     ) {
 
-      return aliases[normalized]
-
+      aliases.push(
+        String(item)
+      )
     }
 
 
-    // ---------------------------------------------------
-    // Longest alias contained inside the query.
-    //
-    // This allows:
-    //
-    // "تويوتا كورولا 2021"
-    //
-    // to resolve both:
-    //
-    // "تويوتا"
-    // "كورولا"
-    // ---------------------------------------------------
-
-    const aliasKeys =
-      Object.keys(
-        aliases
-      )
-        .sort(
-          (a, b) =>
-            b.length -
-            a.length
-        )
-
-
-    for (
-      const alias of aliasKeys
+    if (
+      item &&
+      typeof item === 'object'
     ) {
 
-      const normalizedAlias =
-        this.normalize(
-          alias
-        )
+      const fields = [
+
+        'aliases',
+        'alias',
+        'localizedNames',
+        'localizedName',
+        'translations',
+        'translation',
+        'names',
+
+        'nameAr',
+        'arabicName',
+        'arabic_name',
+        'arName',
+        'nameArabic',
+
+        'nameEn',
+        'englishName',
+        'english_name',
+        'enName',
+        'nameEnglish',
+
+        'modelNameAr',
+        'arabicModelName',
+
+        'makeNameAr',
+        'arabicMakeName',
+
+        'labelAr',
+        'arabicLabel'
+
+      ]
 
 
-      if (
-        normalized.includes(
-          normalizedAlias
-        )
+      for (
+        const field
+        of fields
       ) {
 
-        return aliases[alias]
+        const value =
+          item?.[field]
 
+
+        if (
+          Array.isArray(value)
+        ) {
+
+          aliases.push(
+            ...value
+          )
+
+          continue
+        }
+
+
+        if (
+          value &&
+          typeof value === 'object'
+        ) {
+
+          aliases.push(
+            ...Object.values(
+              value
+            )
+          )
+
+          continue
+        }
+
+
+        if (
+          value !== null &&
+          value !== undefined &&
+          String(value).trim()
+        ) {
+
+          aliases.push(
+            String(value)
+          )
+        }
       }
-
     }
 
 
-    return ''
+    if (
+      type === 'make'
+    ) {
 
+      const canonical =
+        this.getVehicleField(
+          item,
+          [
+            'make',
+            'brand',
+            'manufacturer',
+            'name',
+            'label',
+            'value',
+            'makeName',
+            'brandName'
+          ]
+        )
+
+
+      if (canonical) {
+
+        aliases.push(
+          ...(
+            VEHICLE_ALIASES.makes[
+              String(canonical).trim()
+            ] || []
+          )
+        )
+      }
+    }
+
+
+    if (
+      type === 'model'
+    ) {
+
+      const canonical =
+        this.getVehicleField(
+          item,
+          [
+            'model',
+            'modelName',
+            'name',
+            'label',
+            'value'
+          ]
+        )
+
+
+      if (canonical) {
+
+        aliases.push(
+          ...(
+            VEHICLE_ALIASES.models[
+              String(canonical).trim()
+            ] || []
+          )
+        )
+      }
+    }
+
+
+    return [
+      ...new Set(
+        aliases
+          .filter(
+            value =>
+              value !== null &&
+              value !== undefined
+          )
+          .map(
+            value =>
+              String(value).trim()
+          )
+          .filter(Boolean)
+      )
+    ]
   }
 
 
   // =====================================================
-  // TRANSLATE ARABIC QUERY
+  // CANONICAL MAKE FROM ALIAS
   // =====================================================
 
-  static translateArabicVehicleQuery(
+  static resolveCanonicalMake(
     text = ''
   ) {
 
-    const original =
-      String(
-        text ?? ''
-      ).trim()
+    const query =
+      this.normalize(
+        text
+      )
 
 
-    if (!original) {
-
-      return ''
-
+    if (!query) {
+      return null
     }
 
 
-    let translated =
-      this.normalize(
-        original
-      )
+    let best = null
+    let bestScore = 0
 
-
-    const aliases =
-      this.getArabicVehicleAliases()
-
-
-    const aliasKeys =
-      Object.keys(
-        aliases
-      )
-        .sort(
-          (a, b) =>
-            this.normalize(b).length -
-            this.normalize(a).length
-        )
-
-
-    // ---------------------------------------------------
-    // Replace known Arabic vehicle names.
-    // ---------------------------------------------------
 
     for (
-      const alias of aliasKeys
+      const [canonical, aliases]
+      of Object.entries(
+        VEHICLE_ALIASES.makes
+      )
     ) {
 
-      const normalizedAlias =
-        this.normalize(
-          alias
-        )
+      const values = [
+        canonical,
+        ...aliases
+      ]
 
 
-      if (
-        !normalizedAlias
+      for (
+        const alias
+        of values
       ) {
 
-        continue
-
-      }
-
-
-      if (
-        translated.includes(
-          normalizedAlias
-        )
-      ) {
-
-        translated =
-          translated.replace(
-            normalizedAlias,
-            ` ${aliases[alias]} `
+        const normalizedAlias =
+          this.normalize(
+            alias
           )
 
+
+        if (!normalizedAlias) {
+          continue
+        }
+
+
+        const fullScore =
+          this.matchScore(
+            normalizedAlias,
+            query
+          )
+
+
+        if (
+          fullScore > bestScore
+        ) {
+
+          bestScore =
+            fullScore
+
+          best = {
+
+            make:
+              canonical,
+
+            brand:
+              canonical,
+
+            manufacturer:
+              canonical,
+
+            matchedAlias:
+              alias,
+
+            score:
+              fullScore,
+
+            source:
+              'multilingual-alias'
+
+          }
+        }
+
+
+        const queryTokens =
+          this.tokenize(
+            query
+          )
+
+
+        for (
+          const token
+          of queryTokens
+        ) {
+
+          if (
+            /^(19|20)\d{2}$/.test(
+              token
+            )
+          ) {
+            continue
+          }
+
+
+          const tokenScore =
+            this.matchScore(
+              normalizedAlias,
+              token
+            )
+
+
+          if (
+            tokenScore > bestScore
+          ) {
+
+            bestScore =
+              tokenScore
+
+            best = {
+
+              make:
+                canonical,
+
+              brand:
+                canonical,
+
+              manufacturer:
+                canonical,
+
+              matchedAlias:
+                alias,
+
+              score:
+                tokenScore,
+
+              source:
+                'multilingual-alias'
+
+            }
+          }
+        }
       }
-
     }
-
-
-    translated =
-      translated
-        .replace(
-          /\s+/g,
-          ' '
-        )
-        .trim()
 
 
     if (
-      translated !==
-      this.normalize(original)
+      best &&
+      bestScore >= 70
     ) {
 
-      console.log(
-        '[VehicleAIEngine] ARABIC QUERY TRANSLATED',
-        {
-          original,
-          translated
-        }
-      )
-
+      return best
     }
 
 
-    return translated
+    return null
+  }
 
+
+  // =====================================================
+  // CANONICAL MODEL FROM ALIAS
+  // =====================================================
+
+  static resolveCanonicalModel(
+    text = '',
+    make = ''
+  ) {
+
+    const query =
+      this.normalize(
+        text
+      )
+
+
+    const normalizedMake =
+      this.normalize(
+        make
+      )
+
+
+    if (
+      !query
+    ) {
+      return null
+    }
+
+
+    let best = null
+    let bestScore = 0
+
+
+    for (
+      const [canonical, aliases]
+      of Object.entries(
+        VEHICLE_ALIASES.models
+      )
+    ) {
+
+      const values = [
+        canonical,
+        ...aliases
+      ]
+
+
+      for (
+        const alias
+        of values
+      ) {
+
+        const normalizedAlias =
+          this.normalize(
+            alias
+          )
+
+
+        if (!normalizedAlias) {
+          continue
+        }
+
+
+        let score =
+          this.matchScore(
+            normalizedAlias,
+            query
+          )
+
+
+        const queryWithoutYear =
+          query.replace(
+            /(19|20)\d{2}/g,
+            ' '
+          )
+
+
+        score =
+          Math.max(
+            score,
+            this.matchScore(
+              normalizedAlias,
+              queryWithoutYear
+            )
+          )
+
+
+        const tokens =
+          this.tokenize(
+            queryWithoutYear
+          )
+
+
+        for (
+          const token
+          of tokens
+        ) {
+
+          if (
+            normalizedMake &&
+            token === normalizedMake
+          ) {
+            continue
+          }
+
+
+          const tokenScore =
+            this.matchScore(
+              normalizedAlias,
+              token
+            )
+
+
+          score =
+            Math.max(
+              score,
+              tokenScore
+            )
+        }
+
+
+        if (
+          score > bestScore
+        ) {
+
+          bestScore =
+            score
+
+          best = {
+
+            model:
+              canonical,
+
+            modelName:
+              canonical,
+
+            matchedAlias:
+              alias,
+
+            score,
+
+            source:
+              'multilingual-alias'
+
+          }
+        }
+      }
+    }
+
+
+    if (
+      best &&
+      bestScore >= 70
+    ) {
+
+      return best
+    }
+
+
+    return null
+  }
+
+
+  // =====================================================
+  // RESOLVE MAKE FROM LOCAL ALIASES
+  // =====================================================
+
+  static resolveMakeFromLocalAliases(
+    text = ''
+  ) {
+
+    const resolved =
+      this.resolveCanonicalMake(
+        text
+      )
+
+
+    if (!resolved) {
+      return null
+    }
+
+
+    return {
+
+      ...resolved,
+
+      source:
+        'multilingual-alias'
+
+    }
+  }
+
+
+  // =====================================================
+  // RESOLVE MODEL FROM LOCAL ALIASES
+  // =====================================================
+  //
+  // IMPORTANT:
+  //
+  // This function no longer reads the old
+  // ../../data/vehicleDatabase structure.
+  //
+  // It only resolves the canonical multilingual alias.
+  // Actual model validation is performed against the
+  // VehiclesDB local catalog asynchronously.
+  //
+  // =====================================================
+
+  static resolveLocalModelAlias(
+    query,
+    make,
+    year = null,
+    vehicleType = 'car'
+  ) {
+
+    const canonical =
+      this.resolveCanonicalModel(
+        query,
+        make
+      )
+
+
+    if (!canonical) {
+      return null
+    }
+
+
+    return {
+
+      make:
+        make,
+
+      brand:
+        make,
+
+      manufacturer:
+        make,
+
+      model:
+        canonical.model,
+
+      modelName:
+        canonical.model,
+
+      year:
+        Number.isFinite(
+          Number(year)
+        )
+          ? Number(year)
+          : '',
+
+      years:
+        [],
+
+      vehicleType,
+
+      tireSizes:
+        [],
+
+      source:
+        'multilingual-alias',
+
+      score:
+        canonical.score,
+
+      matchedAlias:
+        canonical.matchedAlias
+
+    }
   }
 
 
@@ -1026,6 +1227,7 @@ export default class VehicleAIEngine {
         'cars',
         'سياره',
         'سيارات',
+        'سيارة',
         'vehicle',
         'vehicles',
         'ملاكي'
@@ -1033,7 +1235,6 @@ export default class VehicleAIEngine {
     ) {
 
       return 'car'
-
     }
 
 
@@ -1043,12 +1244,12 @@ export default class VehicleAIEngine {
         'trucks',
         'شاحنه',
         'شاحنات',
+        'شاحنة',
         'نقل'
       ].includes(type)
     ) {
 
       return 'truck'
-
     }
 
 
@@ -1058,13 +1259,15 @@ export default class VehicleAIEngine {
         'buses',
         'اتوبيس',
         'اتوبيسات',
+        'أتوبيس',
+        'أتوبيسات',
         'حافله',
-        'حافلات'
+        'حافلات',
+        'حافلة'
       ].includes(type)
     ) {
 
       return 'bus'
-
     }
 
 
@@ -1074,30 +1277,17 @@ export default class VehicleAIEngine {
         'motorcycles',
         'دراجه',
         'دراجات',
+        'دراجة',
         'موتوسيكل',
         'موتوسيكلات'
       ].includes(type)
     ) {
 
       return 'motorcycle'
-
-    }
-
-
-    if (
-      [
-        'suv',
-        'suvs'
-      ].includes(type)
-    ) {
-
-      return 'suv'
-
     }
 
 
     return type
-
   }
 
 
@@ -1121,7 +1311,6 @@ export default class VehicleAIEngine {
           match[0]
         )
       : null
-
   }
 
 
@@ -1133,19 +1322,14 @@ export default class VehicleAIEngine {
 
     try {
 
-      const database =
+      return (
         await VehicleProvider.getAll()
-
-
-      return Array.isArray(
-        database
-      )
-        ? database
-        : []
+      ) || []
 
     }
-
-    catch (error) {
+    catch (
+      error
+    ) {
 
       console.warn(
         '[VehicleAIEngine] Vehicle database read failed:',
@@ -1153,9 +1337,44 @@ export default class VehicleAIEngine {
       )
 
       return []
+    }
+  }
+
+
+  // =====================================================
+  // FIND BEST MATCH
+  // =====================================================
+
+  static async findBest(
+    query
+  ) {
+
+    try {
+
+      const results =
+        await VehicleSearchIndex.search(
+          query
+        )
+
+
+      return (
+        Array.isArray(results)
+          ? results[0]
+          : null
+      ) || null
 
     }
+    catch (
+      error
+    ) {
 
+      console.warn(
+        '[VehicleAIEngine] Vehicle index search failed:',
+        error
+      )
+
+      return null
+    }
   }
 
 
@@ -1174,7 +1393,6 @@ export default class VehicleAIEngine {
     ) {
 
       return ''
-
     }
 
 
@@ -1193,647 +1411,116 @@ export default class VehicleAIEngine {
       ) {
 
         return value
-
       }
-
     }
 
 
     return ''
-
   }
 
 
   // =====================================================
-  // GET VEHICLE MAKE
+  // MATCH SCORE
   // =====================================================
 
-  static getVehicleMake(
-    vehicle
+  static matchScore(
+    actual,
+    requested
   ) {
 
-    const direct =
-      this.getVehicleField(
-        vehicle,
-        [
-          'make',
-          'Make',
-          'MAKE',
-          'brand',
-          'Brand',
-          'manufacturer',
-          'Manufacturer',
-          'vehicleBrand',
-          'vehicleMake',
-          'makeName',
-          'brandName',
-          'manufacturerName'
-        ]
+    const a =
+      this.normalize(
+        actual
+      )
+
+    const b =
+      this.normalize(
+        requested
       )
 
 
     if (
-      direct
+      !a ||
+      !b
     ) {
 
-      return direct
-
+      return 0
     }
 
 
     if (
-      vehicle?.vehicle &&
-      typeof vehicle.vehicle === 'object'
+      a === b
     ) {
 
-      return this.getVehicleMake(
-        vehicle.vehicle
-      )
-
+      return 100
     }
 
 
     if (
-      vehicle?.data &&
-      typeof vehicle.data === 'object'
+      a.replace(/\s+/g, '') ===
+      b.replace(/\s+/g, '')
     ) {
 
-      return this.getVehicleMake(
-        vehicle.data
-      )
-
+      return 96
     }
 
 
     if (
-      vehicle?.result &&
-      typeof vehicle.result === 'object'
+      a.includes(b)
     ) {
 
-      return this.getVehicleMake(
-        vehicle.result
-      )
-
-    }
-
-
-    return ''
-
-  }
-
-
-  // =====================================================
-  // GET VEHICLE MODEL
-  // =====================================================
-
-  static getVehicleModel(
-    vehicle
-  ) {
-
-    const direct =
-      this.getVehicleField(
-        vehicle,
-        [
-          'model',
-          'Model',
-          'MODEL',
-          'modelName',
-          'ModelName',
-          'vehicleModel',
-          'model_name',
-          'vehicleModelName'
-        ]
-      )
-
-
-    if (
-      direct
-    ) {
-
-      return direct
-
+      return 88
     }
 
 
     if (
-      vehicle?.vehicle &&
-      typeof vehicle.vehicle === 'object'
+      b.includes(a)
     ) {
 
-      return this.getVehicleModel(
-        vehicle.vehicle
-      )
-
+      return 82
     }
+
+
+    const aTokens =
+      a.split(' ').filter(Boolean)
+
+    const bTokens =
+      b.split(' ').filter(Boolean)
 
 
     if (
-      vehicle?.data &&
-      typeof vehicle.data === 'object'
+      aTokens.length === 0 ||
+      bTokens.length === 0
     ) {
 
-      return this.getVehicleModel(
-        vehicle.data
-      )
-
+      return 0
     }
 
 
-    if (
-      vehicle?.result &&
-      typeof vehicle.result === 'object'
-    ) {
-
-      return this.getVehicleModel(
-        vehicle.result
-      )
-
-    }
-
-
-    return ''
-
-  }
-
-
-  // =====================================================
-  // GET VEHICLE TYPE
-  // =====================================================
-
-  static getVehicleType(
-    vehicle
-  ) {
-
-    const direct =
-      this.getVehicleField(
-        vehicle,
-        [
-          'vehicleType',
-          'VehicleType',
-          'type',
-          'Type',
-          'vehicle_type',
-          'category',
-          'bodyType'
-        ]
-      )
-
-
-    if (
-      direct
-    ) {
-
-      return this.normalizeType(
-        direct
-      )
-
-    }
-
-
-    if (
-      vehicle?.vehicle &&
-      typeof vehicle.vehicle === 'object'
-    ) {
-
-      const nested =
-        this.getVehicleType(
-          vehicle.vehicle
-        )
-
-      if (
-        nested
-      ) {
-
-        return nested
-
-      }
-
-    }
-
-
-    return 'car'
-
-  }
-
-
-  // =====================================================
-  // GET VEHICLE YEAR
-  // =====================================================
-
-  static getVehicleYear(
-    vehicle
-  ) {
-
-    const direct =
-      this.getVehicleField(
-        vehicle,
-        [
-          'year',
-          'Year',
-          'modelYear',
-          'ModelYear',
-          'modelyear',
-          'productionYear',
-          'ProductionYear',
-          'yearFrom',
-          'YearFrom',
-          'yearTo',
-          'YearTo'
-        ]
-      )
-
-
-    if (
-      direct !== ''
-    ) {
-
-      return direct
-
-    }
-
-
-    if (
-      vehicle?.vehicle &&
-      typeof vehicle.vehicle === 'object'
-    ) {
-
-      return this.getVehicleYear(
-        vehicle.vehicle
-      )
-
-    }
-
-
-    if (
-      vehicle?.data &&
-      typeof vehicle.data === 'object'
-    ) {
-
-      return this.getVehicleYear(
-        vehicle.data
-      )
-
-    }
-
-
-    if (
-      vehicle?.result &&
-      typeof vehicle.result === 'object'
-    ) {
-
-      return this.getVehicleYear(
-        vehicle.result
-      )
-
-    }
-
-
-    return ''
-
-  }
-
-
-  // =====================================================
-  // NORMALIZE RESOLVED VEHICLE
-  // =====================================================
-
-  static normalizeResolvedVehicle(
-    vehicle,
-    fallback = {}
-  ) {
-
-    if (
-      !vehicle ||
-      typeof vehicle !== 'object'
-    ) {
-
-      return null
-
-    }
-
-
-    const nestedVehicle =
-      vehicle?.vehicle &&
-      typeof vehicle.vehicle === 'object'
-        ? vehicle.vehicle
-        : null
-
-
-    const nestedData =
-      vehicle?.data &&
-      typeof vehicle.data === 'object'
-        ? vehicle.data
-        : null
-
-
-    const nestedResult =
-      vehicle?.result &&
-      typeof vehicle.result === 'object'
-        ? vehicle.result
-        : null
-
-
-    const candidates = [
-
-      vehicle,
-
-      nestedVehicle,
-
-      nestedData,
-
-      nestedResult
-
-    ].filter(
-      Boolean
-    )
-
-
-    let make = ''
-
-    let model = ''
-
-    let year = ''
-
-    let vehicleType = ''
-
-
-    for (
-      const candidate of candidates
-    ) {
-
-      if (
-        !make
-      ) {
-
-        make =
-          this.getVehicleMake(
-            candidate
+    const matched =
+      bTokens.filter(
+        token =>
+          aTokens.some(
+            actualToken =>
+              actualToken === token ||
+              actualToken.includes(token) ||
+              token.includes(actualToken)
           )
-
-      }
-
-
-      if (
-        !model
-      ) {
-
-        model =
-          this.getVehicleModel(
-            candidate
-          )
-
-      }
-
-
-      if (
-        !year
-      ) {
-
-        year =
-          this.getVehicleYear(
-            candidate
-          )
-
-      }
-
-
-      if (
-        !vehicleType
-      ) {
-
-        vehicleType =
-          this.getVehicleField(
-            candidate,
-            [
-              'vehicleType',
-              'VehicleType',
-              'type',
-              'Type',
-              'vehicle_type',
-              'category',
-              'bodyType'
-            ]
-          )
-
-      }
-
-    }
-
-
-    make =
-      make ||
-      fallback?.make ||
-      fallback?.brand ||
-      ''
-
-
-    model =
-      model ||
-      fallback?.model ||
-      fallback?.modelName ||
-      ''
-
-
-    year =
-      year ||
-      fallback?.year ||
-      ''
-
-
-    vehicleType =
-      this.normalizeType(
-        vehicleType ||
-        fallback?.vehicleType ||
-        fallback?.type ||
-        'car'
-      )
-
-
-    const yearNumber =
-      Number(
-        year
-      )
-
-
-    const normalizedYear =
-      Number.isFinite(
-        yearNumber
-      )
-        ? yearNumber
-        : year
-
-
-    const yearFrom =
-      this.getVehicleField(
-        vehicle,
-        [
-          'yearFrom',
-          'YearFrom',
-          'from',
-          'startYear',
-          'productionFrom'
-        ]
-      ) ||
-      fallback?.yearFrom ||
-      (
-        Number.isFinite(
-          yearNumber
-        )
-          ? yearNumber
-          : null
-      )
-
-
-    const yearTo =
-      this.getVehicleField(
-        vehicle,
-        [
-          'yearTo',
-          'YearTo',
-          'to',
-          'endYear',
-          'productionTo'
-        ]
-      ) ||
-      fallback?.yearTo ||
-      (
-        Number.isFinite(
-          yearNumber
-        )
-          ? yearNumber
-          : null
-      )
-
-
-    const normalized = {
-
-      ...vehicle,
-
-      vehicleType,
-
-      type:
-        vehicle?.type ||
-        vehicle?.Type ||
-        vehicleType,
-
-      make,
-
-      brand:
-        vehicle?.brand ||
-        vehicle?.Brand ||
-        make,
-
-      manufacturer:
-        vehicle?.manufacturer ||
-        vehicle?.Manufacturer ||
-        make,
-
-      model,
-
-      modelName:
-        vehicle?.modelName ||
-        vehicle?.ModelName ||
-        model,
-
-      year:
-        normalizedYear,
-
-      modelYear:
-        vehicle?.modelYear ??
-        vehicle?.ModelYear ??
-        normalizedYear,
-
-      yearFrom,
-
-      yearTo,
-
-      source:
-        vehicle?.source ||
-        vehicle?.Source ||
-        fallback?.source ||
-        'online'
-
-    }
-
-
-    console.log(
-      '[VehicleAIEngine] NORMALIZED ONLINE VEHICLE',
-      {
-        original:
-          vehicle,
-
-        normalized
-      }
-    )
-
-
-    return normalized
-
-  }
-
-
-  // =====================================================
-  // GET VEHICLE SEARCH TEXT
-  // =====================================================
-
-  static getVehicleSearchText(
-    vehicle
-  ) {
-
-    if (
-      vehicle === null ||
-      vehicle === undefined
-    ) {
-
-      return ''
-
-    }
+      ).length
 
 
     if (
-      typeof vehicle === 'string' ||
-      typeof vehicle === 'number'
+      matched === bTokens.length
     ) {
 
-      return this.normalize(
-        vehicle
-      )
-
+      return 76
     }
 
 
-    const values = [
-
-      this.getVehicleMake(
-        vehicle
-      ),
-
-      this.getVehicleModel(
-        vehicle
-      ),
-
-      this.getVehicleYear(
-        vehicle
-      ),
-
-      this.getVehicleType(
-        vehicle
-      )
-
-    ]
-
-
-    return this.normalize(
-      values
-        .filter(
-          value =>
-            value !== null &&
-            value !== undefined &&
-            String(value).trim() !== ''
-        )
-        .join(' ')
-    )
-
+    return (
+      matched /
+      bTokens.length
+    ) * 60
   }
 
 
@@ -1848,1033 +1535,1003 @@ export default class VehicleAIEngine {
     return this.normalize(
       text
     )
-      .split(/\s+/)
-      .map(
-        token =>
-          token.trim()
+      .split(
+        /[\s,،;؛|/]+/
       )
       .filter(
         Boolean
       )
-
   }
 
 
   // =====================================================
-  // YEAR MATCH
+  // GET REQUESTED VEHICLE TYPE
   // =====================================================
 
-  static yearMatches(
-    vehicle,
-    requestedYear
+  static getRequestedVehicleType(
+    text = ''
   ) {
 
-    const year =
-      Number(
-        requestedYear
-      )
-
-
-    if (
-      !Number.isFinite(year)
-    ) {
-
-      return true
-
-    }
-
-
-    const singleYear =
-      Number(
-        this.getVehicleField(
-          vehicle,
-          [
-            'year',
-            'Year',
-            'modelYear',
-            'ModelYear',
-            'productionYear',
-            'ProductionYear'
-          ]
-        )
-      )
-
-
-    if (
-      Number.isFinite(
-        singleYear
-      )
-    ) {
-
-      return (
-        year ===
-        singleYear
-      )
-
-    }
-
-
-    const from =
-      Number(
-        this.getVehicleField(
-          vehicle,
-          [
-            'yearFrom',
-            'YearFrom',
-            'from',
-            'startYear',
-            'productionFrom'
-          ]
-        )
-      )
-
-
-    const to =
-      Number(
-        this.getVehicleField(
-          vehicle,
-          [
-            'yearTo',
-            'YearTo',
-            'to',
-            'endYear',
-            'productionTo'
-          ]
-        )
-      )
-
-
-    if (
-      Number.isFinite(from) &&
-      Number.isFinite(to)
-    ) {
-
-      return (
-        year >= from &&
-        year <= to
-      )
-
-    }
-
-
-    if (
-      Number.isFinite(from)
-    ) {
-
-      return (
-        year >= from
-      )
-
-    }
-
-
-    if (
-      Number.isFinite(to)
-    ) {
-
-      return (
-        year <= to
-      )
-
-    }
-
-
-    return true
-
-  }
-
-
-  // =====================================================
-  // FALLBACK DATABASE MATCH
-  // =====================================================
-
-  static async findBestFromDatabase(
-    query
-  ) {
-
-    const database =
-      await this.getDatabase()
-
-
-    if (
-      database.length === 0
-    ) {
-
-      return null
-
-    }
-
-
-    const translatedQuery =
-      this.translateArabicVehicleQuery(
-        query
-      )
-
-
-    const normalizedQuery =
+    const query =
       this.normalize(
-        translatedQuery
+        text
       )
 
 
     const tokens =
       this.tokenize(
-        normalizedQuery
-      )
-
-
-    const requestedYear =
-      this.extractYear(
-        normalizedQuery
-      )
-
-
-    let best =
-      null
-
-
-    let bestScore =
-      0
-
-
-    for (
-      const vehicle of database
-    ) {
-
-      if (
-        !vehicle ||
-        typeof vehicle !== 'object'
-      ) {
-
-        continue
-
-      }
-
-
-      const make =
-        this.normalize(
-          this.getVehicleMake(
-            vehicle
-          )
-        )
-
-
-      const model =
-        this.normalize(
-          this.getVehicleModel(
-            vehicle
-          )
-        )
-
-
-      if (
-        !make &&
-        !model
-      ) {
-
-        continue
-
-      }
-
-
-      const searchableText =
-        this.getVehicleSearchText(
-          vehicle
-        )
-
-
-      let score =
-        0
-
-
-      if (
-        make &&
-        normalizedQuery.includes(
-          make
-        )
-      ) {
-
-        score += 50
-
-      }
-
-
-      if (
-        model &&
-        normalizedQuery.includes(
-          model
-        )
-      ) {
-
-        score += 50
-
-      }
-
-
-      for (
-        const token of tokens
-      ) {
-
-        if (
-          token.length < 2
-        ) {
-
-          continue
-
-        }
-
-
-        if (
-          searchableText.includes(
-            token
-          )
-        ) {
-
-          score += 5
-
-        }
-
-      }
-
-
-      if (
-        requestedYear &&
-        this.yearMatches(
-          vehicle,
-          requestedYear
-        )
-      ) {
-
-        score += 40
-
-      }
-
-
-      const hasMake =
-        Boolean(
-          make &&
-          normalizedQuery.includes(
-            make
-          )
-        )
-
-
-      const hasModel =
-        Boolean(
-          model &&
-          normalizedQuery.includes(
-            model
-          )
-        )
-
-
-      if (
-        !hasMake &&
-        !hasModel
-      ) {
-
-        continue
-
-      }
-
-
-      if (
-        score >
-        bestScore
-      ) {
-
-        bestScore =
-          score
-
-        best =
-          vehicle
-
-      }
-
-    }
-
-
-    if (
-      best
-    ) {
-
-      console.log(
-        '[VehicleAIEngine] DATABASE FALLBACK MATCH',
-        {
-          query,
-          translatedQuery,
-          score:
-            bestScore,
-          vehicle:
-            best
-        }
-      )
-
-    }
-
-
-    return best
-
-  }
-
-
-  // =====================================================
-  // MATCH TEXT AGAINST VEHICLE
-  // =====================================================
-
-  static vehicleTextMatches(
-    vehicle,
-    query
-  ) {
-
-    const translatedQuery =
-      this.translateArabicVehicleQuery(
         query
       )
 
 
-    const normalizedQuery =
-      this.normalize(
-        translatedQuery
-      )
-
-
-    const make =
-      this.normalize(
-        this.getVehicleMake(
-          vehicle
-        )
-      )
-
-
-    const model =
-      this.normalize(
-        this.getVehicleModel(
-          vehicle
-        )
-      )
-
-
-    if (
-      !make &&
-      !model
+    for (
+      const token
+      of tokens
     ) {
 
-      return false
+      const type =
+        this.normalizeType(
+          token
+        )
 
+
+      if (
+        [
+          'car',
+          'truck',
+          'bus',
+          'motorcycle'
+        ].includes(type)
+      ) {
+
+        return type
+      }
     }
 
 
-    const makeMatch =
-      Boolean(
-        make &&
-        (
-          normalizedQuery.includes(
-            make
-          ) ||
-          make.includes(
-            normalizedQuery
-          )
-        )
-      )
-
-
-    const modelMatch =
-      Boolean(
-        model &&
-        (
-          normalizedQuery.includes(
-            model
-          ) ||
-          model.includes(
-            normalizedQuery
-          )
-        )
-      )
-
-
-    return (
-      makeMatch &&
-      modelMatch
-    )
-
+    return 'car'
   }
 
 
   // =====================================================
-  // FIND MAKE FROM ONLINE CATALOG
+  // RESOLVE MAKE FROM VEHDB
+  // =====================================================
+  //
+  // Historical method name is preserved so existing
+  // callers do not break.
+  //
+  // IMPORTANT:
+  // It no longer calls VehDB.
+  //
+  // Vehicle identification is local-first through
+  // VehiclesDBLocalSource, followed by NHTSA.
+  //
+  // Technical VehDB fitment is handled later by
+  // VehicleSpecificationProvider.
+  //
   // =====================================================
 
-  static async findOnlineMake(
-    query,
-    vehicleType = 'car'
+  static async resolveMakeFromVehDB(
+    text = ''
   ) {
+
+    const query =
+      this.normalize(
+        text
+      )
+
+
+    if (!query) {
+
+      return null
+    }
+
+
+    const vehicleType =
+      this.getRequestedVehicleType(
+        query
+      )
+
+
+    // ===================================================
+    // 0. MULTILINGUAL ALIAS
+    // ===================================================
+
+    const localAliasResolved =
+      this.resolveMakeFromLocalAliases(
+        query
+      )
+
+
+    if (localAliasResolved) {
+
+      console.log(
+        '[VehicleAIEngine] Multilingual make resolved:',
+        {
+          query,
+          make:
+            localAliasResolved.make,
+          matchedAlias:
+            localAliasResolved.matchedAlias,
+          score:
+            localAliasResolved.score
+        }
+      )
+
+      return localAliasResolved
+    }
+
+
+    // ===================================================
+    // 1. VEHICLESDB LOCAL CATALOG
+    // ===================================================
 
     try {
 
       const brands =
-        await VehicleProvider.getBrands(
+        await VehiclesDBLocalSource.getBrands(
           vehicleType
         )
 
 
       if (
-        !Array.isArray(brands) ||
-        brands.length === 0
+        Array.isArray(brands) &&
+        brands.length > 0
       ) {
 
-        console.warn(
-          '[VehicleAIEngine] Online brand catalog is empty.'
-        )
+        const resolved =
+          this.resolveMakeFromBrandList(
+            query,
+            brands
+          )
 
-        return null
 
+        if (resolved) {
+
+          console.log(
+            '[VehicleAIEngine] VehiclesDB local make resolved:',
+            {
+              query,
+              make:
+                resolved.make,
+              score:
+                resolved.score
+            }
+          )
+
+          return {
+
+            ...resolved,
+
+            source:
+              'vehiclesdb'
+
+          }
+        }
       }
 
+    }
+    catch (
+      error
+    ) {
 
-      const translatedQuery =
-        this.translateArabicVehicleQuery(
-          query
+      console.warn(
+        '[VehicleAIEngine] VehiclesDB local make resolution failed:',
+        error
+      )
+    }
+
+
+    // ===================================================
+    // 2. NHTSA FALLBACK
+    // ===================================================
+
+    try {
+
+      const nhtsaBrands =
+        await this.getNHTSABrands(
+          vehicleType
         )
-
-
-      const normalizedQuery =
-        this.normalize(
-          translatedQuery
-        )
-
-
-      let exact =
-        null
-
-
-      let partial =
-        null
-
-
-      for (
-        const brand of brands
-      ) {
-
-        const rawName =
-          this.getVehicleField(
-            brand,
-            [
-              'name',
-              'Name',
-              'label',
-              'Label',
-              'brand',
-              'Brand',
-              'make',
-              'Make'
-            ]
-          )
-
-
-        const name =
-          this.normalize(
-            rawName
-          )
-
-
-        if (!name) {
-
-          continue
-
-        }
-
-
-        if (
-          normalizedQuery === name ||
-          normalizedQuery.includes(
-            ` ${name} `
-          ) ||
-          normalizedQuery.startsWith(
-            `${name} `
-          )
-        ) {
-
-          exact =
-            brand
-
-          break
-
-        }
-
-
-        if (
-          normalizedQuery.includes(
-            name
-          ) ||
-          name.includes(
-            normalizedQuery
-          )
-        ) {
-
-          partial =
-            brand
-
-        }
-
-
-        // -------------------------------------------------
-        // Arabic alias directly compared against this brand
-        // -------------------------------------------------
-
-        const aliases =
-          this.getArabicVehicleAliases()
-
-
-        const matchingAlias =
-          Object.keys(
-            aliases
-          ).find(
-            alias =>
-              this.normalize(
-                aliases[alias]
-              ) === name &&
-              this.normalize(
-                query
-              ).includes(
-                this.normalize(
-                  alias
-                )
-              )
-          )
-
-
-        if (
-          matchingAlias
-        ) {
-
-          exact =
-            brand
-
-          break
-
-        }
-
-      }
-
-
-      const match =
-        exact ||
-        partial
 
 
       if (
-        match
+        Array.isArray(nhtsaBrands) &&
+        nhtsaBrands.length > 0
       ) {
 
-        console.log(
-          '[VehicleAIEngine] ONLINE MAKE MATCH',
-          {
+        const resolved =
+          this.resolveMakeFromBrandList(
             query,
-            translatedQuery,
-            make:
-              match
-          }
-        )
+            nhtsaBrands
+          )
 
+
+        if (resolved) {
+
+          console.log(
+            '[VehicleAIEngine] NHTSA make resolved:',
+            {
+              query,
+              make:
+                resolved.make,
+              score:
+                resolved.score
+            }
+          )
+
+          return {
+
+            ...resolved,
+
+            source:
+              'nhtsa'
+
+          }
+        }
       }
 
-
-      return match || null
-
     }
-    catch (error) {
+    catch (
+      error
+    ) {
 
       console.warn(
-        '[VehicleAIEngine] Online make lookup failed:',
+        '[VehicleAIEngine] NHTSA make fallback failed:',
         error
       )
-
-      return null
-
     }
 
+
+    // ===================================================
+    // 3. COMMON MAKE FALLBACK
+    // ===================================================
+
+    const commonResolved =
+      this.resolveMakeFromBrandList(
+        query,
+        COMMON_VEHICLE_MAKES.map(
+          name => ({
+
+            name,
+
+            make:
+              name,
+
+            brand:
+              name,
+
+            manufacturer:
+              name,
+
+            source:
+              'common-fallback'
+
+          })
+        )
+      )
+
+
+    if (commonResolved) {
+
+      console.log(
+        '[VehicleAIEngine] Common make fallback resolved:',
+        {
+          query,
+          make:
+            commonResolved.make,
+          score:
+            commonResolved.score
+        }
+      )
+
+      return {
+
+        ...commonResolved,
+
+        source:
+          'common-fallback'
+
+      }
+    }
+
+
+    console.warn(
+      '[VehicleAIEngine] No vehicle make resolved:',
+      query
+    )
+
+
+    return null
   }
 
 
   // =====================================================
-  // FIND MODEL FROM ONLINE CATALOG
+  // GET NHTSA BRANDS
   // =====================================================
 
-  static findBestOnlineModel(
-    models,
-    query,
-    make,
-    requestedYear
+  static async getNHTSABrands(
+    vehicleType = 'car'
   ) {
 
-    if (
-      !Array.isArray(models) ||
-      models.length === 0
+    const normalizedType =
+      this.normalizeType(
+        vehicleType
+      )
+
+
+    const types = [
+
+      normalizedType,
+
+      'car',
+
+      'truck',
+
+      'motorcycle',
+
+      'bus'
+
+    ]
+
+
+    const uniqueTypes = [
+      ...new Set(
+        types
+          .map(
+            type =>
+              this.normalizeType(
+                type
+              )
+          )
+          .filter(Boolean)
+      )
+    ]
+
+
+    const allBrands = []
+
+
+    for (
+      const type
+      of uniqueTypes
     ) {
 
-      return null
+      try {
 
+        const brands =
+          await NHTSAProvider.getBrands(
+            type
+          )
+
+
+        if (
+          Array.isArray(brands) &&
+          brands.length
+        ) {
+
+          allBrands.push(
+            ...brands
+          )
+        }
+
+      }
+      catch (
+        error
+      ) {
+
+        console.warn(
+          '[VehicleAIEngine] NHTSA brand request failed:',
+          {
+            type,
+            error
+          }
+        )
+      }
     }
 
 
-    const translatedQuery =
-      this.translateArabicVehicleQuery(
-        query
-      )
+    const result = []
+
+    const seen =
+      new Set()
 
 
-    const normalizedQuery =
-      this.normalize(
-        translatedQuery
-      )
+    for (
+      const brand
+      of allBrands
+    ) {
+
+      const name =
+        this.getVehicleField(
+          brand,
+          [
+            'make',
+            'brand',
+            'manufacturer',
+            'name',
+            'label',
+            'value',
+            'makeName',
+            'brandName'
+          ]
+        )
 
 
-    const tokens =
-      this.tokenize(
-        normalizedQuery
-      )
+      if (!name) {
+        continue
+      }
 
 
-    const makeToken =
-      this.normalize(
-        make
-      )
+      const key =
+        this.normalize(
+          name
+        )
 
 
-    const modelTokens =
-      tokens.filter(
-        token => {
-
-          if (
-            token ===
-            makeToken
-          ) {
-
-            return false
-
-          }
+      if (
+        !key ||
+        seen.has(key)
+      ) {
+        continue
+      }
 
 
-          if (
-            requestedYear &&
-            token ===
-              String(requestedYear)
-          ) {
-
-            return false
-
-          }
+      seen.add(key)
 
 
-          return token.length >= 2
+      result.push({
 
-        }
-      )
+        ...(
+          typeof brand === 'object'
+            ? brand
+            : {}
+        ),
+
+        name:
+          String(name).trim(),
+
+        make:
+          String(name).trim(),
+
+        brand:
+          String(name).trim(),
+
+        manufacturer:
+          String(name).trim(),
+
+        source:
+          'nhtsa'
+
+      })
+    }
+
+
+    return result
+  }
+
+
+  // =====================================================
+  // RESOLVE MAKE FROM BRAND LIST
+  // =====================================================
+
+  static resolveMakeFromBrandList(
+    query,
+    brands = []
+  ) {
+
+    if (
+      !Array.isArray(brands) ||
+      brands.length === 0
+    ) {
+
+      return null
+    }
 
 
     let best =
       null
-
 
     let bestScore =
       0
 
 
     for (
-      const candidate of models
+      const brand
+      of brands
     ) {
 
-      const candidateModel =
-        this.getVehicleModel(
-          candidate
+      const name =
+        this.getVehicleField(
+          brand,
+          [
+            'make',
+            'brand',
+            'manufacturer',
+            'name',
+            'label',
+            'value',
+            'makeName',
+            'brandName'
+          ]
         )
 
 
-      if (!candidateModel) {
-
+      if (!name) {
         continue
-
       }
 
-
-      const normalizedModel =
-        this.normalize(
-          candidateModel
-        )
-
-
-      let score =
-        0
-
-
-      if (
-        normalizedQuery.includes(
-          normalizedModel
-        )
-      ) {
-
-        score += 100
-
-      }
-
-
-      for (
-        const token of modelTokens
-      ) {
-
-        if (
-          normalizedModel.includes(
-            token
-          ) ||
-          token.includes(
-            normalizedModel
-          )
-        ) {
-
-          score += 20
-
-        }
-
-      }
-
-
-      // ---------------------------------------------------
-      // Compare Arabic aliases against the online model.
-      // ---------------------------------------------------
 
       const aliases =
-        this.getArabicVehicleAliases()
+        this.getAliasValues(
+          brand,
+          'make'
+        )
+
+
+      const candidates = [
+        name,
+        ...aliases
+      ]
 
 
       for (
-        const alias of Object.keys(
-          aliases
-        )
+        const candidate
+        of candidates
       ) {
 
-        const canonical =
-          this.normalize(
-            aliases[alias]
+        const score =
+          this.matchScore(
+            candidate,
+            query
           )
 
 
         if (
-          canonical !==
-          normalizedModel
+          score > bestScore
         ) {
 
-          continue
+          bestScore =
+            score
 
+          best = {
+
+            ...(
+              typeof brand === 'object'
+                ? brand
+                : {}
+            ),
+
+            make:
+              name,
+
+            brand:
+              name,
+
+            manufacturer:
+              name,
+
+            matchedAlias:
+              candidate,
+
+            score
+
+          }
         }
-
-
-        const normalizedAlias =
-          this.normalize(
-            alias
-          )
-
-
-        if (
-          normalizedQuery.includes(
-            normalizedAlias
-          )
-        ) {
-
-          score += 150
-
-        }
-
       }
-
-
-      if (
-        requestedYear &&
-        this.yearMatches(
-          candidate,
-          requestedYear
-        )
-      ) {
-
-        score += 30
-
-      }
-
-
-      if (
-        score >
-        bestScore
-      ) {
-
-        bestScore =
-          score
-
-        best =
-          candidate
-
-      }
-
-    }
-
-
-    return best
-
-  }
-
-
-  // =====================================================
-  // FIND ONLINE VEHICLE
-  // =====================================================
-
-  static async findBestOnline(
-    query
-  ) {
-
-    const translatedQuery =
-      this.translateArabicVehicleQuery(
-        query
-      )
-
-
-    const normalizedQuery =
-      this.normalize(
-        translatedQuery
-      )
-
-
-    if (!normalizedQuery) {
-
-      return null
-
-    }
-
-
-    const requestedYear =
-      this.extractYear(
-        normalizedQuery
-      )
-
-
-    const vehicleType =
-      'car'
-
-
-    console.log(
-      '[VehicleAIEngine] ONLINE RESOLUTION START',
-      {
-        query,
-        translatedQuery,
-        year:
-          requestedYear,
-        vehicleType
-      }
-    )
-
-
-    const brand =
-      await this.findOnlineMake(
-        query,
-        vehicleType
-      )
-
-
-    if (!brand) {
-
-      console.warn(
-        '[VehicleAIEngine] ONLINE MAKE NOT FOUND',
-        {
-          query,
-          translatedQuery
-        }
-      )
-
-      return null
-
-    }
-
-
-    const make =
-      this.getVehicleField(
-        brand,
-        [
-          'name',
-          'Name',
-          'label',
-          'Label',
-          'brand',
-          'Brand',
-          'make',
-          'Make'
-        ]
-      )
-
-
-    if (!make) {
-
-      return null
-
     }
 
 
     const tokens =
       this.tokenize(
-        normalizedQuery
+        query
       )
 
 
-    const makeToken =
+    for (
+      const token
+      of tokens
+    ) {
+
+      if (
+        /^(19|20)\d{2}$/.test(
+          token
+        )
+      ) {
+        continue
+      }
+
+
+      for (
+        const brand
+        of brands
+      ) {
+
+        const name =
+          this.getVehicleField(
+            brand,
+            [
+              'make',
+              'brand',
+              'manufacturer',
+              'name',
+              'label',
+              'value',
+              'makeName',
+              'brandName'
+            ]
+          )
+
+
+        if (!name) {
+          continue
+        }
+
+
+        const aliases =
+          this.getAliasValues(
+            brand,
+            'make'
+          )
+
+
+        const candidates = [
+          name,
+          ...aliases
+        ]
+
+
+        for (
+          const candidate
+          of candidates
+        ) {
+
+          const score =
+            this.matchScore(
+              candidate,
+              token
+            )
+
+
+          if (
+            score > bestScore
+          ) {
+
+            bestScore =
+              score
+
+            best = {
+
+              ...(
+                typeof brand === 'object'
+                  ? brand
+                  : {}
+              ),
+
+              make:
+                name,
+
+              brand:
+                name,
+
+              manufacturer:
+                name,
+
+              matchedAlias:
+                candidate,
+
+              score
+
+            }
+          }
+        }
+      }
+    }
+
+
+    if (
+      best &&
+      bestScore >= 70
+    ) {
+
+      return best
+    }
+
+
+    return null
+  }
+
+
+  // =====================================================
+  // LOCAL VEHICLE DATABASE MODEL RESOLUTION
+  // =====================================================
+  //
+  // Historical method name is preserved.
+  //
+  // The old ../../data/vehicleDatabase structure has
+  // been completely removed from this function.
+  //
+  // VehiclesDBLocalSource is the source of truth for
+  // vehicle make/model catalog identification.
+  //
+  // =====================================================
+
+  static async resolveModelFromLocalDatabase(
+    query,
+    make,
+    year = null,
+    vehicleType = 'car'
+  ) {
+
+    const normalizedMake =
       this.normalize(
         make
       )
 
 
-    const modelTokens =
-      tokens.filter(
-        token => {
-
-          if (
-            token ===
-            makeToken
-          ) {
-
-            return false
-
-          }
+    const normalizedQuery =
+      this.normalize(
+        query
+      )
 
 
-          if (
-            requestedYear &&
-            token ===
-              String(requestedYear)
-          ) {
+    if (
+      !normalizedMake ||
+      !normalizedQuery
+    ) {
 
-            return false
-
-          }
+      return null
+    }
 
 
-          return token.length >= 2
+    try {
 
+      const models =
+        await VehiclesDBLocalSource.getModels({
+
+          brand:
+            make,
+
+          vehicleType:
+            this.normalizeType(
+              vehicleType
+            )
+
+        })
+
+
+      if (
+        !Array.isArray(models) ||
+        models.length === 0
+      ) {
+
+        return null
+      }
+
+
+      const resolved =
+        this.resolveModelFromList(
+          query,
+          make,
+          models
+        )
+
+
+      if (!resolved) {
+
+        return null
+      }
+
+
+      const canonicalModel =
+        this.resolveCanonicalModel(
+          query,
+          make
+        )
+
+
+      const finalModel =
+        canonicalModel?.model ||
+        resolved.model
+
+
+      const result = {
+
+        ...resolved,
+
+        make:
+          make,
+
+        brand:
+          make,
+
+        manufacturer:
+          make,
+
+        model:
+          finalModel,
+
+        modelName:
+          finalModel,
+
+        year:
+          Number.isFinite(
+            Number(year)
+          )
+            ? Number(year)
+            : '',
+
+        vehicleType:
+          this.normalizeType(
+            vehicleType
+          ),
+
+        source:
+          'vehiclesdb'
+
+      }
+
+
+      console.log(
+        '[VehicleAIEngine] VehiclesDB local model resolved:',
+        {
+          make:
+            result.make,
+          model:
+            result.model,
+          year:
+            result.year,
+          matchedAlias:
+            result.matchedAlias,
+          score:
+            result.score
         }
       )
 
 
+      return result
+
+    }
+    catch (
+      error
+    ) {
+
+      console.warn(
+        '[VehicleAIEngine] VehiclesDB local model resolution failed:',
+        {
+          make,
+          error
+        }
+      )
+
+      return null
+    }
+  }
+
+
+  // =====================================================
+  // RESOLVE MODEL FROM VEHDB
+  // =====================================================
+  //
+  // Historical method name is preserved.
+  //
+  // IMPORTANT:
+  //
+  // No VehDB model API call is made here.
+  //
+  // VehiclesDBLocalSource is intentionally checked before
+  // NHTSA so vehicle identification does not consume the
+  // exhausted VehDB quota.
+  //
+  // Technical VehDB fitment remains owned by
+  // VehicleSpecificationProvider.
+  //
+  // =====================================================
+
+  static async resolveModelFromVehDB(
+    text = '',
+    make = '',
+    vehicleType = 'car'
+  ) {
+
+    const query =
+      this.normalize(
+        text
+      )
+
+
+    const normalizedMake =
+      this.normalize(
+        make
+      )
+
+
+    if (
+      !query ||
+      !normalizedMake
+    ) {
+
+      return null
+    }
+
+
+    const year =
+      this.extractYear(
+        query
+      )
+
+
     // ===================================================
-    // MODEL CATALOG
+    // 0. VEHICLESDB LOCAL CATALOG
+    // ===================================================
+
+    const localResolved =
+      await this.resolveModelFromLocalDatabase(
+        query,
+        make,
+        year,
+        vehicleType
+      )
+
+
+    if (localResolved) {
+
+      return localResolved
+    }
+
+
+    // ===================================================
+    // 1. MULTILINGUAL MODEL ALIAS
+    // ===================================================
+
+    const localAliasResolved =
+      this.resolveLocalModelAlias(
+        query,
+        make,
+        year,
+        vehicleType
+      )
+
+
+    if (localAliasResolved) {
+
+      console.log(
+        '[VehicleAIEngine] Multilingual model alias resolved:',
+        {
+          make:
+            localAliasResolved.make,
+          model:
+            localAliasResolved.model,
+          matchedAlias:
+            localAliasResolved.matchedAlias,
+          year:
+            localAliasResolved.year
+        }
+      )
+
+      return localAliasResolved
+    }
+
+
+    // ===================================================
+    // 2. NHTSA FALLBACK
     // ===================================================
 
     try {
 
       const models =
-        await VehicleProvider.getModels({
+        await NHTSAProvider.getModels({
+
+          make:
+            make,
 
           brand:
             make,
 
           year:
-            requestedYear || undefined,
+            year,
 
-          vehicleType
+          vehicleType:
+            vehicleType
 
         })
 
@@ -2884,292 +2541,447 @@ export default class VehicleAIEngine {
         models.length > 0
       ) {
 
-        const best =
-          this.findBestOnlineModel(
-            models,
+        const resolved =
+          this.resolveModelFromList(
             query,
             make,
-            requestedYear
+            models
           )
 
 
-        if (
-          best
-        ) {
-
-          const bestModel =
-            this.getVehicleModel(
-              best
-            )
-
+        if (resolved) {
 
           console.log(
-            '[VehicleAIEngine] ONLINE MODEL MATCH',
+            '[VehicleAIEngine] NHTSA model resolved:',
             {
-              query,
-              translatedQuery,
               make,
               model:
-                bestModel,
-              year:
-                requestedYear
+                resolved.model,
+              score:
+                resolved.score
             }
           )
 
+          return {
 
-          const resolved =
-            await VehicleProvider.findVehicle({
+            ...resolved,
 
-              vehicleType,
-
-              make,
-
-              model:
-                bestModel,
-
-              year:
-                requestedYear || undefined
-
-            })
-
-
-          if (
-            resolved
-          ) {
-
-            return this.normalizeResolvedVehicle(
-              resolved,
-              {
-                vehicleType,
-                make,
-                model:
-                  bestModel,
-                year:
-                  requestedYear,
-                source:
-                  'online'
-              }
-            )
-
-          }
-
-
-          return this.normalizeResolvedVehicle(
-            best,
-            {
-              vehicleType,
-              make,
-              model:
-                bestModel,
-              year:
-                requestedYear,
-              source:
-                'online'
-            }
-          )
-
-        }
-
-      }
-
-    }
-    catch (error) {
-
-      console.warn(
-        '[VehicleAIEngine] Online model catalog lookup failed:',
-        error
-      )
-
-    }
-
-
-    // ===================================================
-    // DIRECT VEHICLE LOOKUP
-    // ===================================================
-
-    const guessedModel =
-      modelTokens.join(' ').trim()
-
-
-    if (
-      guessedModel
-    ) {
-
-      try {
-
-        const resolved =
-          await VehicleProvider.findVehicle({
-
-            vehicleType,
-
-            make,
-
-            model:
-              guessedModel,
+            source:
+              'nhtsa',
 
             year:
-              requestedYear || undefined
+              Number.isFinite(
+                Number(year)
+              )
+                ? Number(year)
+                : (
+                    resolved?.year ??
+                    ''
+                  ),
 
-          })
+            vehicleType:
+              this.normalizeType(
+                vehicleType
+              )
 
-
-        if (
-          resolved
-        ) {
-
-          console.log(
-            '[VehicleAIEngine] ONLINE VEHICLE DIRECT MATCH',
-            resolved
-          )
-
-
-          const normalized =
-            this.normalizeResolvedVehicle(
-              resolved,
-              {
-                vehicleType,
-                make,
-                model:
-                  guessedModel,
-                year:
-                  requestedYear,
-                source:
-                  'online'
-              }
-            )
-
-
-          console.log(
-            '[VehicleAIEngine] ONLINE DIRECT MATCH NORMALIZED',
-            normalized
-          )
-
-
-          return normalized
-
+          }
         }
-
-      }
-      catch (error) {
-
-        console.warn(
-          '[VehicleAIEngine] Online direct vehicle lookup failed:',
-          error
-        )
-
       }
 
     }
+    catch (
+      error
+    ) {
 
-
-    console.warn(
-      '[VehicleAIEngine] ONLINE RESOLUTION FAILED',
-      {
-        query,
-        translatedQuery,
-        make,
-        guessedModel,
-        year:
-          requestedYear
-      }
-    )
+      console.warn(
+        '[VehicleAIEngine] NHTSA model resolution failed:',
+        {
+          make,
+          error
+        }
+      )
+    }
 
 
     return null
-
   }
 
 
   // =====================================================
-  // FIND BEST MATCH
+  // RESOLVE MODEL FROM LIST
   // =====================================================
 
-  static async findBest(
-    query
+  static resolveModelFromList(
+    query,
+    make,
+    models = []
   ) {
 
-    const translatedQuery =
-      this.translateArabicVehicleQuery(
+    if (
+      !Array.isArray(models) ||
+      models.length === 0
+    ) {
+
+      return null
+    }
+
+
+    const queryWithoutYear =
+      query.replace(
+        /(19|20)\d{2}/g,
+        ' '
+      )
+
+
+    const normalizedMake =
+      this.normalize(
+        make
+      )
+
+
+    const tokens =
+      this.tokenize(
+        queryWithoutYear
+      )
+      .filter(
+        token =>
+          token !==
+          normalizedMake
+      )
+
+
+    let best =
+      null
+
+    let bestScore =
+      0
+
+
+    for (
+      const model
+      of models
+    ) {
+
+      const name =
+        this.getVehicleField(
+          model,
+          [
+            'model',
+            'modelName',
+            'name',
+            'label',
+            'value'
+          ]
+        )
+
+
+      if (!name) {
+        continue
+      }
+
+
+      const aliases =
+        this.getAliasValues(
+          model,
+          'model'
+        )
+
+
+      const candidates = [
+        name,
+        ...aliases
+      ]
+
+
+      let score =
+        0
+
+      let matchedAlias =
+        name
+
+
+      for (
+        const candidate
+        of candidates
+      ) {
+
+        let candidateScore =
+          this.matchScore(
+            candidate,
+            queryWithoutYear
+          )
+
+
+        candidateScore =
+          Math.max(
+            candidateScore,
+            this.matchScore(
+              candidate,
+              query
+            )
+          )
+
+
+        for (
+          const token
+          of tokens
+        ) {
+
+          const tokenScore =
+            this.matchScore(
+              candidate,
+              token
+            )
+
+
+          candidateScore =
+            Math.max(
+              candidateScore,
+              tokenScore
+            )
+        }
+
+
+        if (
+          candidateScore > score
+        ) {
+
+          score =
+            candidateScore
+
+          matchedAlias =
+            candidate
+        }
+      }
+
+
+      if (
+        score > bestScore
+      ) {
+
+        bestScore =
+          score
+
+        best = {
+
+          ...(
+            typeof model === 'object'
+              ? model
+              : {}
+          ),
+
+          make,
+
+          brand:
+            make,
+
+          model:
+            name,
+
+          modelName:
+            name,
+
+          matchedAlias,
+
+          score
+
+        }
+      }
+    }
+
+
+    if (
+      best &&
+      bestScore >= 70
+    ) {
+
+      return best
+    }
+
+
+    return null
+  }
+
+
+  // =====================================================
+  // RESOLVE VEHICLE DIRECTLY
+  // =====================================================
+  //
+  // Historical method name is preserved.
+  //
+  // VehicleAIEngine identifies the vehicle only.
+  //
+  // Technical fitment is intentionally NOT fetched here.
+  //
+  // VehicleEngine -> OEMCompatibilityEngine ->
+  // VehicleSpecificationProvider owns that responsibility.
+  //
+  // =====================================================
+
+  static async resolveVehicleFromVehDB(
+    text = ''
+  ) {
+
+    const query =
+      this.normalize(
+        text
+      )
+
+
+    if (!query) {
+      return null
+    }
+
+
+    const year =
+      this.extractYear(
+        query
+      )
+
+
+    const vehicleType =
+      this.getRequestedVehicleType(
         query
       )
 
 
     // ---------------------------------------------------
-    // Online resolution is the primary path for free text.
+    // MAKE
     // ---------------------------------------------------
 
-    const onlineVehicle =
-      await this.findBestOnline(
-        translatedQuery
+    const makeRecord =
+      await this.resolveMakeFromVehDB(
+        query
       )
 
 
-    if (
-      onlineVehicle
-    ) {
+    if (!makeRecord) {
 
-      return onlineVehicle
-
+      return null
     }
 
 
-    // ---------------------------------------------------
-    // Search index fallback.
-    // ---------------------------------------------------
-
-    try {
-
-      const results =
-        await VehicleSearchIndex.search(
-          translatedQuery
-        )
-
-
-      if (
-        Array.isArray(results) &&
-        results.length > 0
-      ) {
-
-        console.log(
-          '[VehicleAIEngine] INDEX MATCH',
-          {
-            query,
-            translatedQuery,
-            result:
-              results[0]
-          }
-        )
-
-
-        return this.normalizeResolvedVehicle(
-          results[0],
-          {
-            source:
-              'index'
-          }
-        )
-
-      }
-
-    }
-    catch (error) {
-
-      console.warn(
-        '[VehicleAIEngine] Vehicle index search failed:',
-        error
+    const make =
+      this.getVehicleField(
+        makeRecord,
+        [
+          'make',
+          'brand',
+          'manufacturer',
+          'name',
+          'label',
+          'value'
+        ]
       )
 
+
+    if (!make) {
+
+      return null
     }
 
 
     // ---------------------------------------------------
-    // Local database fallback.
+    // MODEL
     // ---------------------------------------------------
 
-    return this.findBestFromDatabase(
-      translatedQuery
-    )
+    const modelRecord =
+      await this.resolveModelFromVehDB(
+        query,
+        make,
+        vehicleType
+      )
 
+
+    if (!modelRecord) {
+
+      return null
+    }
+
+
+    const model =
+      this.getVehicleField(
+        modelRecord,
+        [
+          'model',
+          'modelName',
+          'name',
+          'label',
+          'value'
+        ]
+      )
+
+
+    if (!model) {
+
+      return null
+    }
+
+
+    // ---------------------------------------------------
+    // VEHICLE OBJECT
+    // ---------------------------------------------------
+    //
+    // No VehDB fitment request here.
+    //
+    // This prevents duplicate technical provider logic
+    // and prevents consuming VehDB quota from the AI
+    // identification layer.
+    //
+    // ---------------------------------------------------
+
+    const source =
+      modelRecord?.source ||
+      makeRecord?.source ||
+      'vehiclesdb'
+
+
+    return {
+
+      vehicle: {
+
+        ...(
+          typeof modelRecord === 'object'
+            ? modelRecord
+            : {}
+        ),
+
+        make,
+
+        brand:
+          make,
+
+        manufacturer:
+          make,
+
+        model,
+
+        modelName:
+          model,
+
+        year:
+          Number.isFinite(year)
+            ? year
+            : (
+                modelRecord?.year ??
+                modelRecord?.modelYear ??
+                ''
+              ),
+
+        vehicleType:
+          vehicleType,
+
+        type:
+          vehicleType,
+
+        source
+
+      },
+
+      fitment:
+        null
+
+    }
   }
 
 
@@ -3190,151 +3002,161 @@ export default class VehicleAIEngine {
     if (!query) {
 
       return null
-
     }
-
-
-    const translatedQuery =
-      this.translateArabicVehicleQuery(
-        query
-      )
 
 
     const year =
       this.extractYear(
-        translatedQuery
+        query
       )
 
 
-    console.log(
-      '[VehicleAIEngine] PARSE START',
-      {
-        originalText:
-          text,
+    // ===================================================
+    // 1. LOCAL VEHICLE IDENTIFICATION
+    //    + NHTSA FALLBACK
+    // ===================================================
 
-        normalizedQuery:
-          query,
+    const resolved =
+      await this.resolveVehicleFromVehDB(
+        query
+      )
 
-        translatedQuery,
 
-        extractedYear:
-          year
+    if (
+      resolved?.vehicle
+    ) {
+
+      const vehicle =
+        resolved.vehicle
+
+
+      return {
+
+        vehicle,
+
+        vehicleType:
+          this.normalizeType(
+            vehicle?.vehicleType ??
+            vehicle?.type ??
+            'car'
+          ),
+
+        make:
+          vehicle?.make ??
+          vehicle?.brand ??
+          vehicle?.manufacturer ??
+          '',
+
+        model:
+          vehicle?.model ??
+          vehicle?.modelName ??
+          '',
+
+        year:
+          year ??
+          vehicle?.year ??
+          vehicle?.modelYear ??
+          vehicle?.yearFrom ??
+          '',
+
+        fitment:
+          resolved.fitment ??
+          null
+
       }
-    )
+    }
 
+
+    // ===================================================
+    // 2. LOCAL INDEX FALLBACK
+    // ===================================================
 
     const vehicle =
       await this.findBest(
-        translatedQuery
+        query
       )
 
 
     if (!vehicle) {
 
       console.warn(
-        '[VehicleAIEngine] PARSE FAILED - VEHICLE NOT FOUND',
-        {
-          query,
-          translatedQuery
-        }
+        '[VehicleAIEngine] Vehicle not found in local or fallback sources:',
+        query
       )
 
       return null
-
     }
 
 
-    const normalizedVehicle =
-      this.normalizeResolvedVehicle(
-        vehicle,
-        {
-          year,
-          source:
-            vehicle?.source ||
-            'online'
-        }
-      )
-
-
     const vehicleType =
-      this.getVehicleType(
-        normalizedVehicle
+      this.normalizeType(
+        vehicle?.vehicleType ??
+        vehicle?.type ??
+        vehicle?.category ??
+        'car'
       )
 
 
     const make =
-      this.getVehicleMake(
-        normalizedVehicle
-      )
+      vehicle?.make ??
+      vehicle?.brand ??
+      vehicle?.manufacturer ??
+      ''
 
 
     const model =
-      this.getVehicleModel(
-        normalizedVehicle
-      )
-
-
-    const vehicleYear =
-      this.getVehicleYear(
-        normalizedVehicle
-      )
+      vehicle?.model ??
+      vehicle?.modelName ??
+      vehicle?.vehicleModel ??
+      ''
 
 
     const resolvedYear =
       year ??
-      vehicleYear ??
+      vehicle?.year ??
+      vehicle?.modelYear ??
+      vehicle?.yearFrom ??
       ''
 
 
-    const parsed = {
-
-      vehicle:
-        normalizedVehicle,
-
-      vehicleType:
-        vehicleType ||
-        'car',
-
-      make:
-        make ||
-        '',
-
-      model:
-        model ||
-        '',
-
-      year:
-        resolvedYear
-
-    }
-
-
-    console.log(
-      '[VehicleAIEngine] PARSE RESULT',
-      parsed
-    )
-
-
     if (
-      !parsed.make ||
-      !parsed.model
+      !make ||
+      !model
     ) {
 
-      console.error(
-        '[VehicleAIEngine] PARSE RESULT MISSING MAKE OR MODEL',
+      console.warn(
+        '[VehicleAIEngine] Vehicle fallback match is incomplete:',
         {
-          parsed,
-          rawVehicle:
-            vehicle,
-          normalizedVehicle
+          query,
+          make,
+          model,
+          year:
+            resolvedYear,
+          vehicle
         }
       )
 
+      return null
     }
 
 
-    return parsed
+    return {
 
+      vehicle,
+
+      vehicleType,
+
+      make,
+
+      model,
+
+      year:
+        resolvedYear,
+
+      fitment:
+        null
+
+    }
   }
 
 
@@ -3355,21 +3177,14 @@ export default class VehicleAIEngine {
     if (!query) {
 
       return []
-
     }
 
 
     try {
 
-      const translatedQuery =
-        this.translateArabicVehicleQuery(
-          query
-        )
-
-
       const results =
         await VehicleSearchIndex.search(
-          translatedQuery
+          query
         )
 
 
@@ -3380,7 +3195,9 @@ export default class VehicleAIEngine {
         : []
 
     }
-    catch (error) {
+    catch (
+      error
+    ) {
 
       console.warn(
         '[VehicleAIEngine] Suggestions failed:',
@@ -3388,14 +3205,19 @@ export default class VehicleAIEngine {
       )
 
       return []
-
     }
-
   }
 
 
   // =====================================================
   // GET COMPATIBLE VEHICLES
+  // =====================================================
+  //
+  // LEGACY BACKWARD COMPATIBILITY ONLY.
+  //
+  // This is NOT the primary technical compatibility
+  // mechanism for vehicle search.
+  //
   // =====================================================
 
   static getCompatibleVehicles(
@@ -3405,7 +3227,6 @@ export default class VehicleAIEngine {
     if (!product) {
 
       return []
-
     }
 
 
@@ -3429,7 +3250,8 @@ export default class VehicleAIEngine {
 
 
     for (
-      const source of sources
+      const source
+      of sources
     ) {
 
       if (
@@ -3438,14 +3260,124 @@ export default class VehicleAIEngine {
       ) {
 
         return source
-
       }
-
     }
 
 
     return []
+  }
 
+
+  // =====================================================
+  // YEAR MATCH
+  // =====================================================
+
+  static yearMatches(
+    vehicle,
+    requestedYear
+  ) {
+
+    const year =
+      Number(
+        requestedYear
+      )
+
+
+    if (
+      !Number.isFinite(year)
+    ) {
+
+      return true
+    }
+
+
+    const singleYear =
+      Number(
+        this.getVehicleField(
+          vehicle,
+          [
+            'year',
+            'modelYear',
+            'productionYear'
+          ]
+        )
+      )
+
+
+    if (
+      Number.isFinite(
+        singleYear
+      )
+    ) {
+
+      return (
+        year ===
+        singleYear
+      )
+    }
+
+
+    const from =
+      Number(
+        this.getVehicleField(
+          vehicle,
+          [
+            'yearFrom',
+            'from',
+            'startYear',
+            'productionFrom'
+          ]
+        )
+      )
+
+
+    const to =
+      Number(
+        this.getVehicleField(
+          vehicle,
+          [
+            'yearTo',
+            'to',
+            'endYear',
+            'productionTo'
+          ]
+        )
+      )
+
+
+    if (
+      Number.isFinite(from) &&
+      Number.isFinite(to)
+    ) {
+
+      return (
+        year >= from &&
+        year <= to
+      )
+    }
+
+
+    if (
+      Number.isFinite(from)
+    ) {
+
+      return (
+        year >= from
+      )
+    }
+
+
+    if (
+      Number.isFinite(to)
+    ) {
+
+      return (
+        year <= to
+      )
+    }
+
+
+    return true
   }
 
 
@@ -3467,7 +3399,6 @@ export default class VehicleAIEngine {
     if (!wanted) {
 
       return true
-
     }
 
 
@@ -3480,7 +3411,6 @@ export default class VehicleAIEngine {
     if (!value) {
 
       return false
-
     }
 
 
@@ -3489,7 +3419,6 @@ export default class VehicleAIEngine {
       value.includes(wanted) ||
       wanted.includes(value)
     )
-
   }
 
 
@@ -3508,7 +3437,6 @@ export default class VehicleAIEngine {
     ) {
 
       return false
-
     }
 
 
@@ -3516,18 +3444,6 @@ export default class VehicleAIEngine {
       typeof compatibleVehicle === 'string' ||
       typeof compatibleVehicle === 'number'
     ) {
-
-      const translatedMake =
-        this.translateArabicVehicleQuery(
-          search?.make
-        )
-
-
-      const translatedModel =
-        this.translateArabicVehicleQuery(
-          search?.model
-        )
-
 
       const text =
         this.normalize(
@@ -3537,13 +3453,13 @@ export default class VehicleAIEngine {
 
       const make =
         this.normalize(
-          translatedMake
+          search?.make
         )
 
 
       const model =
         this.normalize(
-          translatedModel
+          search?.model
         )
 
 
@@ -3559,7 +3475,6 @@ export default class VehicleAIEngine {
       ) {
 
         return false
-
       }
 
 
@@ -3569,7 +3484,6 @@ export default class VehicleAIEngine {
       ) {
 
         return false
-
       }
 
 
@@ -3579,12 +3493,10 @@ export default class VehicleAIEngine {
       ) {
 
         return false
-
       }
 
 
       return true
-
     }
 
 
@@ -3593,7 +3505,6 @@ export default class VehicleAIEngine {
     ) {
 
       return false
-
     }
 
 
@@ -3602,9 +3513,7 @@ export default class VehicleAIEngine {
         compatibleVehicle,
         [
           'vehicleType',
-          'VehicleType',
           'type',
-          'Type',
           'vehicle_type',
           'category'
         ]
@@ -3616,11 +3525,8 @@ export default class VehicleAIEngine {
         compatibleVehicle,
         [
           'make',
-          'Make',
           'brand',
-          'Brand',
           'manufacturer',
-          'Manufacturer',
           'vehicleBrand'
         ]
       )
@@ -3631,9 +3537,7 @@ export default class VehicleAIEngine {
         compatibleVehicle,
         [
           'model',
-          'Model',
           'modelName',
-          'ModelName',
           'vehicleModel',
           'model_name'
         ]
@@ -3655,9 +3559,7 @@ export default class VehicleAIEngine {
       ) {
 
         return false
-
       }
-
     }
 
 
@@ -3666,19 +3568,32 @@ export default class VehicleAIEngine {
       make
     ) {
 
+      const actualCanonicalMake =
+        this.resolveCanonicalMake(
+          make
+        )?.make
+
+
+      const requestedCanonicalMake =
+        this.resolveCanonicalMake(
+          search.make
+        )?.make
+
+
       if (
         !this.fieldMatches(
           make,
-          this.translateArabicVehicleQuery(
-            search.make
-          )
+          search.make
+        ) &&
+        (
+          !actualCanonicalMake ||
+          !requestedCanonicalMake ||
+          actualCanonicalMake !== requestedCanonicalMake
         )
       ) {
 
         return false
-
       }
-
     }
 
 
@@ -3687,19 +3602,34 @@ export default class VehicleAIEngine {
       model
     ) {
 
+      const canonicalActual =
+        this.resolveCanonicalModel(
+          model,
+          make
+        )?.model
+
+
+      const canonicalRequested =
+        this.resolveCanonicalModel(
+          search.model,
+          search.make
+        )?.model
+
+
       if (
         !this.fieldMatches(
           model,
-          this.translateArabicVehicleQuery(
-            search.model
-          )
+          search.model
+        ) &&
+        (
+          !canonicalActual ||
+          !canonicalRequested ||
+          canonicalActual !== canonicalRequested
         )
       ) {
 
         return false
-
       }
-
     }
 
 
@@ -3712,12 +3642,10 @@ export default class VehicleAIEngine {
     ) {
 
       return false
-
     }
 
 
     return true
-
   }
 
 
@@ -3733,7 +3661,6 @@ export default class VehicleAIEngine {
     if (!product) {
 
       return false
-
     }
 
 
@@ -3748,7 +3675,6 @@ export default class VehicleAIEngine {
     ) {
 
       return false
-
     }
 
 
@@ -3759,7 +3685,6 @@ export default class VehicleAIEngine {
           search
         )
     )
-
   }
 
 
@@ -3795,26 +3720,8 @@ export default class VehicleAIEngine {
 
         products:
           []
-
       }
-
     }
-
-
-    console.log(
-      '[VehicleAIEngine] RESOLVE TEXT QUERY',
-      {
-        query,
-        translatedQuery:
-          this.translateArabicVehicleQuery(
-            query
-          ),
-        productsCount:
-          Array.isArray(products)
-            ? products.length
-            : 0
-      }
-    )
 
 
     const parsed =
@@ -3845,9 +3752,7 @@ export default class VehicleAIEngine {
 
         products:
           []
-
       }
-
     }
 
 
@@ -3860,27 +3765,6 @@ export default class VehicleAIEngine {
 
 
     try {
-
-      console.log(
-        '[VehicleAIEngine] CALLING VehicleEngine',
-        {
-          vehicleType:
-            parsed.vehicleType,
-
-          make:
-            parsed.make,
-
-          model:
-            parsed.model,
-
-          year:
-            parsed.year,
-
-          productsCount:
-            safeProducts.length
-        }
-      )
-
 
       const result =
         await VehicleEngine.search({
@@ -3904,12 +3788,6 @@ export default class VehicleAIEngine {
         })
 
 
-      console.log(
-        '[VehicleAIEngine] VehicleEngine RESULT',
-        result
-      )
-
-
       return {
 
         query,
@@ -3931,7 +3809,9 @@ export default class VehicleAIEngine {
       }
 
     }
-    catch (error) {
+    catch (
+      error
+    ) {
 
       console.error(
         '[VehicleAIEngine] VehicleEngine text search failed:',
@@ -3955,9 +3835,7 @@ export default class VehicleAIEngine {
           []
 
       }
-
     }
-
   }
 
 
@@ -4028,20 +3906,58 @@ export default class VehicleAIEngine {
           parsed.vehicleType ||
           'car'
 
+
         make =
           make ||
           parsed.make
+
 
         model =
           model ||
           parsed.model
 
+
         year =
           year ||
           parsed.year
-
       }
+    }
 
+
+    // ---------------------------------------------------
+    // Multilingual structured input normalization.
+    // ---------------------------------------------------
+
+    if (make) {
+
+      const canonicalMake =
+        this.resolveCanonicalMake(
+          make
+        )
+
+
+      if (canonicalMake) {
+
+        make =
+          canonicalMake.make
+      }
+    }
+
+
+    if (model) {
+
+      const canonicalModel =
+        this.resolveCanonicalModel(
+          model,
+          make
+        )
+
+
+      if (canonicalModel) {
+
+        model =
+          canonicalModel.model
+      }
     }
 
 
@@ -4053,7 +3969,6 @@ export default class VehicleAIEngine {
     ) {
 
       return []
-
     }
 
 
@@ -4084,7 +3999,6 @@ export default class VehicleAIEngine {
       ) {
 
         return result.products
-
       }
 
 
@@ -4093,14 +4007,15 @@ export default class VehicleAIEngine {
       ) {
 
         return result
-
       }
 
 
       return []
 
     }
-    catch (error) {
+    catch (
+      error
+    ) {
 
       console.warn(
         '[VehicleAIEngine] VehicleEngine search failed:',
@@ -4109,9 +4024,7 @@ export default class VehicleAIEngine {
 
 
       return []
-
     }
-
   }
 
 
@@ -4122,10 +4035,6 @@ export default class VehicleAIEngine {
   static async search(
     input = ''
   ) {
-
-    // ===================================================
-    // OBJECT MODE
-    // ===================================================
 
     if (
       input &&
@@ -4140,10 +4049,6 @@ export default class VehicleAIEngine {
           ''
         ).trim()
 
-
-      // -------------------------------------------------
-      // FREE TEXT OBJECT
-      // -------------------------------------------------
 
       if (query) {
 
@@ -4171,13 +4076,8 @@ export default class VehicleAIEngine {
             resolved.products
 
         }
-
       }
 
-
-      // -------------------------------------------------
-      // STRUCTURED OBJECT
-      // -------------------------------------------------
 
       const products =
         await this.searchProductsByVehicle(
@@ -4187,19 +4087,19 @@ export default class VehicleAIEngine {
 
       try {
 
-        const vehicleType =
+        let vehicleType =
           input?.vehicleType ??
           input?.type ??
           ''
 
 
-        const make =
+        let make =
           input?.make ??
           input?.brand ??
           ''
 
 
-        const model =
+        let model =
           input?.model ??
           ''
 
@@ -4209,20 +4109,47 @@ export default class VehicleAIEngine {
           ''
 
 
+        if (make) {
+
+          const canonicalMake =
+            this.resolveCanonicalMake(
+              make
+            )
+
+
+          if (canonicalMake) {
+
+            make =
+              canonicalMake.make
+          }
+        }
+
+
+        if (model) {
+
+          const canonicalModel =
+            this.resolveCanonicalModel(
+              model,
+              make
+            )
+
+
+          if (canonicalModel) {
+
+            model =
+              canonicalModel.model
+          }
+        }
+
+
         const engineResult =
           await VehicleEngine.search({
 
             vehicleType,
 
-            make:
-              this.translateArabicVehicleQuery(
-                make
-              ),
+            make,
 
-            model:
-              this.translateArabicVehicleQuery(
-                model
-              ),
+            model,
 
             year,
 
@@ -4250,7 +4177,9 @@ export default class VehicleAIEngine {
         }
 
       }
-      catch (error) {
+      catch (
+        error
+      ) {
 
         console.warn(
           '[VehicleAIEngine] Structured VehicleEngine result failed:',
@@ -4278,15 +4207,9 @@ export default class VehicleAIEngine {
           products
 
         }
-
       }
-
     }
 
-
-    // ===================================================
-    // TEXT MODE
-    // ===================================================
 
     const text =
       String(
@@ -4314,7 +4237,6 @@ export default class VehicleAIEngine {
           []
 
       }
-
     }
 
 
@@ -4322,7 +4244,5 @@ export default class VehicleAIEngine {
       text,
       []
     )
-
   }
-
 }

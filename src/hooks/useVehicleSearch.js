@@ -1,23 +1,10 @@
 // ======================================================
 // EL OLA ERP
 // useVehicleSearch Hook
-//
-// AI-FIRST VEHICLE SEARCH
-//
-// Supports:
-// 1. Structured vehicle search
-// 2. Free-text AI vehicle search
-// 3. Tire size search
-// 4. Battery search
-// 5. Oil search
-// 6. Async vehicle catalog loading
-// 7. Vehicle brand autocomplete
-// 8. Vehicle model autocomplete
-// 9. Offline vehicle catalog cache
 // ======================================================
 
 import {
-  useEffect,
+  useMemo,
   useRef,
   useState
 } from 'react'
@@ -25,120 +12,455 @@ import {
 import VehicleProvider
   from '../core/vehicles/VehicleProvider'
 
-import VehicleEngine
-  from '../core/engines/VehicleEngine'
-
-import VehicleAIEngine
-  from '../core/engines/VehicleAIEngine'
-
 import VehicleSearchController
   from '../core/controllers/VehicleSearchController'
 
-import {
-  useWarehouseStore
-} from '../store/warehouseStore'
-
-import {
-  useWebsiteStore
-} from '../store/websiteStore'
-
+import VehicleAIEngine
+  from '../core/engines/VehicleAIEngine'
 
 // ======================================================
 // NORMALIZE
 // ======================================================
 
-const norm = value =>
-  String(value ?? '')
+const normalizeText = value => {
+
+  return String(
+    value ?? ''
+  )
     .trim()
     .toLowerCase()
     .replace(/أ|إ|آ/g, 'ا')
     .replace(/ة/g, 'ه')
     .replace(/ى/g, 'ي')
-    .replace(/يَ|يُ|يِ|َ|ُ|ِ|ّ|ْ/g, '')
-    .replace(/\s+/g, '')
-
-
-// ======================================================
-// NORMALIZE TYPE
-// ======================================================
-
-const normalizeType = value => {
-
-  const type =
-    norm(value)
-
-  if (
-    [
-      'tire',
-      'tires',
-      'tyre',
-      'tyres',
-      'اطار',
-      'اطارات'
-    ].includes(type)
-  ) {
-
-    return 'tire'
-  }
-
-  if (
-    [
-      'battery',
-      'batteries',
-      'بطاريه',
-      'بطاريات'
-    ].includes(type)
-  ) {
-
-    return 'battery'
-  }
-
-  if (
-    [
-      'oil',
-      'oils',
-      'زيت',
-      'زيوت'
-    ].includes(type)
-  ) {
-
-    return 'oil'
-  }
-
-  return type
+    .replace(
+      /[\u064B-\u065F\u0670]/g,
+      ''
+    )
+    .replace(/\s+/g, ' ')
 }
 
+// ======================================================
+// MULTILINGUAL VEHICLE ALIASES
+// ======================================================
+
+const VEHICLE_BRAND_ALIASES = {
+
+  toyota: [
+    'toyota',
+    'تويوتا',
+    'تيوتا'
+  ],
+
+  lexus: [
+    'lexus',
+    'لكزس',
+    'لكسس'
+  ],
+
+  honda: [
+    'honda',
+    'هوندا'
+  ],
+
+  nissan: [
+    'nissan',
+    'نيسان'
+  ],
+
+  infiniti: [
+    'infiniti',
+    'انفينيتي',
+    'إنفينيتي'
+  ],
+
+  mazda: [
+    'mazda',
+    'مازدا'
+  ],
+
+  mitsubishi: [
+    'mitsubishi',
+    'ميتسوبيشي',
+    'متسوبيشي'
+  ],
+
+  subaru: [
+    'subaru',
+    'سوبارو'
+  ],
+
+  suzuki: [
+    'suzuki',
+    'سوزوكي'
+  ],
+
+  hyundai: [
+    'hyundai',
+    'هيونداي',
+    'هونداي',
+    'هيوندي'
+  ],
+
+  kia: [
+    'kia',
+    'كيا'
+  ],
+
+  genesis: [
+    'genesis',
+    'جينيسس',
+    'جينيسيز'
+  ],
+
+  ford: [
+    'ford',
+    'فورد'
+  ],
+
+  lincoln: [
+    'lincoln',
+    'لينكولن'
+  ],
+
+  chevrolet: [
+    'chevrolet',
+    'شيفروليه',
+    'شفروليه'
+  ],
+
+  gmc: [
+    'gmc',
+    'جي ام سي',
+    'جي إم سي'
+  ],
+
+  cadillac: [
+    'cadillac',
+    'كاديلاك'
+  ],
+
+  buick: [
+    'buick',
+    'بيوك'
+  ],
+
+  chrysler: [
+    'chrysler',
+    'كرايسلر'
+  ],
+
+  dodge: [
+    'dodge',
+    'دودج'
+  ],
+
+  jeep: [
+    'jeep',
+    'جيب'
+  ],
+
+  ram: [
+    'ram',
+    'رام'
+  ],
+
+  tesla: [
+    'tesla',
+    'تسلا'
+  ],
+
+  volkswagen: [
+    'volkswagen',
+    'vw',
+    'فولكس فاجن',
+    'فولكسفاجن'
+  ],
+
+  audi: [
+    'audi',
+    'اودي',
+    'أودي'
+  ],
+
+  bmw: [
+    'bmw',
+    'بي ام دبليو',
+    'بي إم دبليو'
+  ],
+
+  'mercedes-benz': [
+    'mercedes',
+    'mercedes-benz',
+    'مرسيدس',
+    'مرسيدس بنز'
+  ],
+
+  porsche: [
+    'porsche',
+    'بورشه'
+  ],
+
+  volvo: [
+    'volvo',
+    'فولفو'
+  ],
+
+  'land rover': [
+    'land rover',
+    'landrover',
+    'لاند روفر'
+  ],
+
+  jaguar: [
+    'jaguar',
+    'جاكوار'
+  ],
+
+  peugeot: [
+    'peugeot',
+    'بيجو'
+  ],
+
+  renault: [
+    'renault',
+    'رينو'
+  ],
+
+  citroen: [
+    'citroen',
+    'سيتروين'
+  ],
+
+  fiat: [
+    'fiat',
+    'فيات'
+  ],
+
+  'alfa romeo': [
+    'alfa romeo',
+    'الفا روميو',
+    'ألفا روميو'
+  ],
+
+  skoda: [
+    'skoda',
+    'سكودا'
+  ],
+
+  seat: [
+    'seat',
+    'سيات'
+  ],
+
+  opel: [
+    'opel',
+    'اوبل',
+    'أوبل'
+  ],
+
+  isuzu: [
+    'isuzu',
+    'ايسوزو',
+    'إيسوزو'
+  ],
+
+  hino: [
+    'hino',
+    'هينو'
+  ]
+
+}
 
 // ======================================================
-// VALUE EQUALITY
+// MODEL ALIASES
 // ======================================================
 
-const valuesMatch = (
-  actual,
-  wanted
-) => {
+const VEHICLE_MODEL_ALIASES = {
 
-  const left =
-    norm(actual)
+  corolla: [
+    'corolla',
+    'كورولا'
+  ],
 
-  const right =
-    norm(wanted)
+  camry: [
+    'camry',
+    'كامري',
+    'كامرى'
+  ],
 
-  if (
-    !left ||
-    !right
-  ) {
+  rav4: [
+    'rav4',
+    'rav 4',
+    'rav-4',
+    'راف 4',
+    'راف4',
+    'راف فور'
+  ],
 
-    return false
-  }
+  elantra: [
+    'elantra',
+    'النترا',
+    'إلنترا',
+    'الانترا'
+  ],
+
+  tucson: [
+    'tucson',
+    'توسان'
+  ],
+
+  cerato: [
+    'cerato',
+    'سيراتو'
+  ],
+
+  sportage: [
+    'sportage',
+    'سبورتاج',
+    'سبورتج'
+  ],
+
+  sunny: [
+    'sunny',
+    'صني',
+    'سني',
+    'صونى'
+  ],
+
+  qashqai: [
+    'qashqai',
+    'qash qai',
+    'قشقاي',
+    'قشقائي'
+  ],
+
+  lancer: [
+    'lancer',
+    'لانسر'
+  ],
+
+  pajero: [
+    'pajero',
+    'باجيرو'
+  ]
+
+}
+
+// ======================================================
+// STATIC BRAND → MODEL AUTOCOMPLETE MAP
+// ======================================================
+
+const VEHICLE_AUTOCOMPLETE_MODELS = {
+
+  toyota: [
+    'corolla',
+    'camry',
+    'rav4'
+  ],
+
+  honda: [],
+
+  nissan: [
+    'sunny',
+    'qashqai'
+  ],
+
+  hyundai: [
+    'elantra',
+    'tucson'
+  ],
+
+  kia: [
+    'cerato',
+    'sportage'
+  ],
+
+  mitsubishi: [
+    'lancer',
+    'pajero'
+  ]
+
+}
+
+// ======================================================
+// FORM HELPERS
+// ======================================================
+
+const getVehicleType = form => {
 
   return (
-    left === right ||
-    left.includes(right) ||
-    right.includes(left)
+    form?.vehicleType ??
+    form?.type ??
+    ''
   )
 }
 
+const getBrand = form => {
+
+  return (
+    form?.brand ??
+    form?.make ??
+    form?.manufacturer ??
+    ''
+  )
+}
+
+const getModel = form => {
+
+  return (
+    form?.model ??
+    form?.modelName ??
+    ''
+  )
+}
+
+const getYear = form => {
+
+  return (
+    form?.year ??
+    form?.modelYear ??
+    ''
+  )
+}
+
+// ======================================================
+// FREE TEXT VEHICLE QUERY
+// ======================================================
+
+const getVehicleQuery = form => {
+
+  const candidates = [
+
+    form?.query,
+    form?.searchQuery,
+    form?.searchText,
+    form?.vehicleQuery,
+    form?.vehicleSearch,
+    form?.vehicleText,
+    form?.text,
+    form?.freeText,
+    form?.input,
+    form?.value
+
+  ]
+
+  for (
+    const value of candidates
+  ) {
+
+    const text =
+      String(
+        value ?? ''
+      ).trim()
+
+    if (text) {
+      return text
+    }
+
+  }
+
+  return ''
+}
 
 // ======================================================
 // TIRE SIZE PARSER
@@ -147,30 +469,33 @@ const valuesMatch = (
 const parseTireSize = value => {
 
   const input =
-    String(value ?? '')
+    String(
+      value ?? ''
+    )
       .trim()
       .replace(/\s+/g, '')
       .replace(/×/g, '*')
       .replace(/x/gi, '*')
       .replace(/-/g, '/')
 
-  if (
-    !input
-  ) {
-
+  if (!input) {
     return null
   }
 
+  // ----------------------------------------------------
+  // 205/55/16
+  // 205*55*16
+  // ----------------------------------------------------
+
   const threePart =
     input.match(
-      /^(\d+(?:\.\d+)?)[\/\\*](\d+(?:\.\d+)?)[\/\\*](\d+(?:\.\d+)?)$/
+      /^(\d+(?:\.\d+)?)[/*](\d+(?:\.\d+)?)[/*](\d+(?:\.\d+)?)$/
     )
 
-  if (
-    threePart
-  ) {
+  if (threePart) {
 
     return {
+
       width:
         threePart[1],
 
@@ -182,19 +507,26 @@ const parseTireSize = value => {
 
       format:
         'three-part'
+
     }
+
   }
+
+  // ----------------------------------------------------
+  // 1200/24
+  // 1200*24
+  // 24.9/24
+  // ----------------------------------------------------
 
   const twoPart =
     input.match(
-      /^(\d+(?:\.\d+)?)[\/\\*](\d+(?:\.\d+)?)$/
+      /^(\d+(?:\.\d+)?)[/*](\d+(?:\.\d+)?)$/
     )
 
-  if (
-    twoPart
-  ) {
+  if (twoPart) {
 
     return {
+
       width:
         twoPart[1],
 
@@ -206,12 +538,13 @@ const parseTireSize = value => {
 
       format:
         'two-part'
+
     }
+
   }
 
   return null
 }
-
 
 // ======================================================
 // FLATTEN SEARCH RESULTS
@@ -225,7 +558,6 @@ const flattenSearchResults = (
   if (
     Array.isArray(data)
   ) {
-
     return data
   }
 
@@ -233,7 +565,6 @@ const flattenSearchResults = (
     !data ||
     typeof data !== 'object'
   ) {
-
     return []
   }
 
@@ -242,2395 +573,1053 @@ const flattenSearchResults = (
   ) {
 
     return [
-      ...(Array.isArray(data.tires)
-        ? data.tires
-        : []),
 
-      ...(Array.isArray(data.batteries)
-        ? data.batteries
-        : []),
+      ...(
+        Array.isArray(
+          data.tires
+        )
+          ? data.tires
+          : []
+      ),
 
-      ...(Array.isArray(data.oils)
-        ? data.oils
-        : []),
+      ...(
+        Array.isArray(
+          data.batteries
+        )
+          ? data.batteries
+          : []
+      ),
 
-      ...(Array.isArray(data.parts)
-        ? data.parts
-        : []),
+      ...(
+        Array.isArray(
+          data.oils
+        )
+          ? data.oils
+          : []
+      ),
 
-      ...(Array.isArray(data.products)
-        ? data.products
-        : [])
+      ...(
+        Array.isArray(
+          data.parts
+        )
+          ? data.parts
+          : []
+      ),
+
+      ...(
+        Array.isArray(
+          data.products
+        )
+          ? data.products
+          : []
+      )
+
     ]
+
   }
 
   if (
     tab === 'tire'
   ) {
 
-    return Array.isArray(data.tires)
+    return Array.isArray(
+      data.tires
+    )
       ? data.tires
       : []
+
   }
 
   if (
     tab === 'battery'
   ) {
 
-    return Array.isArray(data.batteries)
+    return Array.isArray(
+      data.batteries
+    )
       ? data.batteries
       : []
+
   }
 
   if (
     tab === 'oil'
   ) {
 
-    return Array.isArray(data.oils)
+    return Array.isArray(
+      data.oils
+    )
       ? data.oils
       : []
+
   }
 
   return []
 }
 
-
 // ======================================================
-// IDS
-// ======================================================
-
-const idsEqual = (
-  a,
-  b
-) => {
-
-  const left = [
-    a?.productId,
-    a?.id,
-    a?.sku,
-    a?.barcode
-  ]
-    .filter(Boolean)
-    .map(norm)
-
-  const right = [
-    b?.productId,
-    b?.id,
-    b?.sku,
-    b?.barcode
-  ]
-    .filter(Boolean)
-    .map(norm)
-
-  return left.some(
-    id =>
-      right.includes(id)
-  )
-}
-
-
-// ======================================================
-// ACTIVE OFFER
+// DISPLAY NAME
 // ======================================================
 
-const activeOfferFor = product => {
-
-  const websiteState =
-    useWebsiteStore.getState()
-
-  const websiteProducts =
-    Array.isArray(
-      websiteState?.products
-    )
-      ? websiteState.products
-      : []
-
-  const websiteProduct =
-    websiteProducts.find(
-      item =>
-        idsEqual(
-          item,
-          product
-        )
-    )
+const getSuggestionName = item => {
 
   if (
-    !websiteProduct
+    typeof item === 'string' ||
+    typeof item === 'number'
   ) {
 
-    return {
-      websiteProduct:
-        null,
+    return String(item)
 
-      offer:
-        null
-    }
-  }
-
-  const offers =
-    Array.isArray(
-      websiteState?.offers
-    )
-      ? websiteState.offers
-      : []
-
-  const now =
-    new Date()
-
-  const offer =
-    offers.find(
-      item => {
-
-        if (
-          !item ||
-          item.active === false ||
-          item.productId == null
-        ) {
-
-          return false
-        }
-
-        if (
-          !idsEqual(
-            websiteProduct,
-            {
-              productId:
-                item.productId
-            }
-          )
-        ) {
-
-          return false
-        }
-
-        if (
-          item.startDate
-        ) {
-
-          const date =
-            new Date(
-              item.startDate
-            )
-
-          if (
-            !Number.isNaN(
-              date.getTime()
-            ) &&
-            now < date
-          ) {
-
-            return false
-          }
-        }
-
-        if (
-          item.endDate
-        ) {
-
-          const date =
-            new Date(
-              item.endDate
-            )
-
-          if (
-            !Number.isNaN(
-              date.getTime()
-            ) &&
-            now > date
-          ) {
-
-            return false
-          }
-        }
-
-        return true
-      }
-    ) || null
-
-  return {
-    websiteProduct,
-    offer
-  }
-}
-
-
-// ======================================================
-// PUBLIC WAREHOUSE PRODUCT
-// ======================================================
-
-const publicWarehouseProduct =
-  product => {
-
-    const {
-      websiteProduct,
-      offer
-    } =
-      activeOfferFor(
-        product
-      )
-
-    const warehousePrice =
-      Number(
-        product?.salePrice ??
-        product?.sellingPrice ??
-        product?.price ??
-        0
-      )
-
-    const catalogPrice =
-      Number(
-        websiteProduct?.salePrice ??
-        websiteProduct?.sellingPrice ??
-        websiteProduct?.price ??
-        0
-      )
-
-    const salePrice =
-      Number.isFinite(
-        warehousePrice
-      ) &&
-      warehousePrice > 0
-        ? warehousePrice
-        : (
-            Number.isFinite(
-              catalogPrice
-            )
-              ? catalogPrice
-              : 0
-          )
-
-    let offerPrice =
-      null
-
-    if (
-      offer
-    ) {
-
-      const explicit =
-        Number(
-          offer.offerPrice ??
-          offer.salePrice ??
-          offer.newPrice ??
-          NaN
-        )
-
-      if (
-        Number.isFinite(
-          explicit
-        ) &&
-        explicit >= 0
-      ) {
-
-        offerPrice =
-          explicit
-      }
-
-      else {
-
-        const discount =
-          Number(
-            offer.discount ??
-            0
-          )
-
-        if (
-          discount > 0 &&
-          discount < 100 &&
-          salePrice > 0
-        ) {
-
-          offerPrice =
-            salePrice -
-            (
-              salePrice *
-              discount /
-              100
-            )
-        }
-      }
-    }
-
-    const quantity =
-      Math.max(
-        0,
-        Number(
-          product?.quantity ??
-          product?.availableQuantity ??
-          product?.stock ??
-          0
-        )
-      )
-
-    return {
-
-      ...(websiteProduct || {}),
-      ...product,
-
-      id:
-        product?.productId ??
-        product?.id ??
-        websiteProduct?.id,
-
-      productId:
-        product?.productId ??
-        product?.id ??
-        websiteProduct?.productId ??
-        websiteProduct?.id,
-
-      name:
-        product?.name ||
-        product?.productName ||
-        websiteProduct?.name ||
-        websiteProduct?.productName ||
-        '',
-
-      productName:
-        product?.productName ||
-        product?.name ||
-        websiteProduct?.productName ||
-        websiteProduct?.name ||
-        '',
-
-      image:
-        product?.image ||
-        websiteProduct?.image ||
-        '',
-
-      description:
-        product?.description ||
-        websiteProduct?.description ||
-        '',
-
-      brand:
-        product?.brand ||
-        websiteProduct?.brand ||
-        '',
-
-      model:
-        product?.model ||
-        websiteProduct?.model ||
-        '',
-
-      type:
-        product?.type ||
-        websiteProduct?.type ||
-        '',
-
-      tire:
-        product?.tire ||
-        websiteProduct?.tire,
-
-      battery:
-        product?.battery ||
-        websiteProduct?.battery,
-
-      oil:
-        product?.oil ||
-        websiteProduct?.oil,
-
-      compatibleVehicles:
-        product?.compatibleVehicles ||
-        websiteProduct?.compatibleVehicles ||
-        [],
-
-      vehicleCompatibility:
-        product?.vehicleCompatibility ||
-        websiteProduct?.vehicleCompatibility ||
-        [],
-
-      vehicleCompatibilities:
-        product?.vehicleCompatibilities ||
-        websiteProduct?.vehicleCompatibilities ||
-        [],
-
-      vehicles:
-        product?.vehicles ||
-        websiteProduct?.vehicles ||
-        [],
-
-      compatibility:
-        product?.compatibility ||
-        websiteProduct?.compatibility ||
-        {},
-
-      specifications:
-        product?.specifications ||
-        websiteProduct?.specifications ||
-        {},
-
-      attributes:
-        product?.attributes ||
-        websiteProduct?.attributes ||
-        {},
-
-      salePrice,
-      offerPrice,
-
-      oldPrice:
-        offerPrice !== null
-          ? salePrice
-          : null,
-
-      hasOffer:
-        offerPrice !== null,
-
-      offerTitle:
-        offer?.title ||
-        '',
-
-      offerDescription:
-        offer?.description ||
-        '',
-
-      offerId:
-        offer?.id ??
-        null,
-
-      quantity,
-
-      availableQuantity:
-        quantity,
-
-      available:
-        quantity > 0,
-
-      availability:
-        quantity > 0
-          ? 'متوفر'
-          : 'غير متوفر',
-
-      active:
-        product?.active !== false &&
-        websiteProduct?.active !== false,
-
-      hidden:
-        Boolean(
-          product?.hidden
-        )
-    }
-  }
-
-
-// ======================================================
-// WAREHOUSE PRODUCTS
-// ======================================================
-
-const warehouseProducts = () => {
-
-  const out = []
-
-  const state =
-    useWarehouseStore.getState()
-
-  const warehouses =
-    Array.isArray(
-      state?.warehouses
-    )
-      ? state.warehouses
-      : []
-
-  warehouses.forEach(
-    warehouse => {
-
-      const products =
-        Array.isArray(
-          warehouse?.products
-        )
-          ? warehouse.products
-          : []
-
-      products.forEach(
-        product => {
-
-          if (
-            !product
-          ) {
-
-            return
-          }
-
-          out.push({
-            ...product,
-
-            warehouseId:
-              product?.warehouseId ??
-              warehouse?.id,
-
-            warehouseName:
-              product?.warehouseName ||
-              warehouse?.name ||
-              ''
-          })
-        }
-      )
-    }
-  )
-
-  return out
-}
-
-
-// ======================================================
-// WEBSITE PRODUCTS
-// ======================================================
-
-const websiteProducts = () => {
-
-  const state =
-    useWebsiteStore.getState()
-
-  return Array.isArray(
-    state?.products
-  )
-    ? state.products
-    : []
-}
-
-
-// ======================================================
-// ALL SEARCHABLE PRODUCTS
-// ======================================================
-
-const allSearchableProducts = () => {
-
-  return [
-    ...warehouseProducts(),
-    ...websiteProducts()
-  ]
-}
-
-
-// ======================================================
-// TIRE MATCH
-// ======================================================
-
-const tireMatches = (
-  product,
-  parsed
-) => {
-
-  if (
-    !parsed
-  ) {
-
-    return false
-  }
-
-  const tire =
-    product?.tire ||
-    product?.tireData ||
-    product?.tireSpecification ||
-    product?.tireSpecifications ||
-    product?.specifications?.tire ||
-    product?.attributes?.tire ||
-    {}
-
-  const width =
-    norm(
-      tire?.width ??
-      tire?.sectionWidth ??
-      tire?.tireWidth ??
-      product?.width
-    )
-
-  const profile =
-    norm(
-      tire?.profile ??
-      tire?.height ??
-      tire?.aspectRatio ??
-      tire?.aspect ??
-      product?.profile
-    )
-
-  const rim =
-    norm(
-      tire?.rim ??
-      tire?.rimSize ??
-      tire?.wheelDiameter ??
-      tire?.diameter ??
-      product?.rim
-    )
-
-  const wantedWidth =
-    norm(parsed.width)
-
-  const wantedProfile =
-    norm(parsed.profile)
-
-  const wantedRim =
-    norm(parsed.rim)
-
-  if (
-    width === wantedWidth &&
-    rim === wantedRim
-  ) {
-
-    if (
-      !wantedProfile
-    ) {
-
-      return true
-    }
-
-    if (
-      profile === wantedProfile
-    ) {
-
-      return true
-    }
-  }
-
-  const sizeValues = [
-    product?.tireSize,
-    product?.size,
-    product?.dimension,
-    product?.dimensions,
-    product?.sizeCode,
-    product?.skuSize,
-    product?.name,
-    product?.productName,
-    tire?.size,
-    tire?.tireSize,
-    tire?.dimension,
-    tire?.dimensions,
-    tire?.sizeCode
-  ]
-
-  const wanted = [
-    wantedWidth,
-    wantedProfile,
-    wantedRim
-  ].join('/')
-
-  return sizeValues.some(
-    value => {
-
-      const size =
-        norm(value)
-          .replace(
-            /[\/\\*×-]/g,
-            '/'
-          )
-          .replace(
-            /\s/g,
-            ''
-          )
-
-      return (
-        size === wanted
-      )
-    }
-  )
-}
-
-
-// ======================================================
-// COLLECT VALUES
-// ======================================================
-
-const collectValues = (
-  product,
-  fields
-) => {
-
-  const values = []
-
-  const add = value => {
-
-    if (
-      value == null
-    ) {
-
-      return
-    }
-
-    if (
-      Array.isArray(value)
-    ) {
-
-      value.forEach(
-        item =>
-          add(item)
-      )
-
-      return
-    }
-
-    if (
-      typeof value === 'object'
-    ) {
-
-      Object.values(
-        value
-      ).forEach(
-        item =>
-          add(item)
-      )
-
-      return
-    }
-
-    values.push(
-      String(value)
-    )
-  }
-
-  const specifications =
-    product?.specifications ||
-    {}
-
-  const attributes =
-    product?.attributes ||
-    {}
-
-  const battery =
-    product?.battery ||
-    {}
-
-  const oil =
-    product?.oil ||
-    {}
-
-  fields.forEach(
-    field => {
-
-      add(
-        product?.[field]
-      )
-
-      add(
-        battery?.[field]
-      )
-
-      add(
-        oil?.[field]
-      )
-
-      add(
-        specifications?.[field]
-      )
-
-      add(
-        attributes?.[field]
-      )
-
-      add(
-        specifications?.battery?.[field]
-      )
-
-      add(
-        specifications?.oil?.[field]
-      )
-
-      add(
-        attributes?.battery?.[field]
-      )
-
-      add(
-        attributes?.oil?.[field]
-      )
-    }
-  )
-
-  return values
-}
-
-
-// ======================================================
-// NORMALIZE OIL INPUT
-// ======================================================
-
-const normalizeOilValue = value => {
-
-  return norm(value)
-    .replace(
-      /–|—/g,
-      '-'
-    )
-    .replace(
-      /[\/\\]/g,
-      '-'
-    )
-    .replace(
-      /_/g,
-      '-'
-    )
-}
-
-
-// ======================================================
-// OIL GRADE EXTRACTION
-// ======================================================
-
-const extractOilGrades = value => {
-
-  const text =
-    normalizeOilValue(
-      value
-    )
-
-  if (
-    !text
-  ) {
-
-    return []
-  }
-
-  const grades = []
-
-  const rangeMatches =
-    text.match(
-      /\b\d{1,3}w-?\d{1,3}\b/gi
-    )
-
-  if (
-    Array.isArray(
-      rangeMatches
-    )
-  ) {
-
-    rangeMatches.forEach(
-      item => {
-
-        grades.push(
-          norm(item)
-        )
-      }
-    )
-  }
-
-  const wMatches =
-    text.match(
-      /\b\d{1,3}w\b/gi
-    )
-
-  if (
-    Array.isArray(
-      wMatches
-    )
-  ) {
-
-    wMatches.forEach(
-      item =>
-        grades.push(
-          norm(item)
-        )
-    )
-  }
-
-  const numberMatches =
-    text.match(
-      /\b\d{1,3}\b/g
-    )
-
-  if (
-    Array.isArray(
-      numberMatches
-    )
-  ) {
-
-    numberMatches.forEach(
-      item =>
-        grades.push(
-          norm(item)
-        )
-    )
-  }
-
-  return [
-    ...new Set(
-      grades.filter(Boolean)
-    )
-  ]
-}
-
-
-// ======================================================
-// OIL MATCH
-// ======================================================
-
-const oilMatches = (
-  product,
-  viscosity
-) => {
-
-  const wanted =
-    normalizeOilValue(
-      viscosity
-    )
-
-  if (
-    !wanted
-  ) {
-
-    return false
-  }
-
-  const values =
-    collectValues(
-      product,
-      [
-        'viscosity',
-        'viscosityGrade',
-        'grade',
-        'oilGrade',
-        'oilViscosity',
-        'sae',
-        'SAE',
-        'weight',
-        'oilWeight',
-        'specification',
-        'description',
-        'name',
-        'productName',
-        'title',
-        'code',
-        'sku'
-      ]
-    )
-
-  const wantedGrades =
-    extractOilGrades(
-      wanted
-    )
-
-  return values.some(
-    value => {
-
-      const actual =
-        normalizeOilValue(
-          value
-        )
-
-      if (
-        !actual
-      ) {
-
-        return false
-      }
-
-      if (
-        actual === wanted
-      ) {
-
-        return true
-      }
-
-      if (
-        actual.includes(
-          wanted
-        )
-      ) {
-
-        return true
-      }
-
-      const actualGrades =
-        extractOilGrades(
-          actual
-        )
-
-      return wantedGrades.some(
-        wantedGrade =>
-          actualGrades.some(
-            actualGrade => {
-
-              if (
-                actualGrade ===
-                wantedGrade
-              ) {
-
-                return true
-              }
-
-              if (
-                /^\d+$/.test(
-                  wantedGrade
-                ) &&
-                /^\d+w$/.test(
-                  actualGrade
-                )
-              ) {
-
-                return (
-                  actualGrade.slice(
-                    0,
-                    -1
-                  ) ===
-                  wantedGrade
-                )
-              }
-
-              if (
-                /^\d+w$/.test(
-                  wantedGrade
-                ) &&
-                actualGrade.startsWith(
-                  wantedGrade
-                )
-              ) {
-
-                return true
-              }
-
-              return false
-            }
-          )
-      )
-    }
-  )
-}
-
-
-// ======================================================
-// NORMALIZE BATTERY VALUE
-// ======================================================
-
-const normalizeBatteryValue = value => {
-
-  return norm(value)
-    .replace(
-      /–|—/g,
-      '-'
-    )
-    .replace(
-      /[\/\\]/g,
-      '-'
-    )
-}
-
-
-// ======================================================
-// BATTERY CODE EXTRACTION
-// ======================================================
-
-const extractBatteryCodes = value => {
-
-  const text =
-    normalizeBatteryValue(
-      value
-    )
-
-  if (
-    !text
-  ) {
-
-    return []
-  }
-
-  const codes = []
-
-  const matches =
-    text.match(
-      /\bn\d{0,3}[a-z]?\b|\b\d{1,3}ah\b|\b\d{1,3}\b/gi
-    )
-
-  if (
-    Array.isArray(
-      matches
-    )
-  ) {
-
-    matches.forEach(
-      item => {
-
-        const normalized =
-          normalizeBatteryValue(
-            item
-          )
-
-        if (
-          normalized
-        ) {
-
-          codes.push(
-            normalized
-          )
-        }
-      }
-    )
-  }
-
-  return [
-    ...new Set(
-      codes
-    )
-  ]
-}
-
-
-// ======================================================
-// BATTERY MATCH
-// ======================================================
-
-const batteryMatches = (
-  product,
-  capacity
-) => {
-
-  const wanted =
-    normalizeBatteryValue(
-      capacity
-    )
-
-  if (
-    !wanted
-  ) {
-
-    return false
-  }
-
-  const values =
-    collectValues(
-      product,
-      [
-        'capacity',
-        'batteryCapacity',
-        'ampereHour',
-        'ah',
-        'amp',
-        'ampHours',
-        'batteryType',
-        'typeCode',
-        'batteryCode',
-        'code',
-        'model',
-        'batteryModel',
-        'group',
-        'groupSize',
-        'size',
-        'sizeCode',
-        'name',
-        'productName',
-        'title',
-        'description',
-        'sku'
-      ]
-    )
-
-  const wantedCodes =
-    extractBatteryCodes(
-      wanted
-    )
-
-  return values.some(
-    value => {
-
-      const actual =
-        normalizeBatteryValue(
-          value
-        )
-
-      if (
-        !actual
-      ) {
-
-        return false
-      }
-
-      if (
-        actual === wanted
-      ) {
-
-        return true
-      }
-
-      if (
-        actual.includes(
-          wanted
-        )
-      ) {
-
-        return true
-      }
-
-      if (
-        wanted.includes(
-          actual
-        )
-      ) {
-
-        return true
-      }
-
-      const actualCodes =
-        extractBatteryCodes(
-          actual
-        )
-
-      return wantedCodes.some(
-        wantedCode =>
-          actualCodes.some(
-            actualCode => {
-
-              if (
-                actualCode ===
-                wantedCode
-              ) {
-
-                return true
-              }
-
-              if (
-                wantedCode.startsWith('n') &&
-                actualCode.startsWith(
-                  wantedCode
-                )
-              ) {
-
-                return true
-              }
-
-              if (
-                /^\d+$/.test(
-                  wantedCode
-                ) &&
-                actualCode ===
-                  `${wantedCode}ah`
-              ) {
-
-                return true
-              }
-
-              return false
-            }
-          )
-      )
-    }
-  )
-}
-
-
-// ======================================================
-// VALUE MATCH
-// ======================================================
-
-const valueMatches = (
-  product,
-  value,
-  fields
-) => {
-
-  const wanted =
-    norm(value)
-
-  if (
-    !wanted
-  ) {
-
-    return false
-  }
-
-  const values =
-    collectValues(
-      product,
-      fields
-    )
-
-  return values.some(
-    candidate => {
-
-      const actual =
-        norm(candidate)
-
-      if (
-        !actual
-      ) {
-
-        return false
-      }
-
-      return (
-        actual === wanted ||
-        actual.includes(wanted) ||
-        wanted.includes(actual)
-      )
-    }
-  )
-}
-
-
-// ======================================================
-// PRODUCT TYPE
-// ======================================================
-
-const productType = product => {
-
-  return normalizeType(
-    product?.type ??
-    product?.productType ??
-    product?.category ??
-    product?.categoryType ??
-    product?.kind ??
-    ''
-  )
-}
-
-
-// ======================================================
-// VEHICLE OBJECT MATCH
-// ======================================================
-
-const vehicleObjectMatches = (
-  vehicle,
-  form
-) => {
-
-  if (
-    !vehicle ||
-    typeof vehicle !== 'object'
-  ) {
-
-    return false
-  }
-
-  const vehicleType =
-    vehicle?.vehicleType ??
-    vehicle?.vehicle_type ??
-    vehicle?.type ??
-    vehicle?.category ??
-    vehicle?.vehicleCategory ??
-    ''
-
-  if (
-    form?.vehicleType &&
-    vehicleType &&
-    !valuesMatch(
-      vehicleType,
-      form.vehicleType
-    )
-  ) {
-
-    return false
-  }
-
-  const brand =
-    vehicle?.brand ??
-    vehicle?.make ??
-    vehicle?.manufacturer ??
-    vehicle?.brandName ??
-    vehicle?.makeName ??
-    ''
-
-  if (
-    form?.brand &&
-    brand &&
-    !valuesMatch(
-      brand,
-      form.brand
-    )
-  ) {
-
-    return false
-  }
-
-  const model =
-    vehicle?.model ??
-    vehicle?.modelName ??
-    vehicle?.vehicleModel ??
-    vehicle?.vehicleModelName ??
-    ''
-
-  if (
-    form?.model &&
-    model &&
-    !valuesMatch(
-      model,
-      form.model
-    )
-  ) {
-
-    return false
   }
 
   if (
-    form?.year !== '' &&
-    form?.year !== null &&
-    form?.year !== undefined
-  ) {
-
-    const requestedYear =
-      Number(
-        form.year
-      )
-
-    if (
-      !Number.isFinite(
-        requestedYear
-      )
-    ) {
-
-      return false
-    }
-
-    const singleYear =
-      Number(
-        vehicle?.year ??
-        vehicle?.modelYear ??
-        vehicle?.productionYear ??
-        vehicle?.yearModel ??
-        NaN
-      )
-
-    if (
-      Number.isFinite(
-        singleYear
-      )
-    ) {
-
-      return (
-        requestedYear ===
-        singleYear
-      )
-    }
-
-    const from =
-      Number(
-        vehicle?.yearFrom ??
-        vehicle?.fromYear ??
-        vehicle?.from ??
-        vehicle?.startYear ??
-        vehicle?.minYear ??
-        NaN
-      )
-
-    const to =
-      Number(
-        vehicle?.yearTo ??
-        vehicle?.toYear ??
-        vehicle?.to ??
-        vehicle?.endYear ??
-        vehicle?.maxYear ??
-        NaN
-      )
-
-    if (
-      Number.isFinite(from) &&
-      Number.isFinite(to)
-    ) {
-
-      return (
-        requestedYear >= from &&
-        requestedYear <= to
-      )
-    }
-
-    if (
-      Number.isFinite(from)
-    ) {
-
-      return (
-        requestedYear >= from
-      )
-    }
-
-    if (
-      Number.isFinite(to)
-    ) {
-
-      return (
-        requestedYear <= to
-      )
-    }
-  }
-
-  return true
-}
-
-
-// ======================================================
-// VEHICLE STRING MATCH
-// ======================================================
-
-const vehicleStringMatches = (
-  value,
-  form
-) => {
-
-  const text =
-    norm(value)
-
-  if (
-    !text
-  ) {
-
-    return false
-  }
-
-  const requested = [
-    form?.vehicleType,
-    form?.brand,
-    form?.model
-  ]
-    .filter(Boolean)
-    .map(norm)
-
-  if (
-    requested.length === 0
-  ) {
-
-    return false
-  }
-
-  const basicMatch =
-    requested.every(
-      item =>
-        text.includes(item)
-    )
-
-  if (
-    !basicMatch
-  ) {
-
-    return false
-  }
-
-  if (
-    form?.year !== '' &&
-    form?.year !== null &&
-    form?.year !== undefined
-  ) {
-
-    const year =
-      norm(
-        form.year
-      )
-
-    if (
-      year &&
-      !text.includes(year)
-    ) {
-
-      return false
-    }
-  }
-
-  return true
-}
-
-
-// ======================================================
-// VEHICLE COMPATIBILITY VALUES
-// ======================================================
-
-const collectVehicleCompatibility =
-  product => {
-
-    const output = []
-
-    const add = value => {
-
-      if (
-        value == null
-      ) {
-
-        return
-      }
-
-      if (
-        Array.isArray(value)
-      ) {
-
-        value.forEach(
-          item =>
-            add(item)
-        )
-
-        return
-      }
-
-      if (
-        typeof value === 'object'
-      ) {
-
-        output.push(
-          value
-        )
-
-        return
-      }
-
-      if (
-        typeof value === 'string'
-      ) {
-
-        if (
-          value.trim()
-        ) {
-
-          output.push(
-            value
-          )
-        }
-      }
-    }
-
-    add(
-      product?.compatibleVehicles
-    )
-
-    add(
-      product?.vehicleCompatibility
-    )
-
-    add(
-      product?.vehicleCompatibilities
-    )
-
-    add(
-      product?.vehicles
-    )
-
-    add(
-      product?.compatibility?.vehicles
-    )
-
-    add(
-      product?.compatibility?.compatibleVehicles
-    )
-
-    add(
-      product?.compatibility?.vehicleCompatibility
-    )
-
-    add(
-      product?.compatibility?.vehicleCompatibilities
-    )
-
-    add(
-      product?.specifications?.compatibleVehicles
-    )
-
-    add(
-      product?.specifications?.vehicleCompatibility
-    )
-
-    add(
-      product?.specifications?.vehicleCompatibilities
-    )
-
-    add(
-      product?.specifications?.vehicles
-    )
-
-    add(
-      product?.attributes?.compatibleVehicles
-    )
-
-    add(
-      product?.attributes?.vehicleCompatibility
-    )
-
-    add(
-      product?.attributes?.vehicleCompatibilities
-    )
-
-    add(
-      product?.attributes?.vehicles
-    )
-
-    return output
-  }
-
-
-// ======================================================
-// VEHICLE MATCH
-// ======================================================
-
-const vehicleMatches = (
-  product,
-  form
-) => {
-
-  if (
-    !product ||
-    !form
-  ) {
-
-    return false
-  }
-
-  const vehicles =
-    collectVehicleCompatibility(
-      product
-    )
-
-  if (
-    vehicles.length === 0
-  ) {
-
-    return false
-  }
-
-  return vehicles.some(
-    vehicle => {
-
-      if (
-        typeof vehicle === 'string'
-      ) {
-
-        return vehicleStringMatches(
-          vehicle,
-          form
-        )
-      }
-
-      if (
-        typeof vehicle !== 'object'
-      ) {
-
-        return false
-      }
-
-      return vehicleObjectMatches(
-        vehicle,
-        form
-      )
-    }
-  )
-}
-
-
-// ======================================================
-// MERGE
-// ======================================================
-
-const mergeProducts = products => {
-
-  const map =
-    new Map()
-
-  products.forEach(
-    product => {
-
-      if (
-        !product
-      ) {
-
-        return
-      }
-
-      const id =
-        String(
-          product?.productId ??
-          product?.id ??
-          product?.sku ??
-          product?.barcode ??
-          ''
-        ).trim()
-
-      if (
-        !id
-      ) {
-
-        return
-      }
-
-      const key =
-        norm(id)
-
-      const existing =
-        map.get(key)
-
-      map.set(
-        key,
-        {
-          ...(existing || {}),
-          ...product,
-
-          id,
-
-          productId:
-            product?.productId ??
-            existing?.productId ??
-            id,
-
-          name:
-            product?.name ||
-            product?.productName ||
-            existing?.name ||
-            existing?.productName ||
-            '',
-
-          productName:
-            product?.productName ||
-            product?.name ||
-            existing?.productName ||
-            existing?.name ||
-            '',
-
-          type:
-            product?.type ||
-            existing?.type ||
-            '',
-
-          brand:
-            product?.brand ||
-            existing?.brand ||
-            '',
-
-          compatibleVehicles:
-            product?.compatibleVehicles?.length
-              ? product.compatibleVehicles
-              : (
-                  existing?.compatibleVehicles ||
-                  []
-                ),
-
-          vehicleCompatibility:
-            product?.vehicleCompatibility?.length
-              ? product.vehicleCompatibility
-              : (
-                  existing?.vehicleCompatibility ||
-                  []
-                ),
-
-          vehicleCompatibilities:
-            product?.vehicleCompatibilities?.length
-              ? product.vehicleCompatibilities
-              : (
-                  existing?.vehicleCompatibilities ||
-                  []
-                ),
-
-          vehicles:
-            product?.vehicles?.length
-              ? product.vehicles
-              : (
-                  existing?.vehicles ||
-                  []
-                ),
-
-          compatibility:
-            product?.compatibility ||
-            existing?.compatibility ||
-            {},
-
-          specifications:
-            product?.specifications ||
-            existing?.specifications ||
-            {},
-
-          attributes:
-            product?.attributes ||
-            existing?.attributes ||
-            {},
-
-          quantity:
-            Math.max(
-              0,
-              Number(
-                product?.quantity ??
-                product?.availableQuantity ??
-                product?.stock ??
-                existing?.quantity ??
-                existing?.availableQuantity ??
-                existing?.stock ??
-                0
-              )
-            ),
-
-          salePrice:
-            Number(
-              product?.salePrice ??
-              product?.sellingPrice ??
-              product?.price ??
-              existing?.salePrice ??
-              existing?.sellingPrice ??
-              existing?.price ??
-              0
-            )
-        }
-      )
-    }
-  )
-
-  return Array.from(
-    map.values()
-  )
-}
-
-
-// ======================================================
-// MERGE WAREHOUSE SEARCH RESULTS
-// ======================================================
-
-const mergeWarehouseSearchResults = (
-  tab,
-  controllerResults,
-  form,
-  parsed
-) => {
-
-  const warehouse =
-    warehouseProducts()
-
-  const catalog =
-    websiteProducts()
-
-  let warehouseMatches =
-    []
-
-  let catalogMatches =
-    []
-
-  if (
-    tab === 'tire'
-  ) {
-
-    warehouseMatches =
-      warehouse.filter(
-        product =>
-          productType(
-            product
-          ) === 'tire' &&
-          tireMatches(
-            product,
-            parsed
-          )
-      )
-
-    catalogMatches =
-      catalog.filter(
-        product =>
-          productType(
-            product
-          ) === 'tire' &&
-          tireMatches(
-            product,
-            parsed
-          )
-      )
-  }
-
-  if (
-    tab === 'battery'
-  ) {
-
-    warehouseMatches =
-      warehouse.filter(
-        product => {
-
-          const type =
-            productType(
-              product
-            )
-
-          return (
-            type === 'battery' &&
-            batteryMatches(
-              product,
-              form.capacity
-            )
-          )
-        }
-      )
-
-    catalogMatches =
-      catalog.filter(
-        product => {
-
-          const type =
-            productType(
-              product
-            )
-
-          return (
-            type === 'battery' &&
-            batteryMatches(
-              product,
-              form.capacity
-            )
-          )
-        }
-      )
-  }
-
-  if (
-    tab === 'oil'
-  ) {
-
-    warehouseMatches =
-      warehouse.filter(
-        product => {
-
-          const type =
-            productType(
-              product
-            )
-
-          return (
-            type === 'oil' &&
-            oilMatches(
-              product,
-              form.viscosity
-            )
-          )
-        }
-      )
-
-    catalogMatches =
-      catalog.filter(
-        product => {
-
-          const type =
-            productType(
-              product
-            )
-
-          return (
-            type === 'oil' &&
-            oilMatches(
-              product,
-              form.viscosity
-            )
-          )
-        }
-      )
-  }
-
-  if (
-    tab === 'vehicle'
-  ) {
-
-    warehouseMatches =
-      warehouse.filter(
-        product =>
-          vehicleMatches(
-            product,
-            form
-          )
-      )
-
-    catalogMatches =
-      catalog.filter(
-        product =>
-          vehicleMatches(
-            product,
-            form
-          )
-      )
-  }
-
-  const normalizedWarehouse =
-    warehouseMatches.map(
-      publicWarehouseProduct
-    )
-
-  const normalizedCatalog =
-    catalogMatches.map(
-      publicWarehouseProduct
-    )
-
-  const normalizedController =
-    Array.isArray(
-      controllerResults
-    )
-      ? controllerResults.map(
-          publicWarehouseProduct
-        )
-      : []
-
-  return mergeProducts(
-    [
-      ...normalizedWarehouse,
-      ...normalizedCatalog,
-      ...normalizedController
-    ]
-  )
-}
-
-
-// ======================================================
-// VEHICLE CATALOG FIELD
-// ======================================================
-
-const getVehicleField = (
-  vehicle,
-  fields = []
-) => {
-
-  if (
-    !vehicle ||
-    typeof vehicle !== 'object'
+    !item ||
+    typeof item !== 'object'
   ) {
 
     return ''
+
   }
 
-  for (
-    const field
-    of fields
-  ) {
+  return String(
 
-    const value =
-      vehicle?.[field]
+    item.name ??
+    item.brandName ??
+    item.brand_name ??
+    item.modelName ??
+    item.model_name ??
+    item.model ??
+    item.brand ??
+    item.make ??
+    item.label ??
+    item.title ??
+    ''
 
-    if (
-      value !== null &&
-      value !== undefined &&
-      String(value).trim() !== ''
-    ) {
-
-      return value
-    }
-  }
-
-  return ''
+  ).trim()
 }
 
-
 // ======================================================
-// VEHICLE DISPLAY NAME
+// CANONICAL BRAND
 // ======================================================
 
-const getVehicleDisplayName =
-  vehicle => {
+const resolveCanonicalBrand = value => {
+
+  const text =
+    String(
+      value ?? ''
+    ).trim()
+
+  if (!text) {
+    return ''
+  }
+
+  try {
+
+    const resolved =
+      VehicleAIEngine
+        .resolveCanonicalMake(
+          text
+        )
 
     if (
-      typeof vehicle === 'string'
+      resolved?.make
     ) {
 
-      return vehicle
+      return resolved.make
+
     }
 
-    const make =
-      getVehicleField(
-        vehicle,
-        [
-          'make',
-          'brand',
-          'manufacturer',
-          'makeName',
-          'brandName',
-          'manufacturerName',
-          'name',
-          'label',
-          'title'
-        ]
-      )
+  }
+  catch (error) {
 
-    const model =
-      getVehicleField(
-        vehicle,
-        [
-          'model',
-          'modelName',
-          'vehicleModel',
-          'vehicleModelName'
-        ]
-      )
+    console.warn(
+      '[useVehicleSearch] Brand canonicalization failed:',
+      error
+    )
 
-    const year =
-      getVehicleField(
-        vehicle,
-        [
-          'year',
-          'modelYear',
-          'productionYear'
-        ]
-      )
-
-    return [
-      make,
-      model,
-      year
-    ]
-      .filter(
-        value =>
-          value !== null &&
-          value !== undefined &&
-          String(value).trim() !== ''
-      )
-      .join(' ')
-      .trim()
   }
 
+  const normalized =
+    normalizeText(
+      text
+    )
 
-// ======================================================
-// VEHICLE SEARCH MATCH
-// ======================================================
-
-const vehicleSuggestionMatches = (
-  vehicle,
-  query
-) => {
-
-  const wanted =
-    norm(query)
-
-  if (
-    !wanted
+  for (
+    const [
+      canonical,
+      aliases
+    ]
+    of Object.entries(
+      VEHICLE_BRAND_ALIASES
+    )
   ) {
 
-    return true
+    if (
+
+      normalizeText(
+        canonical
+      ) === normalized ||
+
+      aliases.some(
+        alias =>
+          normalizeText(
+            alias
+          ) === normalized
+      )
+
+    ) {
+
+      return canonical
+
+    }
+
   }
 
-  const make =
-    norm(
-      getVehicleField(
-        vehicle,
-        [
-          'make',
-          'brand',
-          'manufacturer',
-          'makeName',
-          'brandName',
-          'manufacturerName'
+  return text
+}
+
+// ======================================================
+// CANONICAL MODEL
+// ======================================================
+
+const resolveCanonicalModel = (
+  value,
+  brand = ''
+) => {
+
+  const text =
+    String(
+      value ?? ''
+    ).trim()
+
+  if (!text) {
+    return ''
+  }
+
+  try {
+
+    const resolved =
+      VehicleAIEngine
+        .resolveCanonicalModel(
+          text,
+          brand
+        )
+
+    if (
+      resolved?.model
+    ) {
+
+      return resolved.model
+
+    }
+
+    if (
+      typeof resolved === 'string'
+    ) {
+
+      return resolved
+
+    }
+
+  }
+  catch (error) {
+
+    console.warn(
+      '[useVehicleSearch] Model canonicalization failed:',
+      error
+    )
+
+  }
+
+  const normalized =
+    normalizeText(
+      text
+    )
+
+  for (
+    const [
+      canonical,
+      aliases
+    ]
+    of Object.entries(
+      VEHICLE_MODEL_ALIASES
+    )
+  ) {
+
+    if (
+
+      normalizeText(
+        canonical
+      ) === normalized ||
+
+      aliases.some(
+        alias =>
+          normalizeText(
+            alias
+          ) === normalized
+      )
+
+    ) {
+
+      return canonical
+
+    }
+
+  }
+
+  return text
+}
+
+// ======================================================
+// STATIC BRAND CATALOG
+// ======================================================
+
+const getStaticBrandCatalog = () => {
+
+  return Object.entries(
+    VEHICLE_BRAND_ALIASES
+  ).map(
+    ([
+      canonical,
+      aliases
+    ]) => {
+
+      return {
+
+        name:
+          canonical,
+
+        canonicalName:
+          canonical,
+
+        aliases: [
+          ...aliases
         ]
-      )
-    )
 
-  const model =
-    norm(
-      getVehicleField(
-        vehicle,
-        [
-          'model',
-          'modelName',
-          'vehicleModel',
-          'vehicleModelName'
+      }
+
+    }
+  )
+
+}
+
+// ======================================================
+// STATIC MODEL CATALOG
+// ======================================================
+
+const getStaticModelCatalog = () => {
+
+  return Object.entries(
+    VEHICLE_MODEL_ALIASES
+  ).map(
+    ([
+      canonical,
+      aliases
+    ]) => {
+
+      return {
+
+        name:
+          canonical,
+
+        canonicalName:
+          canonical,
+
+        aliases: [
+          ...aliases
         ]
+
+      }
+
+    }
+  )
+
+}
+
+// ======================================================
+// GET ALL BRANDS SAFELY
+// ======================================================
+
+const getAllBrands = vehicleType => {
+
+  const collected = []
+
+  const addBrands = values => {
+
+    if (
+      !Array.isArray(values)
+    ) {
+      return
+    }
+
+    values.forEach(
+      value => {
+
+        const name =
+          getSuggestionName(
+            value
+          )
+
+        if (!name) {
+          return
+        }
+
+        const canonical =
+          value?.canonicalName ||
+          resolveCanonicalBrand(
+            name
+          )
+
+        const exists =
+          collected.some(
+            item =>
+              normalizeText(
+                item.canonicalName ||
+                item.name
+              ) ===
+              normalizeText(
+                canonical
+              )
+          )
+
+        if (!exists) {
+
+          collected.push({
+
+            ...(
+              typeof value === 'object'
+                ? value
+                : {}
+            ),
+
+            name,
+
+            canonicalName:
+              canonical
+
+          })
+
+        }
+
+      }
+    )
+
+  }
+
+  // ----------------------------------------------------
+  // STATIC FIRST
+  // ----------------------------------------------------
+
+  addBrands(
+    getStaticBrandCatalog()
+  )
+
+  // ----------------------------------------------------
+  // PROVIDER
+  // ----------------------------------------------------
+
+  try {
+
+    addBrands(
+      VehicleProvider.getBrands(
+        vehicleType
       )
     )
 
-  const name =
-    norm(
-      getVehicleDisplayName(
-        vehicle
-      )
+  }
+  catch (error) {
+
+    console.warn(
+      '[useVehicleSearch] VehicleProvider.getBrands(type) failed:',
+      error
     )
 
-  return (
-    make.startsWith(wanted) ||
-    model.startsWith(wanted) ||
-    name.startsWith(wanted) ||
-    make.includes(wanted) ||
-    model.includes(wanted) ||
-    name.includes(wanted)
+  }
+
+  // ----------------------------------------------------
+  // GLOBAL PROVIDER
+  // ----------------------------------------------------
+
+  try {
+
+    addBrands(
+      VehicleProvider.getBrands()
+    )
+
+  }
+  catch (error) {
+
+    console.warn(
+      '[useVehicleSearch] VehicleProvider.getBrands() failed:',
+      error
+    )
+
+  }
+
+  return collected
+}
+
+// ======================================================
+// FILTER BRAND SUGGESTIONS
+// ======================================================
+
+const filterBrandSuggestions = (
+  query,
+  vehicleType
+) => {
+
+  const text =
+    normalizeText(
+      query
+    )
+
+  if (!text) {
+    return []
+  }
+
+  const brands =
+    getAllBrands(
+      vehicleType
+    )
+
+  const results = []
+
+  brands.forEach(
+    brand => {
+
+      const name =
+        getSuggestionName(
+          brand
+        )
+
+      const normalizedName =
+        normalizeText(
+          name
+        )
+
+      const canonical =
+        brand?.canonicalName ||
+        resolveCanonicalBrand(
+          name
+        )
+
+      const canonicalAliases =
+        VEHICLE_BRAND_ALIASES[
+          canonical
+        ] || []
+
+      const aliases = [
+
+        ...canonicalAliases,
+
+        ...(
+          Array.isArray(
+            brand?.aliases
+          )
+            ? brand.aliases
+            : []
+        )
+
+      ]
+
+      const matches =
+
+        normalizedName.startsWith(
+          text
+        ) ||
+
+        normalizedName.includes(
+          text
+        ) ||
+
+        normalizeText(
+          canonical
+        ).startsWith(
+          text
+        ) ||
+
+        aliases.some(
+          alias => {
+
+            const normalizedAlias =
+              normalizeText(
+                alias
+              )
+
+            return (
+
+              normalizedAlias.startsWith(
+                text
+              ) ||
+
+              normalizedAlias.includes(
+                text
+              )
+
+            )
+
+          }
+        )
+
+      if (matches) {
+
+        results.push({
+
+          ...brand,
+
+          name,
+
+          canonicalName:
+            canonical
+
+        })
+
+      }
+
+    }
+  )
+
+  // ----------------------------------------------------
+  // ABSOLUTE STATIC FALLBACK
+  // ----------------------------------------------------
+
+  Object.entries(
+    VEHICLE_BRAND_ALIASES
+  ).forEach(
+    ([
+      canonical,
+      aliases
+    ]) => {
+
+      const matches =
+
+        normalizeText(
+          canonical
+        ).startsWith(
+          text
+        ) ||
+
+        aliases.some(
+          alias =>
+            normalizeText(
+              alias
+            ).startsWith(
+              text
+            )
+        )
+
+      if (!matches) {
+        return
+      }
+
+      const exists =
+        results.some(
+          item =>
+            normalizeText(
+              item.canonicalName ||
+              item.name
+            ) ===
+            normalizeText(
+              canonical
+            )
+        )
+
+      if (!exists) {
+
+        results.push({
+
+          name:
+            canonical,
+
+          canonicalName:
+            canonical,
+
+          aliases: [
+            ...aliases
+          ]
+
+        })
+
+      }
+
+    }
+  )
+
+  return results.slice(
+    0,
+    12
   )
 }
 
+// ======================================================
+// GET AUTOCOMPLETE MODELS FOR BRAND
+// ======================================================
+
+const getAutocompleteModelsForBrand = brand => {
+
+  if (!brand) {
+    return []
+  }
+
+  const canonicalBrand =
+    resolveCanonicalBrand(
+      brand
+    )
+
+  const modelKeys =
+    VEHICLE_AUTOCOMPLETE_MODELS[
+      canonicalBrand
+    ] || []
+
+  if (
+    modelKeys.length === 0
+  ) {
+    return []
+  }
+
+  const catalog = []
+
+  modelKeys.forEach(
+    modelKey => {
+
+      const aliases =
+        VEHICLE_MODEL_ALIASES[
+          modelKey
+        ] || []
+
+      if (
+        aliases.length === 0
+      ) {
+        return
+      }
+
+      catalog.push({
+
+        name:
+          modelKey,
+
+        canonicalName:
+          modelKey,
+
+        aliases: [
+          ...aliases
+        ]
+
+      })
+
+    }
+  )
+
+  return catalog
+}
+
+// ======================================================
+// FILTER MODEL SUGGESTIONS
+// ======================================================
+
+const filterModelSuggestions = (
+  query,
+  vehicleType,
+  brand
+) => {
+
+  const text =
+    normalizeText(
+      query
+    )
+
+  const models =
+    getAutocompleteModelsForBrand(
+      brand
+    )
+
+  if (!text) {
+
+    return models.slice(
+      0,
+      20
+    )
+
+  }
+
+  const results = []
+
+  models.forEach(
+    model => {
+
+      const name =
+        getSuggestionName(
+          model
+        )
+
+      const normalizedName =
+        normalizeText(
+          name
+        )
+
+      const canonical =
+        model?.canonicalName ||
+        resolveCanonicalModel(
+          name,
+          brand
+        )
+
+      const aliases =
+        VEHICLE_MODEL_ALIASES[
+          canonical
+        ] || []
+
+      const matches =
+
+        normalizedName.startsWith(
+          text
+        ) ||
+
+        normalizedName.includes(
+          text
+        ) ||
+
+        normalizeText(
+          canonical
+        ).startsWith(
+          text
+        ) ||
+
+        aliases.some(
+          alias => {
+
+            const normalizedAlias =
+              normalizeText(
+                alias
+              )
+
+            return (
+
+              normalizedAlias.startsWith(
+                text
+              ) ||
+
+              normalizedAlias.includes(
+                text
+              )
+
+            )
+
+          }
+        )
+
+      if (matches) {
+
+        results.push({
+
+          ...model,
+
+          name,
+
+          canonicalName:
+            canonical
+
+        })
+
+      }
+
+    }
+  )
+
+  return results.slice(
+    0,
+    20
+  )
+}
+
+// ======================================================
+// PARSE VEHICLE FROM FREE TEXT
+// ======================================================
+
+const parseVehicleText = async query => {
+
+  const text =
+    String(
+      query ?? ''
+    ).trim()
+
+  if (!text) {
+    return null
+  }
+
+  console.log(
+    '[useVehicleSearch] AI SEARCH:',
+    text
+  )
+
+  let parsed = null
+
+  try {
+
+    parsed =
+      await VehicleAIEngine.parse(
+        text
+      )
+
+  }
+  catch (error) {
+
+    console.warn(
+      '[useVehicleSearch] AI parse failed:',
+      error
+    )
+
+    return null
+  }
+
+  if (!parsed) {
+
+    console.warn(
+      '[useVehicleSearch] AI vehicle not found:',
+      text
+    )
+
+    return null
+  }
+
+  const vehicleType =
+    parsed.vehicleType ||
+    parsed.vehicle?.vehicleType ||
+    parsed.vehicle?.type ||
+    'car'
+
+  const make =
+    parsed.make ||
+    parsed.vehicle?.make ||
+    parsed.vehicle?.brand ||
+    parsed.vehicle?.manufacturer ||
+    ''
+
+  const model =
+    parsed.model ||
+    parsed.vehicle?.model ||
+    parsed.vehicle?.modelName ||
+    ''
+
+  const year =
+    parsed.year ||
+    parsed.vehicle?.year ||
+    parsed.vehicle?.modelYear ||
+    parsed.vehicle?.yearFrom ||
+    ''
+
+  const normalized = {
+
+    vehicleType,
+    make,
+    model,
+    year
+
+  }
+
+  console.log(
+    '[useVehicleSearch] AI PARSED:',
+    normalized
+  )
+
+  if (
+    !make ||
+    !model
+  ) {
+
+    console.warn(
+      '[useVehicleSearch] AI parsed vehicle is incomplete:',
+      normalized
+    )
+
+    return null
+  }
+
+  return normalized
+}
+
+// ======================================================
+// SEARCH VEHICLE PRODUCTS
+// ======================================================
+
+const searchVehicleProducts = async vehicle => {
+
+  if (
+    !vehicle?.make ||
+    !vehicle?.model
+  ) {
+    return []
+  }
+
+  try {
+
+    const response =
+      await VehicleSearchController
+        .searchVehicle({
+
+          vehicleType:
+            vehicle.vehicleType ||
+            'car',
+
+          make:
+            vehicle.make,
+
+          model:
+            vehicle.model,
+
+          year:
+            vehicle.year || ''
+
+        })
+
+    const products =
+      Array.isArray(
+        response?.products
+      )
+        ? response.products
+        : flattenSearchResults(
+            'vehicle',
+            response
+          )
+
+    console.log(
+      '[useVehicleSearch] VEHICLE RESULTS:',
+      products.length
+    )
+
+    return products
+
+  }
+  catch (error) {
+
+    console.error(
+      '[useVehicleSearch] vehicle product search failed:',
+      error
+    )
+
+    return []
+  }
+}
 
 // ======================================================
 // AI VEHICLE SEARCH
 // ======================================================
 
-const searchVehicleWithAI =
-  async query => {
+const searchVehicleAI = async query => {
 
-    const text =
-      String(
-        query ?? ''
-      ).trim()
+  const vehicle =
+    await parseVehicleText(
+      query
+    )
 
-    if (
-      !text
-    ) {
-
-      return {
-        query: '',
-        response: null,
-        results: []
-      }
-    }
-
-    const products =
-      allSearchableProducts()
-
-    try {
-
-      console.log(
-        '[Vehicle AI] Searching:',
-        text
-      )
-
-      console.log(
-        '[Vehicle AI] Products available:',
-        products.length
-      )
-
-      const response =
-        await VehicleAIEngine.search({
-          query:
-            text,
-
-          products
-        })
-
-      console.log(
-        '[Vehicle AI] AI Engine response:',
-        response
-      )
-
-      const engineProducts =
-        flattenSearchResults(
-          'vehicle',
-          response
-        )
-
-      console.log(
-        '[Vehicle AI] Matched products:',
-        engineProducts.length
-      )
-
-      if (
-        engineProducts.length > 0
-      ) {
-
-        return {
-          query:
-            text,
-
-          response,
-
-          results:
-            mergeProducts(
-              engineProducts.map(
-                publicWarehouseProduct
-              )
-            )
-        }
-      }
-
-      console.warn(
-        '[Vehicle AI] Vehicle resolved but no matching products were returned.',
-        response
-      )
-
-      return {
-        query:
-          text,
-
-        response,
-
-        results:
-          []
-      }
-
-    }
-    catch (
-      error
-    ) {
-
-      console.error(
-        '[Vehicle AI] Search failed:',
-        error
-      )
-
-      return {
-        query:
-          text,
-
-        response:
-          null,
-
-        results:
-          []
-      }
-    }
+  if (!vehicle) {
+    return []
   }
 
+  return searchVehicleProducts(
+    vehicle
+  )
+}
 
 // ======================================================
 // HOOK
@@ -2641,769 +1630,286 @@ export default function useVehicleSearch() {
   const [
     loading,
     setLoading
-  ] =
-    useState(false)
+  ] = useState(false)
 
   const [
     results,
     setResults
-  ] =
-    useState([])
+  ] = useState([])
 
   const [
     tireSearchError,
     setTireSearchError
-  ] =
-    useState('')
+  ] = useState('')
 
   const [
     form,
     setForm
-  ] =
-    useState({
-      vehicleType: '',
-      brand: '',
-      model: '',
-      year: '',
-      tireSize: '',
-      capacity: '',
-      viscosity: '',
-      vehicleQuery: ''
-    })
+  ] = useState({
 
+    vehicleType: '',
+    brand: '',
+    make: '',
+    model: '',
+    year: '',
+    tireSize: '',
+    width: '',
+    profile: '',
+    rim: '',
+    capacity: '',
+    viscosity: ''
 
-  // ====================================================
-  // ASYNC VEHICLE CATALOG STATE
-  // ====================================================
-
-  const [
-    vehicleTypes,
-    setVehicleTypes
-  ] =
-    useState([])
-
-  const [
-    brands,
-    setBrands
-  ] =
-    useState([])
-
-  const [
-    models,
-    setModels
-  ] =
-    useState([])
-
-  const [
-    years,
-    setYears
-  ] =
-    useState([])
-
-  const [
-    vehicleCatalogLoading,
-    setVehicleCatalogLoading
-  ] =
-    useState(false)
-
-  const [
-    vehicleSuggestions,
-    setVehicleSuggestions
-  ] =
-    useState([])
-
-  const [
-    vehicleSuggestionsLoading,
-    setVehicleSuggestionsLoading
-  ] =
-    useState(false)
-
+  })
 
   // ====================================================
-  // MODEL SUGGESTIONS STATE
+  // AUTOCOMPLETE STATE
   // ====================================================
 
   const [
-    vehicleModelSuggestions,
-    setVehicleModelSuggestions
-  ] =
-    useState([])
+    brandSuggestions,
+    setBrandSuggestions
+  ] = useState([])
 
   const [
-    vehicleModelSuggestionsLoading,
-    setVehicleModelSuggestionsLoading
-  ] =
-    useState(false)
+    modelSuggestions,
+    setModelSuggestions
+  ] = useState([])
 
+  const [
+    brandsLoading,
+    setBrandsLoading
+  ] = useState(false)
+
+  const [
+    modelsLoading,
+    setModelsLoading
+  ] = useState(false)
 
   // ====================================================
-  // MODEL REQUEST TRACKER
-  // ====================================================
-  //
-  // Prevents an older hover request from overwriting
-  // the result of a newer hover request.
-  //
+  // AUTOCOMPLETE COOLDOWN
   // ====================================================
 
-  const modelSuggestionRequestRef =
+  const modelAutocompleteCooldownRef =
     useRef(0)
 
+  const suppressModelAutocomplete =
+    milliseconds => {
 
-  // ====================================================
-  // LOAD VEHICLE TYPES
-  // ====================================================
+      modelAutocompleteCooldownRef.current =
+        Date.now() + milliseconds
 
-  useEffect(
+    }
+
+  const isModelAutocompleteSuppressed =
     () => {
 
-      let cancelled =
-        false
+      return (
 
-      const load =
-        async () => {
+        Date.now() <
+        modelAutocompleteCooldownRef.current
 
-          try {
+      )
 
-            const response =
-              await VehicleProvider
-                .getVehicleTypes()
-
-            if (
-              cancelled
-            ) {
-
-              return
-            }
-
-            setVehicleTypes(
-              Array.isArray(
-                response
-              )
-                ? response
-                : []
-            )
-          }
-
-          catch (
-            error
-          ) {
-
-            console.warn(
-              '[useVehicleSearch] Failed to load vehicle types:',
-              error
-            )
-
-            if (
-              !cancelled
-            ) {
-
-              setVehicleTypes([])
-            }
-          }
-        }
-
-      load()
-
-      return () => {
-
-        cancelled = true
-      }
-    },
-    []
-  )
-
+    }
 
   // ====================================================
-  // LOAD BRANDS
+  // MODEL AUTOCOMPLETE DEDUPLICATION
   // ====================================================
 
-  useEffect(
+  const modelAutocompleteKeyRef =
+    useRef('')
+
+  // ----------------------------------------------------
+  // Cache the actual computed result.
+  //
+  // This is important because the form can clear the
+  // visible model suggestions while the same autocomplete
+  // request is still logically active.
+  //
+  // The cache lets us restore the exact same result without
+  // recalculating or logging the same request again.
+  // ----------------------------------------------------
+
+  const modelAutocompleteResultsRef =
+    useRef([])
+
+  const resetModelAutocompleteKey =
     () => {
 
-      let cancelled =
-        false
+      modelAutocompleteKeyRef.current =
+        ''
 
-      const load =
-        async () => {
+      modelAutocompleteResultsRef.current =
+        []
 
-          setVehicleCatalogLoading(
-            true
+    }
+
+  // ====================================================
+  // VEHICLE TYPES
+  // ====================================================
+
+  const vehicleTypes =
+    useMemo(
+      () =>
+        VehicleProvider
+          .getVehicleTypes(),
+      []
+    )
+
+  // ====================================================
+  // BRANDS
+  // ====================================================
+
+  const brands =
+    useMemo(
+      () =>
+        VehicleProvider
+          .getBrands(
+            getVehicleType(
+              form
+            )
+          ),
+      [
+        form.vehicleType,
+        form.type
+      ]
+    )
+
+  // ====================================================
+  // MODELS
+  // ====================================================
+
+  const models =
+    useMemo(
+      () =>
+        getAutocompleteModelsForBrand(
+          getBrand(
+            form
           )
+        ),
+      [
+        form.brand,
+        form.make
+      ]
+    )
 
-          try {
+  // ====================================================
+  // YEARS
+  // ====================================================
 
-            const response =
-              await VehicleProvider
-                .getBrands(
-                  form.vehicleType
-                )
+  const years =
+    useMemo(
+      () =>
+        VehicleProvider
+          .getYears({
 
-            if (
-              cancelled
-            ) {
+            brand:
+              getBrand(
+                form
+              ),
 
-              return
-            }
-
-            const list =
-              Array.isArray(
-                response
+            model:
+              getModel(
+                form
               )
-                ? response
-                : []
 
-            setBrands(
-              list
-            )
-
-            console.log(
-              '[Vehicle Autocomplete] Brands available:',
-              list.length
-            )
-          }
-
-          catch (
-            error
-          ) {
-
-            console.warn(
-              '[useVehicleSearch] Failed to load vehicle brands:',
-              error
-            )
-
-            if (
-              !cancelled
-            ) {
-
-              setBrands([])
-            }
-          }
-
-          finally {
-
-            if (
-              !cancelled
-            ) {
-
-              setVehicleCatalogLoading(
-                false
-              )
-            }
-          }
-        }
-
-      load()
-
-      return () => {
-
-        cancelled = true
-      }
-    },
-    [
-      form.vehicleType
-    ]
-  )
-
+          }),
+      [
+        form.brand,
+        form.make,
+        form.model
+      ]
+    )
 
   // ====================================================
-  // LOAD MODELS
+  // SUGGEST VEHICLE BRANDS
   // ====================================================
 
-  useEffect(
-    () => {
-
-      let cancelled =
-        false
-
-      if (
-        !form.brand
-      ) {
-
-        setModels([])
-
-        return () => {
-
-          cancelled = true
-        }
-      }
-
-      const load =
-        async () => {
-
-          try {
-
-            const response =
-              await VehicleProvider
-                .getModels({
-                  vehicleType:
-                    form.vehicleType,
-
-                  brand:
-                    form.brand
-                })
-
-            if (
-              cancelled
-            ) {
-
-              return
-            }
-
-            setModels(
-              Array.isArray(
-                response
-              )
-                ? response
-                : []
-            )
-          }
-
-          catch (
-            error
-          ) {
-
-            console.warn(
-              '[useVehicleSearch] Failed to load vehicle models:',
-              error
-            )
-
-            if (
-              !cancelled
-            ) {
-
-              setModels([])
-            }
-          }
-        }
-
-      load()
-
-      return () => {
-
-        cancelled = true
-      }
-    },
-    [
-      form.vehicleType,
-      form.brand
-    ]
-  )
-
-
-  // ====================================================
-  // LOAD YEARS
-  // ====================================================
-
-  useEffect(
-    () => {
-
-      let cancelled =
-        false
-
-      if (
-        !form.brand ||
-        !form.model
-      ) {
-
-        setYears([])
-
-        return () => {
-
-          cancelled = true
-        }
-      }
-
-      const load =
-        async () => {
-
-          try {
-
-            const response =
-              await VehicleProvider
-                .getYears({
-                  vehicleType:
-                    form.vehicleType,
-
-                  brand:
-                    form.brand,
-
-                  model:
-                    form.model
-                })
-
-            if (
-              cancelled
-            ) {
-
-              return
-            }
-
-            setYears(
-              Array.isArray(
-                response
-              )
-                ? response
-                : []
-            )
-          }
-
-          catch (
-            error
-          ) {
-
-            console.warn(
-              '[useVehicleSearch] Failed to load vehicle years:',
-              error
-            )
-
-            if (
-              !cancelled
-            ) {
-
-              setYears([])
-            }
-          }
-        }
-
-      load()
-
-      return () => {
-
-        cancelled = true
-      }
-    },
-    [
-      form.vehicleType,
-      form.brand,
-      form.model
-    ]
-  )
-
-
-  // ====================================================
-  // VEHICLE AUTOCOMPLETE
-  // ====================================================
-
-  const searchVehicleSuggestions =
-    async query => {
+  const suggestVehicleBrands =
+    query => {
 
       const text =
         String(
           query ?? ''
         ).trim()
 
-      if (
-        !text
-      ) {
+      console.log(
+        '[useVehicleSearch] AUTOCOMPLETE BRAND INPUT:',
+        text
+      )
 
-        setVehicleSuggestions([])
+      if (!text) {
+
+        setBrandSuggestions([])
 
         return []
+
       }
 
-      setVehicleSuggestionsLoading(
-        true
-      )
+      setBrandsLoading(true)
 
       try {
 
-        let source =
-          Array.isArray(
-            brands
-          )
-            ? brands
-            : []
-
-        if (
-          source.length === 0
-        ) {
-
-          const response =
-            await VehicleProvider
-              .getBrands(
-                form.vehicleType
-              )
-
-          source =
-            Array.isArray(
-              response
+        const suggestions =
+          filterBrandSuggestions(
+            text,
+            getVehicleType(
+              form
             )
-              ? response
-              : []
-
-          setBrands(
-            source
-          )
-        }
-
-        const matched =
-          source
-            .filter(
-              vehicle =>
-                vehicleSuggestionMatches(
-                  vehicle,
-                  text
-                )
-            )
-            .slice(
-              0,
-              12
-            )
-
-        console.log(
-          '[Vehicle Autocomplete]',
-          text,
-          '=>',
-          matched.length
-        )
-
-        setVehicleSuggestions(
-          matched
-        )
-
-        return matched
-      }
-
-      catch (
-        error
-      ) {
-
-        console.warn(
-          '[useVehicleSearch] Vehicle autocomplete failed:',
-          error
-        )
-
-        setVehicleSuggestions([])
-
-        return []
-      }
-
-      finally {
-
-        setVehicleSuggestionsLoading(
-          false
-        )
-      }
-    }
-
-
-  // ====================================================
-  // MODEL AUTOCOMPLETE
-  // ====================================================
-  //
-  // Called when the user hovers over a brand.
-  //
-  // Uses:
-  //
-  // VehicleProvider
-  //      ↓
-  // CachedVehicleSource
-  //      ↓
-  // VehicleCache
-  //      ↓
-  // OnlineVehicleSource
-  //
-  // No manually maintained model list.
-  //
-  // ====================================================
-
-  const searchVehicleModelSuggestions =
-    async brand => {
-
-      const brandName =
-        String(
-          getVehicleField(
-            brand,
-            [
-              'make',
-              'brand',
-              'manufacturer',
-              'makeName',
-              'brandName',
-              'manufacturerName',
-              'name',
-              'label',
-              'title'
-            ]
-          ) ||
-          (
-            typeof brand === 'string'
-              ? brand
-              : ''
-          ) ||
-          getVehicleDisplayName(
-            brand
-          ) ||
-          ''
-        ).trim()
-
-      if (
-        !brandName
-      ) {
-
-        modelSuggestionRequestRef.current += 1
-
-        setVehicleModelSuggestions([])
-
-        setVehicleModelSuggestionsLoading(
-          false
-        )
-
-        return []
-      }
-
-      const requestId =
-        ++modelSuggestionRequestRef.current
-
-      setVehicleModelSuggestionsLoading(
-        true
-      )
-
-      try {
-
-        const response =
-          await VehicleProvider
-            .getModels({
-              vehicleType:
-                form.vehicleType,
-
-              brand:
-                brandName
-            })
-
-        if (
-          requestId !==
-          modelSuggestionRequestRef.current
-        ) {
-
-          return []
-        }
-
-        const list =
-          Array.isArray(
-            response
-          )
-            ? response
-            : []
-
-        const limited =
-          list.slice(
-            0,
-            30
           )
 
         console.log(
-          '[Vehicle Model Autocomplete]',
-          brandName,
-          '=>',
-          limited.length
+          '[useVehicleSearch] BRAND SUGGESTIONS:',
+          {
+
+            query:
+              text,
+
+            count:
+              suggestions.length,
+
+            suggestions
+
+          }
         )
 
-        setVehicleModelSuggestions(
-          limited
+        setBrandSuggestions(
+          suggestions
         )
 
-        return limited
+        return suggestions
+
       }
+      catch (error) {
 
-      catch (
-        error
-      ) {
-
-        if (
-          requestId !==
-          modelSuggestionRequestRef.current
-        ) {
-
-          return []
-        }
-
-        console.warn(
-          '[useVehicleSearch] Vehicle model autocomplete failed:',
+        console.error(
+          '[useVehicleSearch] Brand suggestions failed:',
           error
         )
 
-        setVehicleModelSuggestions([])
+        setBrandSuggestions([])
 
         return []
-      }
 
+      }
       finally {
 
-        if (
-          requestId ===
-          modelSuggestionRequestRef.current
-        ) {
+        setBrandsLoading(false)
 
-          setVehicleModelSuggestionsLoading(
-            false
-          )
-        }
       }
+
     }
 
-
   // ====================================================
-  // MODEL AUTOCOMPLETE ALIASES
+  // CLEAR BRAND SUGGESTIONS
   // ====================================================
-
-  const modelSuggestions =
-    vehicleModelSuggestions
-
-  const suggestVehicleModels =
-    searchVehicleModelSuggestions
-
-  const clearVehicleModelSuggestions =
-    () => {
-
-      modelSuggestionRequestRef.current += 1
-
-      setVehicleModelSuggestions([])
-
-      setVehicleModelSuggestionsLoading(
-        false
-      )
-    }
-
-  const modelsLoading =
-    vehicleModelSuggestionsLoading
-
-
-  // ====================================================
-  // COMPATIBILITY ALIASES
-  // ====================================================
-
-  const brandSuggestions =
-    vehicleSuggestions
-
-  const suggestVehicleBrands =
-    searchVehicleSuggestions
 
   const clearBrandSuggestions =
     () => {
 
-      setVehicleSuggestions([])
+      setBrandSuggestions([])
 
-      clearVehicleModelSuggestions()
     }
-
-  const brandsLoading =
-    vehicleCatalogLoading ||
-    vehicleSuggestionsLoading
-
-
-  // ====================================================
-  // CLEAR VEHICLE SUGGESTIONS
-  // ====================================================
-
-  const clearVehicleSuggestions =
-    () => {
-
-      setVehicleSuggestions([])
-
-      clearVehicleModelSuggestions()
-    }
-
 
   // ====================================================
   // SELECT VEHICLE BRAND
@@ -3412,43 +1918,37 @@ export default function useVehicleSearch() {
   const selectVehicleBrand =
     brand => {
 
-      if (
-        brand === null ||
-        brand === undefined
-      ) {
-
-        return
-      }
-
-      const displayName =
-        getVehicleDisplayName(
+      const rawBrand =
+        getSuggestionName(
           brand
         )
 
-      const brandValue =
-        getVehicleField(
-          brand,
-          [
-            'make',
-            'brand',
-            'manufacturer',
-            'makeName',
-            'brandName',
-            'manufacturerName',
-            'name',
-            'label',
-            'title'
-          ]
-        ) ||
-        displayName
+      if (!rawBrand) {
+        return
+      }
 
-      modelSuggestionRequestRef.current += 1
+      const canonicalBrand =
+        brand?.canonicalName ||
+        resolveCanonicalBrand(
+          rawBrand
+        )
 
-      setVehicleModelSuggestions([])
+      console.log(
+        '[useVehicleSearch] BRAND SELECTED:',
+        {
 
-      setVehicleModelSuggestionsLoading(
-        false
+          rawBrand,
+          canonicalBrand
+
+        }
       )
+
+      // A different brand starts a new autocomplete cycle.
+
+      resetModelAutocompleteKey()
+
+      modelAutocompleteCooldownRef.current =
+        0
 
       setForm(
         previous => ({
@@ -3456,9 +1956,10 @@ export default function useVehicleSearch() {
           ...previous,
 
           brand:
-            String(
-              brandValue ?? ''
-            ).trim(),
+            canonicalBrand,
+
+          make:
+            canonicalBrand,
 
           model:
             '',
@@ -3467,18 +1968,575 @@ export default function useVehicleSearch() {
             '',
 
           vehicleQuery:
-            String(
-              brandValue ?? ''
-            ).trim()
+            `${canonicalBrand} `
+
         })
       )
 
-      setVehicleSuggestions([])
+      setBrandSuggestions([])
+      setModelSuggestions([])
+
+      return canonicalBrand
     }
 
+  // ====================================================
+  // SUGGEST VEHICLE MODELS
+  // ====================================================
+
+  const suggestVehicleModels =
+    (
+      brand,
+      query = ''
+    ) => {
+
+      // ------------------------------------------------
+      // POST-SEARCH COOLDOWN
+      // ------------------------------------------------
+
+      if (
+        isModelAutocompleteSuppressed()
+      ) {
+
+        console.log(
+          '[useVehicleSearch] MODEL AUTOCOMPLETE SUPPRESSED AFTER SEARCH'
+        )
+
+        return []
+
+      }
+
+      const rawBrand =
+        getSuggestionName(
+          brand
+        )
+
+      if (!rawBrand) {
+
+        setModelSuggestions([])
+
+        return []
+
+      }
+
+      const canonicalBrand =
+        brand?.canonicalName ||
+        resolveCanonicalBrand(
+          rawBrand
+        )
+
+      const normalizedQuery =
+        normalizeText(
+          query
+        )
+
+      const vehicleType =
+        normalizeText(
+          getVehicleType(
+            form
+          )
+        )
+
+      // ------------------------------------------------
+      // STABLE AUTOCOMPLETE KEY
+      // ------------------------------------------------
+
+      const autocompleteKey =
+        [
+
+          vehicleType,
+
+          normalizeText(
+            canonicalBrand
+          ),
+
+          normalizedQuery
+
+        ].join('|')
+
+      // ------------------------------------------------
+      // DUPLICATE REQUEST GUARD
+      // ------------------------------------------------
+
+      if (
+        modelAutocompleteKeyRef.current ===
+        autocompleteKey
+      ) {
+
+        // The same logical request has already been
+        // calculated. Do not run the filter again and do
+        // not emit another autocomplete log.
+        //
+        // If the UI state was cleared meanwhile, restore
+        // the cached result.
+
+        const cachedResults =
+          modelAutocompleteResultsRef.current
+
+        if (
+          cachedResults.length > 0 &&
+          modelSuggestions.length === 0
+        ) {
+
+          setModelSuggestions(
+            cachedResults
+          )
+
+        }
+
+        return cachedResults
+
+      }
+
+      // ------------------------------------------------
+      // NEW AUTOCOMPLETE REQUEST
+      // ------------------------------------------------
+
+      modelAutocompleteKeyRef.current =
+        autocompleteKey
+
+      console.log(
+        '[useVehicleSearch] AUTOCOMPLETE MODEL QUERY:',
+        {
+
+          brand:
+            rawBrand,
+
+          canonicalBrand,
+
+          query
+
+        }
+      )
+
+      setModelsLoading(true)
+
+      try {
+
+        const suggestions =
+          filterModelSuggestions(
+            query,
+            getVehicleType(
+              form
+            ),
+            canonicalBrand
+          )
+
+        console.log(
+          '[useVehicleSearch] MODEL SUGGESTIONS:',
+          {
+
+            brand:
+              canonicalBrand,
+
+            query,
+
+            count:
+              suggestions.length,
+
+            suggestions
+
+          }
+        )
+
+        // Store the real result before updating React state.
+
+        modelAutocompleteResultsRef.current =
+          suggestions
+
+        setModelSuggestions(
+          suggestions
+        )
+
+        return suggestions
+
+      }
+      catch (error) {
+
+        console.error(
+          '[useVehicleSearch] Model suggestions failed:',
+          error
+        )
+
+        modelAutocompleteResultsRef.current =
+          []
+
+        setModelSuggestions([])
+
+        return []
+
+      }
+      finally {
+
+        setModelsLoading(false)
+
+      }
+
+    }
 
   // ====================================================
-  // SEARCH
+  // CLEAR MODEL SUGGESTIONS
+  // ====================================================
+
+  // IMPORTANT:
+  //
+  // DO NOT reset modelAutocompleteKeyRef here.
+  //
+  // VehicleSearchForm calls this while updating the model
+  // input. Resetting the key here was the direct cause of
+  // repeated autocomplete calls.
+  //
+  // The cached result and key remain valid until a genuinely
+  // new autocomplete cycle begins.
+
+  const clearVehicleModelSuggestions =
+    () => {
+
+      setModelSuggestions([])
+
+    }
+
+  // ====================================================
+  // SELECT VEHICLE MODEL
+  // ====================================================
+
+  const selectVehicleModel =
+    model => {
+
+      const rawModel =
+        getSuggestionName(
+          model
+        )
+
+      if (!rawModel) {
+        return
+      }
+
+      const canonicalModel =
+        model?.canonicalName ||
+        resolveCanonicalModel(
+          rawModel,
+          getBrand(
+            form
+          )
+        )
+
+      console.log(
+        '[useVehicleSearch] MODEL SELECTED:',
+        {
+
+          rawModel,
+          canonicalModel
+
+        }
+      )
+
+      // New model selection starts a new cycle.
+
+      resetModelAutocompleteKey()
+
+      modelAutocompleteCooldownRef.current =
+        0
+
+      setForm(
+        previous => ({
+
+          ...previous,
+
+          model:
+            canonicalModel,
+
+          vehicleQuery:
+            `${getBrand(previous)} ${canonicalModel}`.trim()
+
+        })
+      )
+
+      setModelSuggestions([])
+
+      return canonicalModel
+    }
+
+  // ====================================================
+  // STRUCTURED VEHICLE SEARCH
+  // ====================================================
+
+  const searchVehicle =
+    async () => {
+
+      const vehicleType =
+        getVehicleType(
+          form
+        )
+
+      const make =
+        getBrand(
+          form
+        )
+
+      const model =
+        getModel(
+          form
+        )
+
+      const year =
+        getYear(
+          form
+        )
+
+      console.log(
+        '[useVehicleSearch] VEHICLE SEARCH INPUT:',
+        {
+
+          vehicleType,
+          make,
+          model,
+          year
+
+        }
+      )
+
+      // --------------------------------------------------
+      // NORMAL STRUCTURED SEARCH
+      // --------------------------------------------------
+
+      if (
+        make &&
+        model
+      ) {
+
+        const products =
+          await searchVehicleProducts({
+
+            vehicleType,
+            make,
+            model,
+            year
+
+          })
+
+        setResults(
+          products
+        )
+
+        resetModelAutocompleteKey()
+
+        suppressModelAutocomplete(
+          1200
+        )
+
+        return products
+
+      }
+
+      // --------------------------------------------------
+      // FREE TEXT FALLBACK
+      // --------------------------------------------------
+
+      const freeText =
+        getVehicleQuery(
+          form
+        )
+
+      if (freeText) {
+
+        console.log(
+          '[useVehicleSearch] Structured fields empty; using free-text vehicle search:',
+          freeText
+        )
+
+        const products =
+          await searchVehicleAI(
+            freeText
+          )
+
+        setResults(
+          products
+        )
+
+        resetModelAutocompleteKey()
+
+        suppressModelAutocomplete(
+          1200
+        )
+
+        return products
+
+      }
+
+      // --------------------------------------------------
+      // NOTHING TO SEARCH
+      // --------------------------------------------------
+
+      console.warn(
+        '[useVehicleSearch] Missing make/model and no vehicle text query:',
+        {
+
+          vehicleType,
+          make,
+          model,
+          year,
+          form
+
+        }
+      )
+
+      setResults([])
+
+      resetModelAutocompleteKey()
+
+      suppressModelAutocomplete(
+        500
+      )
+
+      return []
+
+    }
+
+  // ====================================================
+  // TIRE SEARCH
+  // ====================================================
+
+  const searchTire =
+    async () => {
+
+      let parsed =
+        parseTireSize(
+          form.tireSize
+        )
+
+      if (
+        !parsed &&
+        form.width &&
+        form.rim
+      ) {
+
+        parsed = {
+
+          width:
+            form.width,
+
+          profile:
+            form.profile ||
+            '',
+
+          rim:
+            form.rim,
+
+          format:
+            form.profile
+              ? 'three-part'
+              : 'two-part'
+
+        }
+
+      }
+
+      if (!parsed) {
+
+        setResults([])
+
+        setTireSearchError(
+          'اكتب مقاس الإطار بهذا الشكل: 205/55/16 أو 205*55*16 أو 1200/24'
+        )
+
+        return []
+
+      }
+
+      const tireResults =
+        await VehicleSearchController
+          .searchTire({
+
+            width:
+              parsed.width,
+
+            profile:
+              parsed.profile,
+
+            rim:
+              parsed.rim,
+
+            format:
+              parsed.format
+
+          })
+
+      const flattened =
+        flattenSearchResults(
+          'tire',
+          tireResults
+        )
+
+      setResults(
+        flattened
+      )
+
+      return flattened
+
+    }
+
+  // ====================================================
+  // BATTERY SEARCH
+  // ====================================================
+
+  const searchBattery =
+    async () => {
+
+      const batteryResults =
+        await VehicleSearchController
+          .searchBattery({
+
+            capacity:
+              form.capacity
+
+          })
+
+      const flattened =
+        flattenSearchResults(
+          'battery',
+          batteryResults
+        )
+
+      setResults(
+        flattened
+      )
+
+      return flattened
+
+    }
+
+  // ====================================================
+  // OIL SEARCH
+  // ====================================================
+
+  const searchOil =
+    async () => {
+
+      const oilResults =
+        await VehicleSearchController
+          .searchOil({
+
+            viscosity:
+              form.viscosity
+
+          })
+
+      const flattened =
+        flattenSearchResults(
+          'oil',
+          oilResults
+        )
+
+      setResults(
+        flattened
+      )
+
+      return flattened
+
+    }
+
+  // ====================================================
+  // MAIN SEARCH
   // ====================================================
 
   const search =
@@ -3491,380 +2549,166 @@ export default function useVehicleSearch() {
       ) {
 
         setTireSearchError('')
+
       }
+
+      // ------------------------------------------------
+      // Close autocomplete immediately when the user
+      // explicitly starts a search.
+      // ------------------------------------------------
+
+      setBrandSuggestions([])
+
+      resetModelAutocompleteKey()
+
+      setModelSuggestions([])
 
       try {
 
-        // ==============================================
-        // VEHICLE
-        // ==============================================
+        switch (tab) {
 
-        if (
-          tab === 'vehicle'
-        ) {
+          case 'vehicle':
 
-          // --------------------------------------------
-          // AI FREE TEXT SEARCH
-          // --------------------------------------------
+            return await searchVehicle()
 
-          const aiQuery =
-            String(
-              form.vehicleQuery ??
-              form.query ??
-              ''
-            ).trim()
+          case 'tire':
 
-          if (
-            aiQuery
-          ) {
+            return await searchTire()
 
-            console.log(
-              '[Vehicle Search] AI query:',
-              aiQuery
-            )
+          case 'battery':
 
-            const aiResult =
-              await searchVehicleWithAI(
-                aiQuery
-              )
+            return await searchBattery()
 
-            const finalResults =
-              Array.isArray(
-                aiResult?.results
-              )
-                ? aiResult.results
-                : []
+          case 'oil':
 
-            finalResults.query =
-              String(
-                aiResult?.query ??
-                aiQuery
-              ).trim()
+            return await searchOil()
 
-            finalResults.searchQuery =
-              finalResults.query
-
-            finalResults.searchType =
-              'vehicle'
-
-            finalResults.aiResponse =
-              aiResult?.response ??
-              null
-
-            setResults(
-              finalResults
-            )
-
-            console.log(
-              '[Vehicle Search] Returning AI results with query:',
-              finalResults.query
-            )
-
-            return finalResults
-          }
-
-
-          // --------------------------------------------
-          // STRUCTURED SEARCH
-          // --------------------------------------------
-
-          if (
-            !form.brand ||
-            !form.model
-          ) {
+          default:
 
             setResults([])
 
             return []
-          }
 
-          let controllerResults =
-            []
-
-          try {
-
-            const response =
-              await VehicleSearchController
-                .searchVehicle({
-                  vehicleType:
-                    form.vehicleType,
-
-                  make:
-                    form.brand,
-
-                  model:
-                    form.model,
-
-                  year:
-                    form.year
-                })
-
-            controllerResults =
-              flattenSearchResults(
-                'vehicle',
-                response
-              )
-          }
-
-          catch (
-            controllerError
-          ) {
-
-            console.warn(
-              'Vehicle controller search failed. Using local product compatibility search.',
-              controllerError
-            )
-
-            controllerResults =
-              []
-          }
-
-          const merged =
-            mergeWarehouseSearchResults(
-              'vehicle',
-              controllerResults,
-              form,
-              null
-            )
-
-          setResults(
-            merged
-          )
-
-          return merged
         }
 
-
-        // ==============================================
-        // TIRE
-        // ==============================================
-
-        if (
-          tab === 'tire'
-        ) {
-
-          const parsed =
-            parseTireSize(
-              form.tireSize
-            )
-
-          if (
-            !parsed
-          ) {
-
-            setResults([])
-
-            setTireSearchError(
-              'اكتب مقاس الإطار بهذا الشكل: 205/55/16 أو 205*55*16 أو 24.9/24'
-            )
-
-            return []
-          }
-
-          let controllerResults =
-            []
-
-          try {
-
-            const response =
-              await VehicleSearchController
-                .searchTire({
-                  width:
-                    parsed.width,
-
-                  profile:
-                    parsed.profile,
-
-                  rim:
-                    parsed.rim,
-
-                  format:
-                    parsed.format
-                })
-
-            controllerResults =
-              flattenSearchResults(
-                'tire',
-                response
-              )
-          }
-
-          catch (
-            error
-          ) {
-
-            console.warn(
-              'Tire controller search failed. Using local product search.',
-              error
-            )
-
-            controllerResults =
-              []
-          }
-
-          const merged =
-            mergeWarehouseSearchResults(
-              'tire',
-              controllerResults,
-              form,
-              parsed
-            )
-
-          setResults(
-            merged
-          )
-
-          return merged
-        }
-
-
-        // ==============================================
-        // BATTERY
-        // ==============================================
-
-        if (
-          tab === 'battery'
-        ) {
-
-          let controllerResults =
-            []
-
-          try {
-
-            const response =
-              await VehicleSearchController
-                .searchBattery({
-                  capacity:
-                    form.capacity
-                })
-
-            controllerResults =
-              flattenSearchResults(
-                'battery',
-                response
-              )
-          }
-
-          catch (
-            error
-          ) {
-
-            console.warn(
-              'Battery controller search failed. Using local product search.',
-              error
-            )
-
-            controllerResults =
-              []
-          }
-
-          const merged =
-            mergeWarehouseSearchResults(
-              'battery',
-              controllerResults,
-              form,
-              null
-            )
-
-          setResults(
-            merged
-          )
-
-          return merged
-        }
-
-
-        // ==============================================
-        // OIL
-        // ==============================================
-
-        if (
-          tab === 'oil'
-        ) {
-
-          let controllerResults =
-            []
-
-          try {
-
-            const response =
-              await VehicleSearchController
-                .searchOil({
-                  viscosity:
-                    form.viscosity
-                })
-
-            controllerResults =
-              flattenSearchResults(
-                'oil',
-                response
-              )
-          }
-
-          catch (
-            error
-          ) {
-
-            console.warn(
-              'Oil controller search failed. Using local product search.',
-              error
-            )
-
-            controllerResults =
-              []
-          }
-
-          const merged =
-            mergeWarehouseSearchResults(
-              'oil',
-              controllerResults,
-              form,
-              null
-            )
-
-          setResults(
-            merged
-          )
-
-          return merged
-        }
-
-
-        // ==============================================
-        // UNKNOWN
-        // ==============================================
-
-        setResults([])
-
-        return []
       }
-
-      catch (
-        error
-      ) {
+      catch (error) {
 
         console.error(
-          'Vehicle search failed:',
+          '[useVehicleSearch] Search failed:',
           error
         )
 
         setResults([])
 
         return []
-      }
 
+      }
       finally {
 
+        // ------------------------------------------------
+        // Keep model autocomplete closed briefly after
+        // vehicle search.
+        // ------------------------------------------------
+
+        if (
+          tab === 'vehicle'
+        ) {
+
+          resetModelAutocompleteKey()
+
+          suppressModelAutocomplete(
+            1200
+          )
+
+        }
+
         setLoading(false)
+
       }
+
     }
 
+  // ====================================================
+  // AI SEARCH
+  // ====================================================
+
+  const searchAI =
+    async query => {
+
+      setLoading(true)
+
+      setBrandSuggestions([])
+
+      resetModelAutocompleteKey()
+
+      setModelSuggestions([])
+
+      try {
+
+        const products =
+          await searchVehicleAI(
+            query
+          )
+
+        setResults(
+
+          Array.isArray(
+            products
+          )
+            ? products
+            : []
+
+        )
+
+        resetModelAutocompleteKey()
+
+        suppressModelAutocomplete(
+          1200
+        )
+
+        return Array.isArray(
+          products
+        )
+          ? products
+          : []
+
+      }
+      catch (error) {
+
+        console.error(
+          '[useVehicleSearch] searchAI failed:',
+          error
+        )
+
+        setResults([])
+
+        return []
+
+      }
+      finally {
+
+        resetModelAutocompleteKey()
+
+        suppressModelAutocomplete(
+          1200
+        )
+
+        setLoading(false)
+
+      }
+
+    }
 
   // ====================================================
   // RETURN
   // ====================================================
 
   return {
+
+    // --------------------------------------------------
+    // Search state
+    // --------------------------------------------------
 
     loading,
 
@@ -3874,6 +2718,10 @@ export default function useVehicleSearch() {
 
     setForm,
 
+    // --------------------------------------------------
+    // Vehicle data
+    // --------------------------------------------------
+
     vehicleTypes,
 
     brands,
@@ -3882,25 +2730,9 @@ export default function useVehicleSearch() {
 
     years,
 
-    // ----------------------------------------------
-    // Original autocomplete API
-    // ----------------------------------------------
-
-    vehicleSuggestions,
-
-    vehicleSuggestionsLoading,
-
-    vehicleCatalogLoading,
-
-    searchVehicleSuggestions,
-
-    clearVehicleSuggestions,
-
-    selectVehicleBrand,
-
-    // ----------------------------------------------
-    // HomeVehicleSearch compatibility API
-    // ----------------------------------------------
+    // --------------------------------------------------
+    // Vehicle autocomplete
+    // --------------------------------------------------
 
     brandSuggestions,
 
@@ -3908,38 +2740,37 @@ export default function useVehicleSearch() {
 
     clearBrandSuggestions,
 
+    selectVehicleBrand,
+
     brandsLoading,
-
-    // ----------------------------------------------
-    // Model autocomplete API
-    // ----------------------------------------------
-
-    vehicleModelSuggestions,
-
-    vehicleModelSuggestionsLoading,
-
-    searchVehicleModelSuggestions,
-
-    clearVehicleModelSuggestions,
-
-    // ----------------------------------------------
-    // Model autocomplete aliases
-    // ----------------------------------------------
 
     modelSuggestions,
 
+    modelsSuggestions:
+      modelSuggestions,
+
     suggestVehicleModels,
+
+    clearVehicleModelSuggestions,
+
+    selectVehicleModel,
 
     modelsLoading,
 
-    // ----------------------------------------------
-    // Search
-    // ----------------------------------------------
+    // --------------------------------------------------
+    // Search errors
+    // --------------------------------------------------
 
     tireSearchError,
 
+    // --------------------------------------------------
+    // Search functions
+    // --------------------------------------------------
+
     search,
 
-    searchVehicleWithAI
+    searchAI
+
   }
+
 }

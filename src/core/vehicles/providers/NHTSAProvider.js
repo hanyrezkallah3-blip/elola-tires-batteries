@@ -15,16 +15,36 @@
 // 2. Vehicle brands are requested by vehicle category.
 // 3. GetAllMakes is intentionally NOT used for the
 //    consumer vehicle brand catalog.
-// 4. This prevents non-vehicle/business manufacturer
-//    names from entering autocomplete.
+// 4. Vehicle fitment is NOT provided by this provider.
 // 5. No vehicle data is fabricated.
 // 6. Models remain resolved through vPIC.
-// 7. VehDB fitment is handled separately.
+// 7. VehDB fitment and Elola local fitment are handled
+//    separately.
+//
+// IMPORTANT UPDATE
+// ------------------------------------------------------
+//
+// vPIC year-specific model endpoints can return HTTP 404
+// for valid makes in the current application flow.
+//
+// Therefore this provider intentionally uses:
+//
+//   /vehicles/GetModelsForMake/{make}
+//
+// as its model catalog endpoint.
+//
+// Year is treated as search metadata and matching is
+// handled by the caller/local fitment layer.
+//
+// This prevents NHTSA catalog failures from interfering
+// with Elola local vehicle fitment.
 //
 // ======================================================
 
+
 import HttpClient
   from '../../network/HttpClient'
+
 
 // ======================================================
 // BASE URL
@@ -164,6 +184,7 @@ const normalizeMake = (
     !item ||
     typeof item !== 'object'
   ) {
+
     return null
   }
 
@@ -186,6 +207,7 @@ const normalizeMake = (
   if (
     !String(makeName).trim()
   ) {
+
     return null
   }
 
@@ -247,6 +269,7 @@ const normalizeModel = (
     !item ||
     typeof item !== 'object'
   ) {
+
     return null
   }
 
@@ -269,6 +292,7 @@ const normalizeModel = (
   if (
     !String(modelName).trim()
   ) {
+
     return null
   }
 
@@ -455,19 +479,6 @@ const NHTSAProvider = {
   // ====================================================
   // GET BRANDS
   // ====================================================
-  //
-  // IMPORTANT
-  // ----------------------------------------------------
-  //
-  // We deliberately do NOT fall back to:
-  //
-  //   /vehicles/GetAllMakes
-  //
-  // because that endpoint contains thousands of
-  // manufacturers that are not suitable for consumer
-  // vehicle autocomplete.
-  //
-  // ====================================================
 
   async getBrands(
     vehicleType = ''
@@ -478,10 +489,6 @@ const NHTSAProvider = {
         vehicleType
       )
 
-
-    // --------------------------------------------------
-    // A specific vehicle type is required here.
-    // --------------------------------------------------
 
     if (
       !type
@@ -541,7 +548,8 @@ const NHTSAProvider = {
         normalized
       )
 
-    } catch (
+    }
+    catch (
       error
     ) {
 
@@ -558,6 +566,26 @@ const NHTSAProvider = {
 
   // ====================================================
   // GET MODELS
+  // ====================================================
+  //
+  // IMPORTANT
+  // ----------------------------------------------------
+  //
+  // NHTSA vPIC year-specific endpoint:
+  //
+  //   /GetModelsForMakeYear/{make}/{year}
+  //
+  // has produced HTTP 404 responses in the application.
+  //
+  // We therefore intentionally use ONLY:
+  //
+  //   /GetModelsForMake/{make}
+  //
+  // Year remains metadata and is preserved in the
+  // normalized model records.
+  //
+  // Vehicle fitment is NOT inferred from NHTSA.
+  //
   // ====================================================
 
   async getModels(
@@ -597,129 +625,88 @@ const NHTSAProvider = {
     }
 
 
-    const requests = []
-
-
     // --------------------------------------------------
-    // 1. Vehicle type + make + year
-    // --------------------------------------------------
-
-    if (
-      vehicleType &&
-      year
-    ) {
-
-      requests.push(
-        `/vehicles/GetModelsForMakeYear/${encodeURIComponent(brand)}/${encodeURIComponent(year)}/vehicletype/${encodeURIComponent(vehicleType)}`
-      )
-    }
-
-
-    // --------------------------------------------------
-    // 2. Vehicle type + make
+    // IMPORTANT:
+    // Do NOT call GetModelsForMakeYear.
+    //
+    // It is the source of the HTTP 404 noise seen in
+    // VehicleEngine -> OnlineVehicleSource.
     // --------------------------------------------------
 
-    if (
-      vehicleType
-    ) {
-
-      requests.push(
-        `/vehicles/GetModelsForMake/${encodeURIComponent(brand)}/vehicletype/${encodeURIComponent(vehicleType)}`
-      )
-    }
-
-
-    // --------------------------------------------------
-    // 3. Make + year
-    // --------------------------------------------------
-
-    if (
-      year
-    ) {
-
-      requests.push(
-        `/vehicles/GetModelsForMakeYear/${encodeURIComponent(brand)}/${encodeURIComponent(year)}`
-      )
-    }
-
-
-    // --------------------------------------------------
-    // 4. Make only
-    // --------------------------------------------------
-
-    requests.push(
+    const endpoint =
       `/vehicles/GetModelsForMake/${encodeURIComponent(brand)}`
-    )
 
 
-    for (
-      const endpoint
-      of requests
-    ) {
+    try {
 
-      try {
-
-        const response =
-          await request(
-            endpoint
-          )
+      const response =
+        await request(
+          endpoint
+        )
 
 
-        const results =
-          Array.isArray(
-            response?.Results
-          )
-            ? response.Results
-            : Array.isArray(
-                response?.results
-              )
-              ? response.results
-              : []
-
-
-        if (
-          results.length === 0
-        ) {
-
-          continue
-        }
-
-
-        const normalized =
-          results
-            .map(
-              item =>
-                normalizeModel(
-                  item,
-                  params
-                )
+      const results =
+        Array.isArray(
+          response?.Results
+        )
+          ? response.Results
+          : Array.isArray(
+              response?.results
             )
-            .filter(Boolean)
+            ? response.results
+            : []
 
 
-        if (
-          normalized.length > 0
-        ) {
-
-          return dedupe(
-            normalized
-          )
-        }
-
-      } catch (
-        error
+      if (
+        results.length === 0
       ) {
 
-        console.warn(
-          '[NHTSAProvider] Model request failed:',
-          endpoint,
-          error
-        )
+        return []
       }
+
+
+      const normalized =
+        results
+          .map(
+            item =>
+              normalizeModel(
+                item,
+                {
+                  ...params,
+
+                  brand,
+
+                  make:
+                    brand,
+
+                  year,
+
+                  vehicleType
+
+                }
+              )
+          )
+          .filter(Boolean)
+
+
+      return dedupe(
+        normalized
+      )
+
     }
+    catch (
+      error
+    ) {
+
+      console.warn(
+        '[NHTSAProvider] Model request failed:',
+        endpoint,
+        error
+      )
 
 
-    return []
+      return []
+    }
   },
 
 
@@ -757,57 +744,77 @@ const NHTSAProvider = {
 
 
     // --------------------------------------------------
-    // vPIC model data is more reliable than fabricating
-    // years from a generic range.
+    // IMPORTANT
+    // --------------------------------------------------
     //
-    // Query the available years through model lookups.
+    // Do not issue hundreds of year-specific requests.
+    //
+    // The current application does not use NHTSA as the
+    // technical fitment source.
+    //
+    // Use the make model catalog and inspect only data
+    // actually returned by NHTSA when available.
+    //
+    // Since GetModelsForMake does not guarantee year
+    // metadata, returning [] is safer than fabricating
+    // supported years.
+    //
     // --------------------------------------------------
 
-    for (
-      let year = 1996;
-      year <= currentYear;
-      year++
-    ) {
+    try {
 
-      try {
-
-        const response =
-          await request(
-            `/vehicles/GetModelsForMakeYear/${encodeURIComponent(brand)}/${year}`
-          )
-
-
-        const results =
-          Array.isArray(
-            response?.Results
-          )
-            ? response.Results
-            : Array.isArray(
-                response?.results
-              )
-              ? response.results
-              : []
+      const models =
+        await this.getModels(
+          {
+            brand,
+            make:
+              brand,
+            vehicleType:
+              params?.vehicleType ?? ''
+          }
+        )
 
 
-        if (
-          results.length > 0
-        ) {
-
-          years.push(
-            year
-          )
-        }
-
-      } catch (
-        error
+      if (
+        !Array.isArray(models) ||
+        models.length === 0
       ) {
 
-        // ------------------------------------------------
-        // One failed year must not stop the entire lookup.
-        // ------------------------------------------------
-
-        continue
+        return []
       }
+
+
+      models.forEach(
+        model => {
+
+          const modelYear =
+            Number(
+              model?.year
+            )
+
+
+          if (
+            Number.isFinite(modelYear) &&
+            modelYear >= 1996 &&
+            modelYear <= currentYear
+          ) {
+
+            years.push(
+              modelYear
+            )
+          }
+        }
+      )
+
+    }
+    catch (
+      error
+    ) {
+
+      console.warn(
+        '[NHTSAProvider] getYears failed:',
+        error
+      )
     }
 
 
@@ -978,11 +985,23 @@ const NHTSAProvider = {
     }
 
 
+    // --------------------------------------------------
+    // NHTSA is catalog-only.
+    //
+    // We intentionally use GetModelsForMake through
+    // getModels(). No year-specific endpoint is called.
+    // --------------------------------------------------
+
     const models =
       await this.getModels(
         {
           ...params,
+
           brand,
+
+          make:
+            brand,
+
           year
         }
       )
@@ -1007,6 +1026,10 @@ const NHTSAProvider = {
       null
 
 
+    // --------------------------------------------------
+    // 1. Exact model match
+    // --------------------------------------------------
+
     if (
       normalizedModel
     ) {
@@ -1021,26 +1044,60 @@ const NHTSAProvider = {
         )
 
 
+      // ------------------------------------------------
+      // 2. Includes match
+      // ------------------------------------------------
+
       if (
         !matched
       ) {
 
         matched =
           models.find(
-            item =>
-              stableValue(
-                item.model
-              )
-                .includes(
-                  normalizedModel
-                ) ||
-              normalizedModel.includes(
+            item => {
+
+              const itemModel =
                 stableValue(
                   item.model
                 )
+
+
+              return (
+                itemModel.includes(
+                  normalizedModel
+                ) ||
+                normalizedModel.includes(
+                  itemModel
+                )
               )
+            }
           )
       }
+    }
+
+
+    // --------------------------------------------------
+    // IMPORTANT
+    // --------------------------------------------------
+    //
+    // Do NOT arbitrarily return the first NHTSA model
+    // when a requested model was supplied but no model
+    // matched.
+    //
+    // That could turn:
+    //
+    // Toyota Corolla 2021
+    //
+    // into an unrelated Toyota model.
+    //
+    // --------------------------------------------------
+
+    if (
+      normalizedModel &&
+      !matched
+    ) {
+
+      return null
     }
 
 
