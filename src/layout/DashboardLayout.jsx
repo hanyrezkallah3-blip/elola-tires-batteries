@@ -142,10 +142,6 @@ export default function DashboardLayout({ children }) {
         ? ['/bi']
         : []),
 
-      ...(hasPermission('ai')
-        ? ['/ai']
-        : []),
-
       ...(hasPermission('products')
         ? ['/products']
         : []),
@@ -268,11 +264,6 @@ export default function DashboardLayout({ children }) {
       visible: hasPermission('bi')
     },
 
-    {
-      path: '/ai',
-      title: '🤖 الذكاء الاصطناعي',
-      visible: hasPermission('ai')
-    },
 
     {
       path: '/finance',

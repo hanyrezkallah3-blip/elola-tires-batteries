@@ -189,19 +189,6 @@ export default function App() {
         }
       />
 
-      {/* ================= AI ================= */}
-
-      <Route
-        path="/ai"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout>
-              <BIDashboard />
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
-
       {/* ================= ADMIN ================= */}
 
       <Route
