@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useWebsiteStore } from '../store/websiteStore'
+import uploadImageToCloudinary from '../lib/cloudinaryMedia'
 
 export default function Slides() {
 
@@ -16,7 +17,7 @@ export default function Slides() {
 
   // ================= UPLOAD IMAGE =================
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
 
     const file = e.target.files?.[0]
 
@@ -32,21 +33,32 @@ export default function Slides() {
 
     }
 
-    const reader = new FileReader()
+    try {
 
-    reader.onload = () => {
+      const imageUrl = await uploadImageToCloudinary(
+        file,
+        'slider'
+      )
 
-      setPreview(reader.result)
+      setPreview(imageUrl)
+
+    } catch (error) {
+
+      console.error(
+        '[Slides] Cloudinary upload failed:',
+        error
+      )
+
+      alert(
+        error?.message ||
+        'Image upload failed'
+      )
+
+    } finally {
+
+      e.target.value = ''
 
     }
-
-    reader.onerror = () => {
-
-      alert('حدث خطأ أثناء تحميل الصورة')
-
-    }
-
-    reader.readAsDataURL(file)
 
   }
 
