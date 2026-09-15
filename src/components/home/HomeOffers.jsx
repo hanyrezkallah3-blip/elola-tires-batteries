@@ -331,6 +331,8 @@ const findInventoryStock = (
 // COMPONENT
 // ======================================================
 
+import { useState } from 'react'
+import useMarketDemandStore from '../../store/marketDemandStore'
 export default function HomeOffers({
 
   offers = [],
@@ -736,6 +738,56 @@ export default function HomeOffers({
 
                       ''
 
+
+  const [
+    feedbackProductId,
+    setFeedbackProductId
+  ] = useState(null)
+
+  const [
+    feedbackSentProductId,
+    setFeedbackSentProductId
+  ] = useState(null)
+
+  const submitFeedback = (
+    product,
+    reason
+  ) => {
+    if (!reason) {
+      return
+    }
+
+    try {
+      useMarketDemandStore
+        .getState()
+        .recordFeedback({
+          product,
+          reason,
+          searchContext:
+            product?.searchContext ||
+            product?.vehicleSearchContext ||
+            {},
+          metadata: {
+            source:
+              'HomeOffers'
+          }
+        })
+
+      setFeedbackSentProductId(
+        product?.id ??
+        product?.productId ??
+        null
+      )
+
+      setFeedbackProductId(null)
+
+    } catch (error) {
+      console.error(
+        '[MarketDemand] feedback tracking failed:',
+        error
+      )
+    }
+  }
                     const displayBrand =
 
                       batteryBrand ||
@@ -1184,6 +1236,254 @@ export default function HomeOffers({
                             }
 
                           </button>
+                          {
+                            feedbackSentProductId ===
+                              (
+                                productId ??
+                                null
+                              )
+                              ? (
+                                <div
+                                  className="
+                                    w-full
+                                    mt-4
+                                    py-3
+                                    px-4
+                                    rounded-2xl
+                                    bg-emerald-900/40
+                                    border
+                                    border-emerald-700
+                                    text-emerald-300
+                                    text-center
+                                    font-bold
+                                  "
+                                >
+                                  {'\u062a\u0645 \u062a\u0633\u062c\u064a\u0644 \u0633\u0628\u0628 \u0639\u062f\u0645 \u0627\u0644\u0634\u0631\u0627\u0621'}
+                                </div>
+                              )
+                              : feedbackProductId !==
+                                  (
+                                    productId ??
+                                    null
+                                  )
+                                ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setFeedbackProductId(
+                                        productId ??
+                                        null
+                                      )
+                                    }}
+                                    className="
+                                      w-full
+                                      mt-4
+                                      py-3
+                                      rounded-2xl
+                                      border
+                                      border-yellow-500/60
+                                      text-yellow-400
+                                      font-bold
+                                      hover:bg-yellow-500
+                                      hover:text-black
+                                      transition
+                                    "
+                                  >
+                                    {'\u0644\u0645 \u0623\u0642\u0631\u0631 \u0634\u0631\u0627\u0621 \u0647\u0630\u0627 \u0627\u0644\u0645\u0646\u062a\u062c'}
+                                  </button>
+                                )
+                                : (
+                                  <div
+                                    className="
+                                      mt-4
+                                      p-4
+                                      rounded-2xl
+                                      bg-slate-800
+                                      border
+                                      border-slate-700
+                                    "
+                                  >
+                                    <div
+                                      className="
+                                        text-white
+                                        font-bold
+                                        mb-3
+                                        text-center
+                                      "
+                                    >
+                                      {'\u0645\u0627 \u0627\u0644\u0633\u0628\u0628\u061f'}
+                                    </div>
+
+                                    <div className="grid gap-2">
+
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          submitFeedback(
+                                            {
+                                              ...offer,
+                                              id:
+                                                productId,
+                                              productId:
+                                                productId
+                                            },
+                                            'price'
+                                          )
+                                        }
+                                        className="
+                                          w-full
+                                          py-2
+                                          rounded-xl
+                                          bg-slate-700
+                                          hover:bg-yellow-500
+                                          hover:text-black
+                                          text-white
+                                          font-bold
+                                          transition
+                                        "
+                                      >
+                                        {'\u0627\u0644\u0633\u0639\u0631 \u063a\u064a\u0631 \u0645\u0646\u0627\u0633\u0628'}
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          submitFeedback(
+                                            {
+                                              ...offer,
+                                              id:
+                                                productId,
+                                              productId:
+                                                productId
+                                            },
+                                            'unavailable'
+                                          )
+                                        }
+                                        className="
+                                          w-full
+                                          py-2
+                                          rounded-xl
+                                          bg-slate-700
+                                          hover:bg-yellow-500
+                                          hover:text-black
+                                          text-white
+                                          font-bold
+                                          transition
+                                        "
+                                      >
+                                        {'\u0627\u0644\u0645\u0646\u062a\u062c \u063a\u064a\u0631 \u0645\u062a\u0648\u0641\u0631'}
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          submitFeedback(
+                                            {
+                                              ...offer,
+                                              id:
+                                                productId,
+                                              productId:
+                                                productId
+                                            },
+                                            'not_needed'
+                                          )
+                                        }
+                                        className="
+                                          w-full
+                                          py-2
+                                          rounded-xl
+                                          bg-slate-700
+                                          hover:bg-yellow-500
+                                          hover:text-black
+                                          text-white
+                                          font-bold
+                                          transition
+                                        "
+                                      >
+                                        {'\u0644\u0645 \u0623\u0639\u062f \u0628\u062d\u0627\u062c\u0629 \u0625\u0644\u064a\u0647'}
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          submitFeedback(
+                                            {
+                                              ...offer,
+                                              id:
+                                                productId,
+                                              productId:
+                                                productId
+                                            },
+                                            'alternative'
+                                          )
+                                        }
+                                        className="
+                                          w-full
+                                          py-2
+                                          rounded-xl
+                                          bg-slate-700
+                                          hover:bg-yellow-500
+                                          hover:text-black
+                                          text-white
+                                          font-bold
+                                          transition
+                                        "
+                                      >
+                                        {'\u0627\u062e\u062a\u0631\u062a \u0645\u0646\u062a\u062c\u064b\u0627 \u0622\u062e\u0631'}
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          submitFeedback(
+                                            {
+                                              ...offer,
+                                              id:
+                                                productId,
+                                              productId:
+                                                productId
+                                            },
+                                            'other'
+                                          )
+                                        }
+                                        className="
+                                          w-full
+                                          py-2
+                                          rounded-xl
+                                          bg-slate-700
+                                          hover:bg-yellow-500
+                                          hover:text-black
+                                          text-white
+                                          font-bold
+                                          transition
+                                        "
+                                      >
+                                        {'\u0633\u0628\u0628 \u0622\u062e\u0631'}
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setFeedbackProductId(null)
+                                        }
+                                        className="
+                                          w-full
+                                          py-2
+                                          rounded-xl
+                                          text-slate-300
+                                          hover:text-white
+                                          font-bold
+                                          transition
+                                        "
+                                      >
+                                        {'\u0625\u0644\u063a\u0627\u0621'}
+                                      </button>
+
+                                    </div>
+                                  </div>
+                                )
+                          }
+
 
                         </div>
 

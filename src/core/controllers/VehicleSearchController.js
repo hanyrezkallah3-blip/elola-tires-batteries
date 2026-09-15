@@ -71,6 +71,9 @@
 import VehicleEngine
   from '../engines/VehicleEngine'
 
+import VehicleAIEngine
+  from '../engines/VehicleAIEngine'
+
 import ProductsRepository
   from '../../repositories/ProductsRepository'
 
@@ -3816,6 +3819,54 @@ const getLocalFitment = ({
 
   try {
 
+    /*
+     * ====================================================
+     * LOCAL TECHNICAL DATABASE FIRST
+     * ====================================================
+     *
+     * Technical compatibility must NOT depend on:
+     *
+     * - VehicleLookupService
+     * - local vehicle memory
+     * - warehouse inventory
+     * - offers
+     *
+     * LocalTechnicalFitmentProvider is the authoritative
+     * technical source whenever it contains fitment data.
+     */
+
+    let technicalFitment = null
+
+    try {
+
+      technicalFitment =
+        LocalTechnicalFitmentProvider
+          .findFitmentSync({
+            make,
+            model,
+            year
+          })
+
+    } catch (error) {
+
+      console.warn(
+        '[VehicleSearchController] Local technical fitment lookup failed:',
+        error
+      )
+
+    }
+
+    /*
+     * ----------------------------------------------------
+     * VEHICLE MEMORY
+     * ----------------------------------------------------
+     *
+     * Vehicle memory is used only to enrich vehicle
+     * identity / legacy fitment.
+     *
+     * It is NOT a prerequisite for technical fitment.
+     */
+
     let serviceVehicle = null
 
     try {
@@ -3851,66 +3902,11 @@ const getLocalFitment = ({
       nestedVehicle ||
       null
 
-    if (!localVehicle) {
-
-      return {
-        found: false,
-        vehicle: null,
-        fitment: null
-      }
-
-    }
-
-    console.log(
-      '[VehicleSearchController] LOCAL VEHICLE MEMORY HIT',
-      {
-        make,
-        model,
-        year,
-        vehicle:
-          localVehicle
-      }
-    )
-
-    console.log(
-      '[VehicleSearchController] VEHDB SKIPPED — LOCAL VEHICLE EXISTS'
-    )
-
     /*
-     * Local vehicle memory provides the vehicle identity
-     * and may already contain tire fitment.
-     *
-     * LocalTechnicalFitmentProvider adds the technical
-     * fallback requirements for:
-     *
-     * - tires
-     * - batteries
-     * - oils
-     *
-     * Compatibility is resolved independently from
-     * warehouse availability.
+     * ----------------------------------------------------
+     * COLLECT LEGACY / MEMORY FITMENT
+     * ----------------------------------------------------
      */
-
-    let technicalFitment = null
-
-    try {
-
-      technicalFitment =
-        LocalTechnicalFitmentProvider
-          .findFitmentSync({
-            make,
-            model,
-            year
-          })
-
-    } catch (error) {
-
-      console.warn(
-        '[VehicleSearchController] Local technical fitment lookup failed:',
-        error
-      )
-
-    }
 
     const candidates = [
 
@@ -3974,6 +3970,7 @@ const getLocalFitment = ({
 
       seen.add(normalized)
       target.push(normalized)
+
     }
 
     for (
@@ -4059,7 +4056,9 @@ const getLocalFitment = ({
     }
 
     /*
-     * Merge local technical tire requirements.
+     * ----------------------------------------------------
+     * MERGE LOCAL TECHNICAL TIRES
+     * ----------------------------------------------------
      */
 
     const technicalTireSizes =
@@ -4147,7 +4146,9 @@ const getLocalFitment = ({
     }
 
     /*
-     * Technical battery requirements.
+     * ----------------------------------------------------
+     * TECHNICAL BATTERY REQUIREMENTS
+     * ----------------------------------------------------
      */
 
     const batteries =
@@ -4177,7 +4178,9 @@ const getLocalFitment = ({
             )
 
     /*
-     * Technical oil requirements.
+     * ----------------------------------------------------
+     * TECHNICAL OIL REQUIREMENTS
+     * ----------------------------------------------------
      */
 
     const oils =
@@ -4196,7 +4199,8 @@ const getLocalFitment = ({
             .map(
               oil =>
                 oil?.viscosity ??
-                oil?.grade
+                oil?.grade ??
+                oil?.viscosityGrade
             )
             .filter(
               value =>
@@ -4205,12 +4209,27 @@ const getLocalFitment = ({
                 value !== ''
             )
 
+    /*
+     * ----------------------------------------------------
+     * TECHNICAL DATA EXISTS
+     * ----------------------------------------------------
+     */
+
     const hasTechnicalData =
       allSizes.length > 0 ||
       batteries.length > 0 ||
       batteryCapacities.length > 0 ||
       oils.length > 0 ||
       oilViscosities.length > 0
+
+    /*
+     * ----------------------------------------------------
+     * NO TECHNICAL DATA
+     * ----------------------------------------------------
+     *
+     * We can still return local vehicle identity.
+     * searchVehicle will decide whether VehDB is needed.
+     */
 
     if (!hasTechnicalData) {
 
@@ -4219,17 +4238,30 @@ const getLocalFitment = ({
         {
           make,
           model,
-          year
+          year,
+          localVehicle:
+            Boolean(localVehicle)
         }
       )
 
       return {
-        found: true,
-        vehicle: localVehicle,
-        fitment: null
+        found:
+          Boolean(localVehicle),
+
+        vehicle:
+          localVehicle,
+
+        fitment:
+          null
       }
 
     }
+
+    /*
+     * ----------------------------------------------------
+     * BUILD AUTHORITATIVE TECHNICAL FITMENT
+     * ----------------------------------------------------
+     */
 
     const fitment = {
 
@@ -4258,9 +4290,7 @@ const getLocalFitment = ({
       oilViscosities,
 
       compatibilityResolved:
-        Boolean(
-          technicalFitment?.compatibilityResolved
-        ),
+        true,
 
       availabilityChecked:
         false,
@@ -4272,8 +4302,15 @@ const getLocalFitment = ({
     }
 
     console.log(
-      '[VehicleSearchController] LOCAL VEHICLE FITMENT READY',
+      '[VehicleSearchController] LOCAL TECHNICAL FITMENT READY',
       {
+        make,
+        model,
+        year,
+
+        vehicleMemory:
+          Boolean(localVehicle),
+
         source:
           fitment.technicalSource,
 
@@ -4306,7 +4343,7 @@ const getLocalFitment = ({
   } catch (error) {
 
     console.warn(
-      '[VehicleSearchController] Local vehicle memory lookup failed:',
+      '[VehicleSearchController] Local fitment lookup failed:',
       error
     )
 
@@ -4335,7 +4372,6 @@ class VehicleSearchController {
   // ====================================================
   // VEHICLE
   // ====================================================
-
   static async searchVehicle({
     vehicleType,
     make,
@@ -4343,90 +4379,212 @@ class VehicleSearchController {
     year
   }) {
 
+    // --------------------------------------------------
+    // CANONICAL VEHICLE IDENTITY
+    // --------------------------------------------------
+    //
+    // The UI may provide Arabic or English aliases.
+    // VehicleAIEngine owns the multilingual alias map.
+    //
+    // IMPORTANT:
+    // Canonicalization happens BEFORE technical fitment.
+    // This prevents Arabic aliases from bypassing the
+    // local technical vehicle database and incorrectly
+    // triggering VehDB.
+    //
+
+    const canonicalMakeResult =
+      VehicleAIEngine.resolveCanonicalMake(
+        make
+      )
+
+    const canonicalMake =
+      canonicalMakeResult?.make ||
+      canonicalMakeResult?.brand ||
+      make
+
+    const canonicalModel =
+      VehicleAIEngine.resolveCanonicalModel(
+        model,
+        canonicalMake
+      )?.model ||
+      model
+
+    console.log(
+      '[VehicleSearchController] CANONICAL VEHICLE:',
+      {
+        inputMake: make,
+        inputModel: model,
+        canonicalMake,
+        canonicalModel,
+        year
+      }
+    )
+
     const products =
       await getAllProducts()
 
     // --------------------------------------------------
-    // LOCAL MEMORY FIRST
+    // LOCAL TECHNICAL FITMENT FIRST
     // --------------------------------------------------
+    //
+    // Compatibility must be resolved independently from
+    // Elola inventory.
+    //
+    // Local Technical Database is authoritative whenever
+    // it contains tire fitment.
+    //
+    // VehDB is allowed ONLY when local tire fitment is
+    // missing. VehDB supplies tire fitment only.
+    //
 
     const localResult =
       getLocalFitment({
-        make,
-        model,
+        make: canonicalMake,
+        model: canonicalModel,
         year
       })
 
-    let fitment =
+    const localFitment =
       localResult?.fitment ??
       null
 
+    const hasLocalTireFitment =
+      !!(
+        localFitment &&
+        Array.isArray(
+          localFitment.sizes
+        ) &&
+        localFitment.sizes.length > 0
+      )
+
+    let fitment =
+      localFitment
+
     let fitmentSource =
-      localResult?.found
-        ? 'local'
+      hasLocalTireFitment
+        ? 'local-technical'
         : null
 
     // --------------------------------------------------
-    // VEHDB
+    // VEHDB — TIRES ONLY WHEN LOCAL TIRES ARE MISSING
     // --------------------------------------------------
 
-    if (
-      localResult?.found !== true
-    ) {
+    if (!hasLocalTireFitment) {
 
       try {
 
         console.log(
-          '[VehicleSearchController] LOCAL VEHICLE MISS â†’ VehDB'
+          '[VehicleSearchController] LOCAL TECHNICAL TIRE FITMENT MISS -> VehDB'
         )
 
-        fitment =
+        const vehDBFitment =
           await VehDBFitmentProvider.findTireFitment({
-            make,
-            model,
+            make: canonicalMake,
+            model: canonicalModel,
             year
           })
 
         if (
-          fitment &&
+          vehDBFitment &&
           Array.isArray(
-            fitment.sizes
+            vehDBFitment.sizes
           ) &&
-          fitment.sizes.length > 0
+          vehDBFitment.sizes.length > 0
         ) {
 
+          fitment = {
+            ...(localFitment || {}),
+            ...vehDBFitment,
+
+            sizes:
+              vehDBFitment.sizes,
+
+            tireSizes:
+              vehDBFitment.tireSizes ??
+              vehDBFitment.sizes,
+
+            oemSizes:
+              vehDBFitment.oemSizes ??
+              [],
+
+            alternateSizes:
+              vehDBFitment.alternateSizes ??
+              [],
+
+            batteries:
+              localFitment?.batteries ??
+              vehDBFitment.batteries ??
+              [],
+
+            batteryCapacities:
+              localFitment?.batteryCapacities ??
+              vehDBFitment.batteryCapacities ??
+              [],
+
+            oils:
+              localFitment?.oils ??
+              vehDBFitment.oils ??
+              [],
+
+            oilViscosities:
+              localFitment?.oilViscosities ??
+              vehDBFitment.oilViscosities ??
+              []
+          }
+
           fitmentSource =
-            'vehdb'
+            'local-technical+vehdb'
+
+          console.log(
+            '[VehicleSearchController] VEHDB TIRE FITMENT READY'
+          )
 
         }
         else {
 
           fitment =
-            null
+            localFitment
+
+          fitmentSource =
+            localFitment
+              ? 'local-technical'
+              : null
+
+          console.log(
+            '[VehicleSearchController] VehDB returned no tire fitment'
+          )
 
         }
 
       }
-      catch (
-        error
-      ) {
+      catch (error) {
 
         console.warn(
           '[VehicleSearchController] VehDB fitment failed:',
           error
         )
 
+        // Preserve all local technical information
+        // when VehDB fails.
         fitment =
-          null
+          localFitment
+
+        fitmentSource =
+          localFitment
+            ? 'local-technical'
+            : null
       }
 
     }
     else {
 
       console.log(
-        '[VehicleSearchController] VEHDB NOT CALLED â€” LOCAL VEHICLE IS AUTHORITATIVE'
+        '[VehicleSearchController] VEHDB NOT CALLED — LOCAL TECHNICAL TIRE FITMENT IS AUTHORITATIVE'
       )
+
     }
+
 
     // --------------------------------------------------
     // LOCAL / VEHDB FITMENT SUCCESS
@@ -4475,6 +4633,42 @@ class VehicleSearchController {
       // PER-SIZE DIAGNOSTICS
       // ------------------------------------------------
 
+      const tireSizeExactDiagnostic =
+        fitment.sizes.map(size => ({
+          requestedSize: size,
+          parsed: parseTireSize(size),
+          normalizedRequested:
+            normalizeSizeForMatch(size),
+          matchingProducts:
+            tireProducts
+              .filter(product =>
+                tireMatchesVehDBSize(
+                  product,
+                  size
+                )
+              )
+              .map(product => ({
+                id: product?.id,
+                name: product?.name,
+                sizes:
+                  getProductSizeValues(product)
+              }))
+        }))
+
+      console.log('[VehicleSearchController] TIRE SIZE EXACT DIAGNOSTIC START')
+      tireSizeExactDiagnostic.forEach((item, index) => {
+        console.log(
+          '[VehicleSearchController] TIRE SIZE #' + (index + 1) + ': ' +
+          JSON.stringify({
+            requestedSize: item.requestedSize,
+            normalizedRequested: item.normalizedRequested,
+            parsed: item.parsed,
+            matchingProducts: item.matchingProducts.length,
+            productSizes: item.matchingProducts.map(product => product.sizes).flat()
+          })
+        )
+      })
+      console.log('[VehicleSearchController] TIRE SIZE EXACT DIAGNOSTIC END')
       const matchDiagnostics =
         fitment.sizes.map(
           size => {
@@ -4569,17 +4763,129 @@ class VehicleSearchController {
         matchDiagnostics
       )
 
-      const finalTireProducts =
-        buildResults(
-          matchedTires
-        )
 
       // ------------------------------------------------
-      // TECHNICAL BATTERY REQUIREMENTS
+      // TECHNICAL TIRE REQUIREMENTS
+
+      // ======================================================
+      // TECHNICAL TIRE REQUIREMENTS
+      // ======================================================
       //
-      // These are compatibility requirements, NOT
-      // warehouse products.
-      // ------------------------------------------------
+      // Canonical tire size comparison:
+      // 205/55/16 == 205/55R16 == 205*55*16
+      //
+      // A technical requirement is created only when
+      // there is NO real Elola product for that size.
+      // ======================================================
+
+      const canonicalTireSize = value => {
+        if (
+          value === null ||
+          value === undefined
+        ) {
+          return null
+        }
+
+        const text = String(value).trim()
+
+        const match = text.match(
+          /(\d{3})\D+(\d{2})\D+(\d{2})/
+        )
+
+        if (!match) {
+          return normalizeSizeForMatch(value) || null
+        }
+
+        return (
+          match[1] +
+          "/" +
+          match[2] +
+          "/" +
+          match[3]
+        )
+      }
+
+      const matchedTireSizes = new Set(
+        matchedTires
+          .flatMap(
+            product =>
+              getTireSizeCandidates(product)
+          )
+          .map(
+            size =>
+              canonicalTireSize(size)
+          )
+          .filter(Boolean)
+      )
+
+      const technicalTireResults =
+        Array.isArray(fitment.sizes)
+          ? fitment.sizes
+              .filter(size => {
+                const canonicalSize =
+                  canonicalTireSize(size)
+
+                return (
+                  canonicalSize &&
+                  !matchedTireSizes.has(
+                    canonicalSize
+                  )
+                )
+              })
+              .map(
+                (size, index) => ({
+                  id:
+                    "technical-tire-" +
+                    canonicalTireSize(size) +
+                    "-" +
+                    index,
+                  productId: null,
+                  name: "Tire " + size,
+                  productName: "Tire " + size,
+                  type: "tire",
+                  productType: "tire",
+                  category: "tire",
+                  technicalRequirement: true,
+                  technicalRequirementType:
+                    "tire-size",
+                  technicalCompatibility: true,
+                  compatibilitySource:
+                    "technical",
+                  technicalTireSize: size,
+                  tireSize: size,
+                  size: size,
+                  available: false,
+                  inStock: false,
+                  quantity: 0,
+                  price: null,
+                  salePrice: null,
+                  availabilityChecked: true,
+                  availabilitySource:
+                    "warehouse"
+                })
+              )
+          : []
+
+      const finalTireProducts = [
+        ...buildResults(matchedTires),
+        ...technicalTireResults
+      ]
+
+      console.log(
+        "[VehicleSearchController] FINAL TIRE RESULTS:",
+        {
+          matchedTires:
+            matchedTires.length,
+          technicalTires:
+            technicalTireResults.length,
+          finalTires:
+            finalTireProducts.length,
+          sizes:
+            Array.isArray(fitment.sizes)
+              ? fitment.sizes
+              : []
+        }
+      )
 
       const batteryValues =
         Array.isArray(
@@ -5017,9 +5323,9 @@ class VehicleSearchController {
 
           vehicleType,
 
-          make,
+          make: canonicalMake,
 
-          model,
+          model: canonicalModel,
 
           year,
 
@@ -5350,5 +5656,12 @@ class VehicleSearchController {
 // ======================================================
 
 export default VehicleSearchController
+
+
+
+
+
+
+
 
 

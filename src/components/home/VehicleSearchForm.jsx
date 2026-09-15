@@ -822,6 +822,7 @@ export default function VehicleSearchForm({
 
     let nextBrand = ''
     let nextModel = ''
+    let nextYear = ''
 
     // --------------------------------------------------
     // No selected brand
@@ -848,7 +849,21 @@ export default function VehicleSearchForm({
       nextBrand =
         currentBrand
 
+      
+      const yearMatch =
+        text.match(
+          /(?:^|\s)((?:19|20)\d{2})\s*$/
+        )
+
       if (
+        currentModel &&
+        yearMatch
+      ) {
+        nextModel =
+          currentModel
+        nextYear =
+          yearMatch[1]
+      } else if (
         currentModel &&
         normalizeText(
           extractedModelQuery
@@ -877,6 +892,7 @@ export default function VehicleSearchForm({
 
       nextBrand = ''
       nextModel = ''
+      nextYear = ''
     }
 
 
@@ -886,7 +902,7 @@ export default function VehicleSearchForm({
       vehicleType: '',
       brand: nextBrand,
       model: nextModel,
-      year: '',
+      year: nextYear,
       vehicleQuery: value
     })
 

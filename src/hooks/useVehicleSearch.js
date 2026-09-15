@@ -1,4 +1,4 @@
-// ======================================================
+﻿// ======================================================
 // EL OLA ERP
 // useVehicleSearch Hook
 // ======================================================
@@ -18,6 +18,9 @@ import VehicleSearchController
 import VehicleAIEngine
   from '../core/engines/VehicleAIEngine'
 
+import VehiclesDBLocalSource
+  from '../core/vehicles/VehiclesDBLocalSource'
+
 // ======================================================
 // NORMALIZE
 // ======================================================
@@ -29,9 +32,9 @@ const normalizeText = value => {
   )
     .trim()
     .toLowerCase()
-    .replace(/أ|إ|آ/g, 'ا')
-    .replace(/ة/g, 'ه')
-    .replace(/ى/g, 'ي')
+    .replace(/\u0623|\u0625|\u0622/g, '\u0627')
+    .replace(/\u0629/g, '\u0647')
+    .replace(/\u0649/g, '\u064A')
     .replace(
       /[\u064B-\u065F\u0670]/g,
       ''
@@ -47,226 +50,226 @@ const VEHICLE_BRAND_ALIASES = {
 
   toyota: [
     'toyota',
-    'تويوتا',
-    'تيوتا'
+    'طھظˆظٹظˆطھط§',
+    'طھظٹظˆطھط§'
   ],
 
   lexus: [
     'lexus',
-    'لكزس',
-    'لكسس'
+    'ظ„ظƒط²ط³',
+    'ظ„ظƒط³ط³'
   ],
 
   honda: [
     'honda',
-    'هوندا'
+    'ظ‡ظˆظ†ط¯ط§'
   ],
 
   nissan: [
     'nissan',
-    'نيسان'
+    'ظ†ظٹط³ط§ظ†'
   ],
 
   infiniti: [
     'infiniti',
-    'انفينيتي',
-    'إنفينيتي'
+    'ط§ظ†ظپظٹظ†ظٹطھظٹ',
+    'ط¥ظ†ظپظٹظ†ظٹطھظٹ'
   ],
 
   mazda: [
     'mazda',
-    'مازدا'
+    'ظ…ط§ط²ط¯ط§'
   ],
 
   mitsubishi: [
     'mitsubishi',
-    'ميتسوبيشي',
-    'متسوبيشي'
+    'ظ…ظٹطھط³ظˆط¨ظٹط´ظٹ',
+    'ظ…طھط³ظˆط¨ظٹط´ظٹ'
   ],
 
   subaru: [
     'subaru',
-    'سوبارو'
+    'ط³ظˆط¨ط§ط±ظˆ'
   ],
 
   suzuki: [
     'suzuki',
-    'سوزوكي'
+    'ط³ظˆط²ظˆظƒظٹ'
   ],
 
   hyundai: [
     'hyundai',
-    'هيونداي',
-    'هونداي',
-    'هيوندي'
+    'ظ‡ظٹظˆظ†ط¯ط§ظٹ',
+    'ظ‡ظˆظ†ط¯ط§ظٹ',
+    'ظ‡ظٹظˆظ†ط¯ظٹ'
   ],
 
   kia: [
     'kia',
-    'كيا'
+    'ظƒظٹط§'
   ],
 
   genesis: [
     'genesis',
-    'جينيسس',
-    'جينيسيز'
+    'ط¬ظٹظ†ظٹط³ط³',
+    'ط¬ظٹظ†ظٹط³ظٹط²'
   ],
 
   ford: [
     'ford',
-    'فورد'
+    'ظپظˆط±ط¯'
   ],
 
   lincoln: [
     'lincoln',
-    'لينكولن'
+    'ظ„ظٹظ†ظƒظˆظ„ظ†'
   ],
 
   chevrolet: [
     'chevrolet',
-    'شيفروليه',
-    'شفروليه'
+    'ط´ظٹظپط±ظˆظ„ظٹظ‡',
+    'ط´ظپط±ظˆظ„ظٹظ‡'
   ],
 
   gmc: [
     'gmc',
-    'جي ام سي',
-    'جي إم سي'
+    'ط¬ظٹ ط§ظ… ط³ظٹ',
+    'ط¬ظٹ ط¥ظ… ط³ظٹ'
   ],
 
   cadillac: [
     'cadillac',
-    'كاديلاك'
+    'ظƒط§ط¯ظٹظ„ط§ظƒ'
   ],
 
   buick: [
     'buick',
-    'بيوك'
+    'ط¨ظٹظˆظƒ'
   ],
 
   chrysler: [
     'chrysler',
-    'كرايسلر'
+    'ظƒط±ط§ظٹط³ظ„ط±'
   ],
 
   dodge: [
     'dodge',
-    'دودج'
+    'ط¯ظˆط¯ط¬'
   ],
 
   jeep: [
     'jeep',
-    'جيب'
+    'ط¬ظٹط¨'
   ],
 
   ram: [
     'ram',
-    'رام'
+    'ط±ط§ظ…'
   ],
 
   tesla: [
     'tesla',
-    'تسلا'
+    'طھط³ظ„ط§'
   ],
 
   volkswagen: [
     'volkswagen',
     'vw',
-    'فولكس فاجن',
-    'فولكسفاجن'
+    'ظپظˆظ„ظƒط³ ظپط§ط¬ظ†',
+    'ظپظˆظ„ظƒط³ظپط§ط¬ظ†'
   ],
 
   audi: [
     'audi',
-    'اودي',
-    'أودي'
+    'ط§ظˆط¯ظٹ',
+    'ط£ظˆط¯ظٹ'
   ],
 
   bmw: [
     'bmw',
-    'بي ام دبليو',
-    'بي إم دبليو'
+    'ط¨ظٹ ط§ظ… ط¯ط¨ظ„ظٹظˆ',
+    'ط¨ظٹ ط¥ظ… ط¯ط¨ظ„ظٹظˆ'
   ],
 
   'mercedes-benz': [
     'mercedes',
     'mercedes-benz',
-    'مرسيدس',
-    'مرسيدس بنز'
+    'ظ…ط±ط³ظٹط¯ط³',
+    'ظ…ط±ط³ظٹط¯ط³ ط¨ظ†ط²'
   ],
 
   porsche: [
     'porsche',
-    'بورشه'
+    'ط¨ظˆط±ط´ظ‡'
   ],
 
   volvo: [
     'volvo',
-    'فولفو'
+    'ظپظˆظ„ظپظˆ'
   ],
 
   'land rover': [
     'land rover',
     'landrover',
-    'لاند روفر'
+    'ظ„ط§ظ†ط¯ ط±ظˆظپط±'
   ],
 
   jaguar: [
     'jaguar',
-    'جاكوار'
+    'ط¬ط§ظƒظˆط§ط±'
   ],
 
   peugeot: [
     'peugeot',
-    'بيجو'
+    'ط¨ظٹط¬ظˆ'
   ],
 
   renault: [
     'renault',
-    'رينو'
+    'ط±ظٹظ†ظˆ'
   ],
 
   citroen: [
     'citroen',
-    'سيتروين'
+    'ط³ظٹطھط±ظˆظٹظ†'
   ],
 
   fiat: [
     'fiat',
-    'فيات'
+    'ظپظٹط§طھ'
   ],
 
   'alfa romeo': [
     'alfa romeo',
-    'الفا روميو',
-    'ألفا روميو'
+    'ط§ظ„ظپط§ ط±ظˆظ…ظٹظˆ',
+    'ط£ظ„ظپط§ ط±ظˆظ…ظٹظˆ'
   ],
 
   skoda: [
     'skoda',
-    'سكودا'
+    'ط³ظƒظˆط¯ط§'
   ],
 
   seat: [
     'seat',
-    'سيات'
+    'ط³ظٹط§طھ'
   ],
 
   opel: [
     'opel',
-    'اوبل',
-    'أوبل'
+    'ط§ظˆط¨ظ„',
+    'ط£ظˆط¨ظ„'
   ],
 
   isuzu: [
     'isuzu',
-    'ايسوزو',
-    'إيسوزو'
+    'ط§ظٹط³ظˆط²ظˆ',
+    'ط¥ظٹط³ظˆط²ظˆ'
   ],
 
   hino: [
     'hino',
-    'هينو'
+    'ظ‡ظٹظ†ظˆ'
   ]
 
 }
@@ -279,75 +282,75 @@ const VEHICLE_MODEL_ALIASES = {
 
   corolla: [
     'corolla',
-    'كورولا'
+    'ظƒظˆط±ظˆظ„ط§'
   ],
 
   camry: [
     'camry',
-    'كامري',
-    'كامرى'
+    'ظƒط§ظ…ط±ظٹ',
+    'ظƒط§ظ…ط±ظ‰'
   ],
 
   rav4: [
     'rav4',
     'rav 4',
     'rav-4',
-    'راف 4',
-    'راف4',
-    'راف فور'
+    'ط±ط§ظپ 4',
+    'ط±ط§ظپ4',
+    'ط±ط§ظپ ظپظˆط±'
   ],
 
   elantra: [
     'elantra',
-    'النترا',
-    'إلنترا',
-    'الانترا'
+    'ط§ظ„ظ†طھط±ط§',
+    'ط¥ظ„ظ†طھط±ط§',
+    'ط§ظ„ط§ظ†طھط±ط§'
   ],
 
   tucson: [
     'tucson',
-    'توسان'
+    'طھظˆط³ط§ظ†'
   ],
 
   cerato: [
     'cerato',
-    'سيراتو'
+    'ط³ظٹط±ط§طھظˆ'
   ],
 
   sportage: [
     'sportage',
-    'سبورتاج',
-    'سبورتج'
+    'ط³ط¨ظˆط±طھط§ط¬',
+    'ط³ط¨ظˆط±طھط¬'
   ],
 
   sunny: [
     'sunny',
-    'صني',
-    'سني',
-    'صونى'
+    'طµظ†ظٹ',
+    'ط³ظ†ظٹ',
+    'طµظˆظ†ظ‰'
   ],
 
   qashqai: [
     'qashqai',
     'qash qai',
-    'قشقاي',
-    'قشقائي'
+    'ظ‚ط´ظ‚ط§ظٹ',
+    'ظ‚ط´ظ‚ط§ط¦ظٹ'
   ],
 
   lancer: [
     'lancer',
-    'لانسر'
+    'ظ„ط§ظ†ط³ط±'
   ],
 
   pajero: [
     'pajero',
-    'باجيرو'
+    'ط¨ط§ط¬ظٹط±ظˆ'
   ]
 
 }
 
 // ======================================================
-// STATIC BRAND → MODEL AUTOCOMPLETE MAP
+// STATIC BRAND â†’ MODEL AUTOCOMPLETE MAP
 // ======================================================
 
 const VEHICLE_AUTOCOMPLETE_MODELS = {
@@ -474,7 +477,7 @@ const parseTireSize = value => {
     )
       .trim()
       .replace(/\s+/g, '')
-      .replace(/×/g, '*')
+      .replace(/أ—/g, '*')
       .replace(/x/gi, '*')
       .replace(/-/g, '/')
 
@@ -1255,7 +1258,10 @@ const filterBrandSuggestions = (
 // GET AUTOCOMPLETE MODELS FOR BRAND
 // ======================================================
 
-const getAutocompleteModelsForBrand = brand => {
+const getAutocompleteModelsForBrand = (
+  brand,
+  vehicleType = ''
+) => {
 
   if (!brand) {
     return []
@@ -1266,54 +1272,151 @@ const getAutocompleteModelsForBrand = brand => {
       brand
     )
 
-  const modelKeys =
-    VEHICLE_AUTOCOMPLETE_MODELS[
-      canonicalBrand
-    ] || []
+  const catalog = []
+  const seen = new Set()
 
-  if (
-    modelKeys.length === 0
-  ) {
-    return []
+  const addModel = model => {
+
+    const name =
+      getSuggestionName(
+        model
+      )
+
+    if (!name) {
+      return
+    }
+
+    const canonicalName =
+      model?.canonicalName ||
+      name
+
+    const key =
+      normalizeText(
+        canonicalName
+      )
+
+    if (
+      !key ||
+      seen.has(key)
+    ) {
+      return
+    }
+
+    seen.add(key)
+
+    const aliases =
+      Array.isArray(
+        model?.aliases
+      )
+        ? model.aliases
+        : (
+            VEHICLE_MODEL_ALIASES[
+              canonicalName
+            ] || []
+          )
+
+    catalog.push({
+
+      ...(
+        model &&
+        typeof model === 'object'
+          ? model
+          : {}
+      ),
+
+      name,
+
+      canonicalName,
+
+      aliases: [
+        ...aliases
+      ]
+
+    })
+
   }
 
-  const catalog = []
+  // ==================================================
+  // PRIMARY SOURCE
+  // VehiclesDB LOCAL MODEL CATALOG
+  // ==================================================
 
-  modelKeys.forEach(
-    modelKey => {
+  try {
 
-      const aliases =
-        VEHICLE_MODEL_ALIASES[
-          modelKey
-        ] || []
+    const localModels =
+      VehiclesDBLocalSource.getModels({
 
-      if (
-        aliases.length === 0
-      ) {
-        return
-      }
+        vehicleType,
 
-      catalog.push({
-
-        name:
-          modelKey,
-
-        canonicalName:
-          modelKey,
-
-        aliases: [
-          ...aliases
-        ]
+        brand:
+          canonicalBrand
 
       })
 
+    if (
+      Array.isArray(
+        localModels
+      )
+    ) {
+
+      localModels.forEach(
+        addModel
+      )
+
     }
-  )
+
+  }
+  catch (error) {
+
+    console.warn(
+      '[useVehicleSearch] VehiclesDB local model catalog failed:',
+      error
+    )
+
+  }
+
+  // ==================================================
+  // FALLBACK
+  // Existing static autocomplete catalog
+  // ==================================================
+
+  if (
+    catalog.length === 0
+  ) {
+
+    const modelKeys =
+      VEHICLE_AUTOCOMPLETE_MODELS[
+        canonicalBrand
+      ] || []
+
+    modelKeys.forEach(
+      modelKey => {
+
+        const aliases =
+          VEHICLE_MODEL_ALIASES[
+            modelKey
+          ] || []
+
+        addModel({
+
+          name:
+            modelKey,
+
+          canonicalName:
+            modelKey,
+
+          aliases
+
+        })
+
+      }
+    )
+
+  }
 
   return catalog
 }
 
-// ======================================================
 // FILTER MODEL SUGGESTIONS
 // ======================================================
 
@@ -1323,14 +1426,17 @@ const filterModelSuggestions = (
   brand
 ) => {
 
-  const text =
-    normalizeText(
-      query
-    )
-
   const models =
     getAutocompleteModelsForBrand(
-      brand
+      brand,
+      vehicleType
+    )
+
+  const text =
+    normalizeText(
+      String(
+        query ?? ''
+      ).trim()
     )
 
   if (!text) {
@@ -1365,47 +1471,52 @@ const filterModelSuggestions = (
         )
 
       const aliases =
-        VEHICLE_MODEL_ALIASES[
-          canonical
-        ] || []
+        Array.isArray(
+          VEHICLE_MODEL_ALIASES[
+            canonical
+          ]
+        )
+          ? VEHICLE_MODEL_ALIASES[
+              canonical
+            ]
+          : []
+
+      const modelSearchValues = [
+        name,
+        canonical,
+        model?.model,
+        model?.modelName,
+        model?.name,
+        model?.displayName,
+        model?.arabicName,
+        model?.nameAr,
+        model?.modelAr,
+        model?.modelNameAr,
+        model?.label
+      ]
+
+      const searchValues = [
+        ...modelSearchValues,
+        ...aliases
+      ]
+        .filter(
+          value =>
+            value !== undefined &&
+            value !== null &&
+            String(value).trim() !== ''
+        )
+        .map(
+          value =>
+            normalizeText(
+              String(value)
+            )
+        )
 
       const matches =
-
-        normalizedName.startsWith(
-          text
-        ) ||
-
-        normalizedName.includes(
-          text
-        ) ||
-
-        normalizeText(
-          canonical
-        ).startsWith(
-          text
-        ) ||
-
-        aliases.some(
-          alias => {
-
-            const normalizedAlias =
-              normalizeText(
-                alias
-              )
-
-            return (
-
-              normalizedAlias.startsWith(
-                text
-              ) ||
-
-              normalizedAlias.includes(
-                text
-              )
-
-            )
-
-          }
+        searchValues.some(
+          value =>
+            value.startsWith(text) ||
+            value.includes(text)
         )
 
       if (matches) {
@@ -1572,19 +1683,100 @@ const searchVehicleProducts = async vehicle => {
 
         })
 
+    // --------------------------------------------------
+    // VEHICLE SEARCH RESULT CONTRACT
+    // --------------------------------------------------
+    //
+    // VehicleSearchController is the authoritative source
+    // for vehicle compatibility results.
+    //
+    // response.products already contains:
+    //
+    // 1. Available Elola products
+    // 2. Technical tire requirements
+    // 3. Technical battery requirements
+    // 4. Technical oil requirements
+    //
+    // Technical compatibility MUST NOT depend on inventory.
+    // --------------------------------------------------
+
     const products =
       Array.isArray(
         response?.products
       )
         ? response.products
-        : flattenSearchResults(
-            'vehicle',
-            response
-          )
+        : []
 
     console.log(
       '[useVehicleSearch] VEHICLE RESULTS:',
       products.length
+    )
+
+    console.log(
+      '[useVehicleSearch] VEHICLE RESULT CONTRACT:',
+      JSON.stringify(
+        {
+          total:
+            products.length,
+
+          available:
+            products.filter(
+              product =>
+                !(
+                  product?.technicalRequirement === true ||
+                  product?.technicalCompatibility === true
+                )
+            ).length,
+
+          technical:
+            products.filter(
+              product =>
+                product?.technicalRequirement === true ||
+                product?.technicalCompatibility === true
+            ).length,
+
+          technicalTypes:
+            [
+              ...new Set(
+                products
+                  .map(
+                    product =>
+                      product?.technicalRequirementType
+                  )
+                  .filter(Boolean)
+              )
+            ],
+
+          items:
+            products.map(
+              product => ({
+                id: product?.id,
+                name: product?.name,
+                type: product?.type,
+                technicalRequirement:
+                  product?.technicalRequirement,
+                technicalCompatibility:
+                  product?.technicalCompatibility,
+                technicalRequirementType:
+                  product?.technicalRequirementType,
+                technicalBatteryCapacity:
+                  product?.technicalBatteryCapacity,
+                technicalOilViscosity:
+                  product?.technicalOilViscosity,
+                tireSize:
+                  product?.tireSize,
+                size:
+                  product?.size,
+                quantity:
+                  product?.quantity,
+                price:
+                  product?.price
+              })
+            )
+        },
+        null,
+        2
+      )
     )
 
     return products
@@ -1784,6 +1976,9 @@ export default function useVehicleSearch() {
       () =>
         getAutocompleteModelsForBrand(
           getBrand(
+            form
+          ),
+          getVehicleType(
             form
           )
         ),
@@ -2436,7 +2631,7 @@ export default function useVehicleSearch() {
         setResults([])
 
         setTireSearchError(
-          'اكتب مقاس الإطار بهذا الشكل: 205/55/16 أو 205*55*16 أو 1200/24'
+          'ط§ظƒطھط¨ ظ…ظ‚ط§ط³ ط§ظ„ط¥ط·ط§ط± ط¨ظ‡ط°ط§ ط§ظ„ط´ظƒظ„: 205/55/16 ط£ظˆ 205*55*16 ط£ظˆ 1200/24'
         )
 
         return []
@@ -2774,3 +2969,8 @@ export default function useVehicleSearch() {
   }
 
 }
+
+
+
+
+
