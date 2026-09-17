@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useWebsiteStore } from '../store/websiteStore'
+import { uploadVideoToCloudinary } from '../lib/cloudinaryMedia'
 
 export default function Videos() {
 
@@ -16,7 +17,7 @@ export default function Videos() {
 
   // ================= VIDEO UPLOAD =================
 
-  const handleVideoUpload = (e) => {
+  const handleVideoUpload = async (e) => {
 
     const file = e.target.files?.[0]
 
@@ -33,11 +34,32 @@ export default function Videos() {
 
     setLoading(true)
 
-    const videoURL = URL.createObjectURL(file)
+    try {
 
-    setVideo(videoURL)
+      const videoURL =
+        await uploadVideoToCloudinary(file)
 
-    setLoading(false)
+      setVideo(videoURL)
+
+    } catch (error) {
+
+      console.error(
+        '[Videos] Cloudinary video upload failed:',
+        error
+      )
+
+      alert(
+        error?.message ||
+        'حدث خطأ أثناء رفع الفيديو'
+      )
+
+      setVideo('')
+
+    } finally {
+
+      setLoading(false)
+
+    }
 
   }
 

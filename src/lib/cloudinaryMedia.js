@@ -443,4 +443,99 @@ export {
   uploadDocumentToCloudinary
 }
 
+
+/**
+ * Upload a video directly to Cloudinary.
+ *
+ * Videos are stored as Cloudinary secure URLs only.
+ * No blob/object URL is persisted in the application store.
+ */
+export async function uploadVideoToCloudinary(file) {
+
+  if (!CLOUD_NAME) {
+    throw new Error(
+      'VITE_CLOUDINARY_CLOUD_NAME is missing'
+    )
+  }
+
+  if (!UPLOAD_PRESET) {
+    throw new Error(
+      'VITE_CLOUDINARY_UPLOAD_PRESET is missing'
+    )
+  }
+
+  if (!(file instanceof File)) {
+    throw new Error('Invalid video file')
+  }
+
+  if (!file.type.startsWith('video/')) {
+    throw new Error('Selected file is not a video')
+  }
+
+  if (file.size > 100 * 1024 * 1024) {
+    throw new Error(
+      'Video is larger than 100 MB'
+    )
+  }
+
+  const formData =
+    new FormData()
+
+  formData.append(
+    'file',
+    file
+  )
+
+  formData.append(
+    'upload_preset',
+    UPLOAD_PRESET
+  )
+
+  formData.append(
+    'folder',
+    'elola/videos'
+  )
+
+  const response =
+    await fetch(
+      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`,
+      {
+        method: 'POST',
+        body: formData
+      }
+    )
+
+  if (!response.ok) {
+
+    let message =
+      `Cloudinary video upload failed (${response.status}).`
+
+    try {
+
+      const error =
+        await response.json()
+
+      message =
+        error?.error?.message ||
+        message
+
+    } catch {
+      // Keep the generic upload error.
+    }
+
+    throw new Error(message)
+  }
+
+  const result =
+    await response.json()
+
+  if (!result?.secure_url) {
+    throw new Error(
+      'Cloudinary did not return a video URL'
+    )
+  }
+
+  return result.secure_url
+}
+
 export default uploadImageToCloudinary

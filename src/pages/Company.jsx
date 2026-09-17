@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import uploadImageToCloudinary from '../lib/cloudinaryMedia'
 
 import { useWebsiteStore }
   from '../store/websiteStore'
@@ -155,7 +156,7 @@ export default function Company() {
 
   // ================= LOGO =================
 
-  const handleLogoUpload = (e) => {
+  const handleLogoUpload = async (e) => {
 
   const file = e.target.files[0]
 
@@ -166,19 +167,23 @@ export default function Company() {
   return
 }
 
-  const reader = new FileReader()
+  try {
 
-  reader.onloadend = () => {
+    const imageUrl = await uploadImageToCloudinary(file, 'company')
 
-    setLogo(reader.result)
+    setLogo(imageUrl)
 
     alert(
       'تم رفع الشعار بنجاح'
     )
 
-  }
+  } catch (error) {
 
-  reader.readAsDataURL(file)
+    console.error('[Company] Logo upload failed:', error)
+
+    alert(error?.message || 'Logo upload failed')
+
+  }
 
 }
   return (
