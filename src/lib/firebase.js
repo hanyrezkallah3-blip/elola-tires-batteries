@@ -9,10 +9,6 @@ import {
 } from 'firebase/firestore'
 
 import {
-  getStorage
-} from 'firebase/storage'
-
-import {
   getAuth,
   signInAnonymously
 } from 'firebase/auth'
@@ -64,9 +60,6 @@ const app =
 
 const db =
   getFirestore(app)
-
-const storage =
-  getStorage(app)
 
 const auth =
   getAuth(app)
@@ -130,7 +123,6 @@ export {
 
   db,
 
-  storage,
 
   auth
 
