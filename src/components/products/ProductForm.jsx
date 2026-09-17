@@ -456,6 +456,24 @@ useCallback(async () => {
     publishedToHome:
       form.publishedToHome !== false,
 
+    publishToProducts:
+      form.publishToProducts === true,
+
+    publishedToProducts:
+      form.publishedToProducts === true,
+
+    publishToOffers:
+      form.publishToOffers === true,
+
+    publishedToOffers:
+      form.publishedToOffers === true,
+
+    showQuantityOnProducts:
+      form.showQuantityOnProducts === true,
+
+    showQuantityOnOffers:
+      form.showQuantityOnOffers === true,
+
 
     // ----------------------------------------------
     // TIMESTAMPS
