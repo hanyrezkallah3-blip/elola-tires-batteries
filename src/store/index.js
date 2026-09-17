@@ -25,7 +25,6 @@ export * from './permissionStore'
 export * from './productStore'
 export * from './offerStore'
 export * from './serviceStore'
-export * from './videoStore'
 export * from './slideStore'
 
 // ===========================
