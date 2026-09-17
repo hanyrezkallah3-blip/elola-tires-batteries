@@ -1,14 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-import {
-  ref,
-  uploadBytes,
-  getDownloadURL,
-  deleteObject
-} from 'firebase/storage'
-
-import { storage } from '../lib/firebase'
+import { uploadDocumentToCloudinary } from '../lib/cloudinaryMedia'
 
 const STORAGE_KEY = 'elola_tenders'
 
@@ -422,44 +415,6 @@ export const useTenderStore = create(
         ]
 
         // ----------------------------------------------
-        // DELETE FROM FIREBASE STORAGE
-        // ----------------------------------------------
-
-        for (
-          const document
-          of documents
-        ) {
-
-          if (
-            !document.storagePath
-          ) {
-            continue
-          }
-
-          try {
-
-            const fileRef =
-              ref(
-                storage,
-                document.storagePath
-              )
-
-            await deleteObject(
-              fileRef
-            )
-
-          } catch (error) {
-
-            console.error(
-              'Tender document delete error:',
-              error
-            )
-
-          }
-
-        }
-
-        // ----------------------------------------------
         // DELETE TENDER
         // ----------------------------------------------
 
@@ -596,36 +551,16 @@ export const useTenderStore = create(
               '_'
             )
 
-        const storagePath =
-          `tenders/${tenderId}/documents/${documentId}_${safeFileName}`
-
         // ----------------------------------------------
-        // FIREBASE STORAGE
+        // CLOUDINARY
         // ----------------------------------------------
-
-        const fileRef =
-          ref(
-            storage,
-            storagePath
-          )
-
-        const snapshot =
-          await uploadBytes(
-            fileRef,
-            file,
-            {
-              contentType:
-                file.type ||
-                'application/octet-stream'
-            }
-          )
 
         const downloadURL =
-          await getDownloadURL(
-            snapshot.ref
+          await uploadDocumentToCloudinary(
+            file,
+            'tender'
           )
 
-        // ----------------------------------------------
         // DOCUMENT
         // ----------------------------------------------
 
@@ -649,7 +584,7 @@ export const useTenderStore = create(
           dataUrl:
             downloadURL,
 
-          storagePath,
+          storagePath: '',
 
           uploadedAt:
             now()
@@ -796,37 +731,6 @@ export const useTenderStore = create(
           throw new Error(
             'المستند غير موجود'
           )
-
-        }
-
-        // ----------------------------------------------
-        // FIREBASE STORAGE
-        // ----------------------------------------------
-
-        if (
-          document.storagePath
-        ) {
-
-          try {
-
-            const fileRef =
-              ref(
-                storage,
-                document.storagePath
-              )
-
-            await deleteObject(
-              fileRef
-            )
-
-          } catch (error) {
-
-            console.error(
-              'Firebase document delete error:',
-              error
-            )
-
-          }
 
         }
 

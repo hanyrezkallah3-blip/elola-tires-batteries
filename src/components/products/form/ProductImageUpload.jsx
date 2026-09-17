@@ -1,4 +1,5 @@
 import React, { useCallback } from 'react'
+import { uploadImageToCloudinary } from '../../../lib/cloudinaryMedia'
 
 export default function ProductImageUpload({
   form,
@@ -6,7 +7,7 @@ export default function ProductImageUpload({
 }) {
 
   const handleImage =
-    useCallback((e)=>{
+    useCallback(async (e)=>{
 
       const file =
         e.target.files?.[0]
@@ -14,27 +15,39 @@ export default function ProductImageUpload({
       if(!file)
         return
 
-      const reader =
-        new FileReader()
+      try {
 
-      reader.onloadend = ()=>{
+        const imageUrl =
+          await uploadImageToCloudinary(
+            file,
+            'product'
+          )
 
         setForm(prev=>({
 
           ...prev,
 
           image:
-            reader.result,
+            imageUrl,
 
           images:[
-            reader.result
+            imageUrl
           ]
 
         }))
 
-      }
+      } catch(error) {
 
-      reader.readAsDataURL(file)
+        console.error(
+          '[ProductImageUpload] Cloudinary upload failed:',
+          error
+        )
+
+        alert(
+          'فشل رفع صورة المنتج. حاول مرة أخرى.'
+        )
+
+      }
 
     },[setForm])
 
