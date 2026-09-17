@@ -1129,6 +1129,8 @@ export default function Tenders() {
   const getDocumentUrl = document => {
 
     return (
+      document?.secure_url ||
+      document?.secureUrl ||
       document?.downloadURL ||
       document?.dataUrl ||
       ''
