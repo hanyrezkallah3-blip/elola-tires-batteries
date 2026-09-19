@@ -364,6 +364,9 @@ export const useTenderStore = create(
             )
 
         }))
+        return get().tenders.find(
+          tender => tender.id === id
+        )
 
       },
 

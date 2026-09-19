@@ -329,8 +329,7 @@ export async function uploadImageToCloudinary(
  * Documents use Cloudinary raw/upload and are stored as URL only.
  */
 const DOCUMENT_UPLOAD_PRESET =
-  import.meta.env.VITE_CLOUDINARY_DOCUMENT_UPLOAD_PRESET ||
-  'elola_documents'
+  import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
 
 const DOCUMENT_MAX_SIZE =
   10 * 1024 * 1024
