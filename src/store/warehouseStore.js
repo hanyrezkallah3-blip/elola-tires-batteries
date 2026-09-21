@@ -17,6 +17,12 @@ import addWarehouseTransaction
 
 import ProductEngine
   from '../core/engines/product/ProductEngine'
+import repriceWarehouseProductHelper
+  from './warehouse/helpers/repriceWarehouseProduct'
+
+import {
+  recordRepricingOperation
+} from '../services/operationService'
 
 
 const STORAGE_KEY =
@@ -921,6 +927,74 @@ export const useWarehouseStore = create(
 
         })),
 
+
+      // ==========================================
+      // REPRICE WAREHOUSE PRODUCT
+      // ==========================================
+
+      repriceWarehouseProduct: (
+        warehouseId,
+        productId,
+        quantity,
+        newSalePrice,
+        repricingData = {}
+      ) => {
+
+        const warehouse =
+          get().warehouses.find(
+            item => String(item.id) === String(warehouseId)
+          )
+
+        const result =
+          repriceWarehouseProductHelper(
+            get().warehouses,
+            warehouseId,
+            productId,
+            quantity,
+            newSalePrice,
+            repricingData
+          )
+
+        if (!result.success) {
+          return result
+        }
+
+        set({
+          warehouses:
+            result.warehouses
+        })
+
+        const ledgerResult =
+          recordRepricingOperation({
+            repricing:
+              result.repricing,
+
+            operationData: {
+              warehouseName:
+                warehouse?.name ||
+                warehouseId,
+              operationNotes:
+                repricingData.notes ||
+                repricingData.reason
+            }
+          })
+
+        if (!ledgerResult.success) {
+          return {
+            ...result,
+            ledgerRecorded: false,
+            ledgerError:
+              ledgerResult.error
+          }
+        }
+
+        return {
+          ...result,
+          ledgerRecorded: true,
+          operation:
+            ledgerResult.operation
+        }
+      },
 
       // ==========================================
       // PROCESS INVENTORY TRANSACTION

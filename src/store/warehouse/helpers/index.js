@@ -1,4 +1,4 @@
-export { default as generateWarehouseId } from './generateWarehouseId'
+﻿export { default as generateWarehouseId } from './generateWarehouseId'
 
 export { default as createWarehouse } from './createWarehouse'
 export { default as createWarehouseProduct } from './createWarehouseProduct'
@@ -11,6 +11,7 @@ export { default as updateWarehouseProduct } from './updateWarehouseProduct'
 export { default as removeWarehouseProduct } from './removeWarehouseProduct'
 export { default as increaseWarehouseProductQuantity } from './increaseWarehouseProductQuantity'
 export { default as decreaseWarehouseProductQuantity } from './decreaseWarehouseProductQuantity'
+export { default as repriceWarehouseProduct } from './repriceWarehouseProduct'
 export { default as moveWarehouseProduct } from './moveWarehouseProduct'
 export { default as addWarehouseExpense } from './addWarehouseExpense'
 

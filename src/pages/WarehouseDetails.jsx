@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 import { useWarehouseStore } from '../store/warehouseStore'
 import { useUserStore } from '../store/userStore'
+import { recordInventoryOperation } from '../services/operationService'
 
 export default function WarehouseDetails() {
 
@@ -574,6 +575,85 @@ export default function WarehouseDetails() {
         return
       }
 
+      // ==================================================
+      // OPERATION LEDGER
+      // Inventory movement remains the quantity source
+      // of truth. The ledger records the linked operation.
+      // ==================================================
+
+      try {
+        const ledgerResult =
+          recordInventoryOperation({
+            transaction: result.transaction,
+            operationData: {
+              type:
+                transactionType === 'in'
+                  ? 'warehouse_receipt'
+                  : 'warehouse_issue',
+              reference:
+                result.transaction?.reference ||
+                'WH-' + (result.transaction?.id || Date.now()),
+              performedAt:
+                result.transaction?.createdAt ||
+                new Date().toISOString(),
+              performedById:
+                currentUser?.id || '',
+              performedByName:
+                currentUser?.name ||
+                currentUser?.username ||
+                currentUser?.email ||
+                '',
+              performedByRole:
+                currentUser?.role || '',
+              sourceId:
+                warehouse?.id ||
+                id ||
+                '',
+              sourceName:
+                warehouse?.name ||
+                '',
+              sourceType:
+                warehouse?.type ||
+                'warehouse',
+              productId:
+                product?.productId ||
+                product?.id ||
+                transactionProductId,
+              productName:
+                product?.productName ||
+                product?.name ||
+                '',
+              quantity,
+              purchasePrice:
+                Number(result.transaction?.purchasePrice ?? 0),
+              actualSalePrice:
+                Number(result.transaction?.salePrice ?? 0),
+              originalSalePrice:
+                Number(result.transaction?.salePrice ?? 0),
+              salePriceSource:
+                transactionType === 'out'
+                  ? 'warehouse'
+                  : '',
+              notes:
+                transactionNotes.trim(),
+              operationNotes:
+                transactionNotes.trim(),
+              countsAsSale: false,
+            }
+          })
+
+        if (!ledgerResult?.success) {
+          console.error(
+            'Operation Ledger Error:',
+            ledgerResult?.error
+          )
+        }
+      } catch (ledgerError) {
+        console.error(
+          'Operation Ledger Error:',
+          ledgerError
+        )
+      }
       setTransactionSuccess(
         transactionType === 'in'
           ? `✅ تم تسجيل الوارد بنجاح. الكمية الجديدة: ${result.newQuantity}`
